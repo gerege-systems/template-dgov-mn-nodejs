@@ -49,6 +49,8 @@ import { registerRoutes, type Deps } from '../../../http/routes/index.js';
 import { newEidClient } from '../../../pkg/eid/eid.js';
 import { newGoogleClient } from '../../../pkg/google/google.js';
 import { newJWTServiceWithRefresh } from '../../../pkg/jwt/jwt.js';
+import { newSSOEidProxy } from '../../../pkg/ssoeidproxy/ssoeidproxy.js';
+import { newXypClient } from '../../../pkg/xyp/xyp.js';
 import { newAuditUsecase } from '../../../usecases/audit/audit_usecase.js';
 import { newAuthUsecase } from '../../../usecases/auth/auth_impl.js';
 import { newAssetsUsecase } from '../../../usecases/assets/assets_usecase.js';
@@ -226,9 +228,32 @@ export async function newApp(): Promise<App> {
   );
   // Google OAuth — креденшл тохируулаагүй бол feature fail-closed (configured()=false).
   const googleClient = newGoogleClient(AppConfig.GOOGLE_CLIENT_ID, AppConfig.GOOGLE_CLIENT_SECRET);
-  const authUC = newAuthUsecase(usersUC, jwtService, eidClient, googleClient, redisCache, {
-    eidDisplayText: AppConfig.EID_DISPLAY_TEXT,
-  });
+  // XYP — улсын бүртгэлийн байгууллагын лавлагаа. Креденшлгүй бол домэйн инерт
+  // (байгууллага холбох үед "тохируулагдаагүй" алдаа), boot зогсохгүй.
+  const xypClient = newXypClient(
+    AppConfig.XYP_API_BASE,
+    AppConfig.XYP_CLIENT_ID,
+    AppConfig.XYP_CLIENT_SECRET,
+  );
+  // SSO eID proxy — тохируулагдсан бол PKI самбар SSO-гоор дамжина (энэ RP-д
+  // PKI_READ эрх шаардахгүй). ssoTokens нь `ssotoken` домэйнтэй хамт залгагдана.
+  const ssoEidProxy =
+    AppConfig.SSO_EID_PROXY_BASE_URL === ''
+      ? null
+      : newSSOEidProxy(AppConfig.SSO_EID_PROXY_BASE_URL);
+  const authUC = newAuthUsecase(
+    usersUC,
+    jwtService,
+    eidClient,
+    xypClient,
+    googleClient,
+    redisCache,
+    {
+      eidDisplayText: AppConfig.EID_DISPLAY_TEXT,
+      ssoEidProxy,
+      ssoTokens: null,
+    },
+  );
 
   // RBAC — динамик role/permission. Мөн requirePermission-ийн resolver.
   const rbacRepo = newRBACRepository(db);

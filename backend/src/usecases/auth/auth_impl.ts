@@ -10,6 +10,7 @@ import {
   ErrorType,
   forbidden,
   internalCause,
+  notFound,
   unauthorized,
 } from '../../apperror/index.js';
 import { isCacheMiss, type RedisCache } from '../../datasources/caches/redis.js';
@@ -22,13 +23,40 @@ import {
 } from '../../domain/users.js';
 import type { Ctx } from '../../pkg/ctx/ctx.js';
 import { ErrInitiateRejected, StateComplete, type EidClient } from '../../pkg/eid/eid.js';
+import {
+  ErrNotRepresentative,
+  ErrSignerNotEnrolled,
+  type Representation,
+  type Signer,
+  type SignersResult,
+} from '../../pkg/eid/eid_org.js';
+import { ErrPKINotPermitted } from '../../pkg/eid/eid_pki.js';
+import type {
+  PersonActivity,
+  PersonCertificates,
+  PersonDevices,
+  PersonSummary,
+} from '../../pkg/eid/eid_pki.js';
+import {
+  ErrSSOProxyDisabled,
+  ErrSSOTokenExpired,
+  type SSOEidProxy,
+} from '../../pkg/ssoeidproxy/ssoeidproxy.js';
+import {
+  ErrXypNotConfigured,
+  ErrXypNotFound,
+  type Lookuper,
+  type Organization,
+} from '../../pkg/xyp/xyp.js';
 import type { GoogleClient, GoogleUser } from '../../pkg/google/google.js';
 import type { JWTService, TokenPair } from '../../pkg/jwt/jwt.js';
 import * as logger from '../../pkg/logger/logger.js';
 import type { UsersUsecase } from '../users/users_usecase.js';
 import { accessDenyKey, googleLinkKey, refreshKey, superadminMFAKey } from './redis_keys.js';
+import { ErrSSOTokenNotFound } from './auth_usecase.js';
 import type {
   AuthUsecase,
+  SSOTokenService,
   EIDPollRequest,
   EIDPollResponse,
   EIDStartResponse,
@@ -47,6 +75,14 @@ import type {
 export interface AuthConfig {
   /** eidDisplayText нь IdP/гар утсан дээр харагдах RP-ийн нэр/тайлбар. */
   eidDisplayText: string;
+  /**
+   * ssoEidProxy + ssoTokens нь PKI самбарыг SSO-гоор унших СОНГОЛТТОЙ зам.
+   * ХОЁУЛАА өгөгдсөн (SSO_EID_PROXY_BASE_URL тохируулсан) үед PKI GET-үүд
+   * шууд eidmongolia-ий оронд SSO proxy-гоор дамжина — энэ RP-д PKI_READ эрх
+   * шаардахгүй болно. null бол шууд зам.
+   */
+  ssoEidProxy?: SSOEidProxy | null;
+  ssoTokens?: SSOTokenService | null;
 }
 
 // Тэмдэглэл: eID-ийн callback URL нь ТОХИРГООНООС биш, ХҮСЭЛТЭЭС ирдэг —
@@ -112,6 +148,7 @@ class AuthUsecaseImpl implements AuthUsecase {
     private readonly users: UsersUsecase,
     private readonly jwtService: JWTService,
     private readonly eid: EidClient,
+    private readonly xyp: Lookuper | null,
     private readonly google: GoogleClient | null,
     private readonly redisCache: RedisCache,
     private readonly cfg: AuthConfig,
@@ -704,6 +741,349 @@ class AuthUsecaseImpl implements AuthUsecase {
       });
     }
   }
+
+  // ─────────────────────── eID профайл: туслахууд ───────────────────────
+
+  /**
+   * eidPersonEtsi нь userId-аар хэрэглэгчийг олж, ETSI танигч (PNOMN-<CIVIL>,
+   * ТОМООР) буцаана. eID хэрэглэгч БИШ (civil_id хоосон) бол хоосон мөр —
+   * АЛДАА БИШ, дуудагч өөрөө шийднэ.
+   */
+  private async eidPersonEtsi(ctx: Ctx, userId: string): Promise<string> {
+    const got = await this.users.getById(ctx, { id: userId });
+    const civilId = got.user.civilId.trim();
+    if (civilId === '') return '';
+    return `PNOMN-${civilId.toUpperCase()}`;
+  }
+
+  /**
+   * actingEtsi нь eID-ээр нэвтэрсэн БАЙХЫГ шаардана — байгууллагын үйлдлүүд
+   * иргэний eID-д холбогдсон эрхэн дээр тулгуурладаг.
+   */
+  private async actingEtsi(ctx: Ctx, userId: string): Promise<string> {
+    const etsi = await this.eidPersonEtsi(ctx, userId);
+    if (etsi === '') throw forbidden('Энэ үйлдэлд eID-ээр нэвтэрсэн байх шаардлагатай');
+    return etsi;
+  }
+
+  /**
+   * eidProxyEnabled нь PKI-г SSO-гоор дамжуулах зам идэвхтэй эсэхийг хэлнэ.
+   * ХОЁУЛАА (proxy + токен үйлчилгээ) байх ёстой — эс бөгөөс токенгүй proxy
+   * дуудлага бүр 401 болно.
+   */
+  private eidProxyEnabled(): boolean {
+    const { ssoEidProxy, ssoTokens } = this.cfg;
+    return (
+      ssoEidProxy !== undefined &&
+      ssoEidProxy !== null &&
+      ssoTokens !== undefined &&
+      ssoTokens !== null
+    );
+  }
+
+  /**
+   * ssoProxyAccessToken нь хэрэглэгчийн хүчинтэй SSO access token-ыг авна.
+   * Токен байхгүй бол ДАХИН НЭВТРЭХ (401) төлөв — 500 биш.
+   */
+  private async ssoProxyAccessToken(ctx: Ctx, userId: string): Promise<string> {
+    const tokens = this.cfg.ssoTokens;
+    if (tokens === undefined || tokens === null) {
+      throw new DomainError(ErrorType.Internal, 'eID үйлчилгээ түр боломжгүй байна');
+    }
+    try {
+      return await tokens.validAccessToken(ctx, userId);
+    } catch (err) {
+      if (err instanceof ErrSSOTokenNotFound) {
+        throw unauthorized('eID мэдээлэл авахын тулд SSO-гоор дахин нэвтэрнэ үү');
+      }
+      throw internalCause(err);
+    }
+  }
+
+  /**
+   * mapSignerErr нь eID signer client-ийн алдаануудыг apperror болгоно. Эрхийн
+   * шийдвэр IdP-д үлдэж, энд зөвхөн HTTP статус руу буулгана.
+   */
+  private mapSignerErr(err: unknown): Error {
+    if (err instanceof ErrNotRepresentative) {
+      return forbidden('Та энэ байгууллагын гарын үсэг зурагчдыг удирдах эрхгүй байна');
+    }
+    if (err instanceof ErrSignerNotEnrolled) {
+      return notFound('Энэ регистрийн дугаартай иргэн eID-д бүртгэлгүй байна');
+    }
+    return internalCause(err);
+  }
+
+  /**
+   * mapPKIErr нь PKI дуудлагын алдааг HTTP-д буулгана: PKI_READ эрхгүй бол
+   * Forbidden (frontend "эрх хүлээгдэж байна" харуулна), SSO токен хүчингүй
+   * бол 401, proxy унтраалттай бол 500.
+   */
+  private mapPKIErr(err: unknown): Error {
+    if (err instanceof ErrPKINotPermitted) {
+      return forbidden('eID PKI хандах эрх (PKI_READ) олгогдоогүй байна');
+    }
+    if (err instanceof ErrSSOTokenExpired) {
+      return unauthorized('eID мэдээлэл авахын тулд SSO-гоор дахин нэвтэрнэ үү');
+    }
+    if (err instanceof ErrSSOProxyDisabled) {
+      return new DomainError(ErrorType.Internal, 'eID үйлчилгээ түр боломжгүй байна');
+    }
+    return internalCause(err);
+  }
+
+  // ──────────────── eID профайл: төлөөлдөг байгууллагууд ────────────────
+
+  async eidRepresentations(ctx: Ctx, userId: string): Promise<Representation[]> {
+    const etsi = await this.eidPersonEtsi(ctx, userId);
+    // eID хэрэглэгч биш — алдаа биш, зүгээр хоосон (профайл хуудас эвдрэхгүй).
+    if (etsi === '') return [];
+    try {
+      return await this.eid.representations(etsi, ctx.signal);
+    } catch (err) {
+      throw internalCause(err);
+    }
+  }
+
+  async registerEidOrganization(
+    ctx: Ctx,
+    userId: string,
+    regNo: string,
+  ): Promise<Representation[]> {
+    const trimmed = regNo.trim();
+    if (trimmed === '') throw badRequest('Байгууллагын регистрийн дугаар шаардлагатай');
+    const etsi = await this.eidPersonEtsi(ctx, userId);
+    if (etsi === '') {
+      throw forbidden('Байгууллага холбохын тулд eID-ээр нэвтэрсэн байх шаардлагатай');
+    }
+    if (this.xyp === null) {
+      throw new DomainError(ErrorType.Internal, 'Байгууллагын лавлагаа (XYP) тохируулагдаагүй');
+    }
+
+    let org: Organization;
+    try {
+      org = await this.xyp.lookup(trimmed, ctx.signal);
+    } catch (err) {
+      if (err instanceof ErrXypNotFound) {
+        throw notFound('Энэ регистрийн дугаартай байгууллага олдсонгүй');
+      }
+      if (err instanceof ErrXypNotConfigured) {
+        throw new DomainError(ErrorType.Internal, 'Байгууллагын лавлагаа (XYP) тохируулагдаагүй');
+      }
+      throw internalCause(err);
+    }
+
+    try {
+      return await this.eid.addRepresentation(
+        etsi,
+        {
+          orgRegister: org.reg_no,
+          orgName: org.name,
+          orgNameEn: '',
+          affiliates: affiliatesFromXyp(org),
+        },
+        ctx.signal,
+      );
+    } catch (err) {
+      if (err instanceof ErrNotRepresentative) {
+        throw forbidden(
+          'Та энэ байгууллагыг төлөөлөх эрхгүй байна (захирал / үүсгэн байгуулагч / хувь эзэмшигч биш)',
+        );
+      }
+      throw internalCause(err);
+    }
+  }
+
+  async unlinkEidOrganization(
+    ctx: Ctx,
+    userId: string,
+    orgRegister: string,
+  ): Promise<Representation[]> {
+    if (orgRegister.trim() === '') {
+      throw badRequest('Байгууллагын регистрийн дугаар шаардлагатай');
+    }
+    const etsi = await this.actingEtsi(ctx, userId);
+    try {
+      return await this.eid.removeRepresentation(etsi, orgRegister.trim(), ctx.signal);
+    } catch (err) {
+      if (err instanceof ErrNotRepresentative) {
+        throw forbidden('Зөвхөн ADMIN эрхтэй хүн байгууллагыг салгаж чадна');
+      }
+      throw internalCause(err);
+    }
+  }
+
+  async listEidOrgSigners(ctx: Ctx, userId: string, orgRegister: string): Promise<Signer[]> {
+    const etsi = await this.actingEtsi(ctx, userId);
+    try {
+      return await this.eid.orgSigners(orgRegister.trim(), etsi, ctx.signal);
+    } catch (err) {
+      throw this.mapSignerErr(err);
+    }
+  }
+
+  async addEidOrgSigner(
+    ctx: Ctx,
+    userId: string,
+    orgRegister: string,
+    signerRegNo: string,
+    role: string,
+  ): Promise<SignersResult> {
+    if (signerRegNo.trim() === '') {
+      throw badRequest('Гарын үсэг зурагчийн регистрийн дугаар шаардлагатай');
+    }
+    const etsi = await this.actingEtsi(ctx, userId);
+    try {
+      return await this.eid.addSigner(
+        orgRegister.trim(),
+        etsi,
+        { signerRegNo: signerRegNo.trim(), role: role.trim() },
+        ctx.signal,
+      );
+    } catch (err) {
+      throw this.mapSignerErr(err);
+    }
+  }
+
+  async resendEidOrgSigner(
+    ctx: Ctx,
+    userId: string,
+    orgRegister: string,
+    signerRegNo: string,
+  ): Promise<SignersResult> {
+    if (signerRegNo.trim() === '') {
+      throw badRequest('Гарын үсэг зурагчийн регистрийн дугаар шаардлагатай');
+    }
+    const etsi = await this.actingEtsi(ctx, userId);
+    try {
+      return await this.eid.resendSigner(orgRegister.trim(), etsi, signerRegNo.trim(), ctx.signal);
+    } catch (err) {
+      throw this.mapSignerErr(err);
+    }
+  }
+
+  async removeEidOrgSigner(
+    ctx: Ctx,
+    userId: string,
+    orgRegister: string,
+    signerRegNo: string,
+  ): Promise<Signer[]> {
+    const etsi = await this.actingEtsi(ctx, userId);
+    try {
+      return await this.eid.removeSigner(orgRegister.trim(), etsi, signerRegNo.trim(), ctx.signal);
+    } catch (err) {
+      throw this.mapSignerErr(err);
+    }
+  }
+
+  // ──────────────────── eID профайл: иргэний PKI самбар ────────────────────
+  //
+  // Дөрвүүлээ ижил бүтэцтэй: proxy идэвхтэй бол SSO-гоор, эс бол шууд eID рүү.
+  // eID хэрэглэгч биш бол `null` (handler хоосон өгөгдөл харуулна).
+
+  async eidSummary(ctx: Ctx, userId: string): Promise<PersonSummary | null> {
+    const proxy = this.cfg.ssoEidProxy;
+    if (this.eidProxyEnabled() && proxy) {
+      const token = await this.ssoProxyAccessToken(ctx, userId);
+      try {
+        return await proxy.summary(token, ctx.signal);
+      } catch (err) {
+        throw this.mapPKIErr(err);
+      }
+    }
+    const etsi = await this.eidPersonEtsi(ctx, userId);
+    if (etsi === '') return null;
+    try {
+      return await this.eid.personSummary(etsi, ctx.signal);
+    } catch (err) {
+      throw this.mapPKIErr(err);
+    }
+  }
+
+  async eidCertificates(ctx: Ctx, userId: string): Promise<PersonCertificates | null> {
+    const proxy = this.cfg.ssoEidProxy;
+    if (this.eidProxyEnabled() && proxy) {
+      const token = await this.ssoProxyAccessToken(ctx, userId);
+      try {
+        return await proxy.certificates(token, ctx.signal);
+      } catch (err) {
+        throw this.mapPKIErr(err);
+      }
+    }
+    const etsi = await this.eidPersonEtsi(ctx, userId);
+    if (etsi === '') return null;
+    try {
+      return await this.eid.personCertificates(etsi, ctx.signal);
+    } catch (err) {
+      throw this.mapPKIErr(err);
+    }
+  }
+
+  async eidDevices(ctx: Ctx, userId: string): Promise<PersonDevices | null> {
+    const proxy = this.cfg.ssoEidProxy;
+    if (this.eidProxyEnabled() && proxy) {
+      const token = await this.ssoProxyAccessToken(ctx, userId);
+      try {
+        return await proxy.devices(token, ctx.signal);
+      } catch (err) {
+        throw this.mapPKIErr(err);
+      }
+    }
+    const etsi = await this.eidPersonEtsi(ctx, userId);
+    if (etsi === '') return null;
+    try {
+      return await this.eid.personDevices(etsi, ctx.signal);
+    } catch (err) {
+      throw this.mapPKIErr(err);
+    }
+  }
+
+  async eidActivity(
+    ctx: Ctx,
+    userId: string,
+    limit: number,
+    offset: number,
+  ): Promise<PersonActivity | null> {
+    const proxy = this.cfg.ssoEidProxy;
+    if (this.eidProxyEnabled() && proxy) {
+      const token = await this.ssoProxyAccessToken(ctx, userId);
+      try {
+        return await proxy.activity(token, limit, offset, ctx.signal);
+      } catch (err) {
+        throw this.mapPKIErr(err);
+      }
+    }
+    const etsi = await this.eidPersonEtsi(ctx, userId);
+    if (etsi === '') return null;
+    try {
+      return await this.eid.personActivity(etsi, limit, offset, ctx.signal);
+    } catch (err) {
+      throw this.mapPKIErr(err);
+    }
+  }
+}
+
+/**
+ * affiliatesFromXyp нь XYP-ийн байгууллагаас эрх бүхий этгээдийн (захирал →
+ * үүсгэн байгуулагч → хувь эзэмшигч дарааллаар) РД жагсаалтыг угсарна.
+ *
+ * Захирлыг ЭХЭНД тавьсан нь санамсаргүй биш: eidmongolia эхний таарсан бичлэгээр
+ * role-г тодорхойлдог тул холбогдож буй этгээд ADMIN эрхтэй болно. Хоосон РД-г
+ * алгасна.
+ */
+function affiliatesFromXyp(org: Organization): { regNo: string; role: string; kind: string }[] {
+  const out: { regNo: string; role: string; kind: string }[] = [];
+  const add = (regNo: string, role: string, kind: string): void => {
+    if (regNo.trim() === '') return;
+    out.push({ regNo: regNo.trim(), role: role.trim(), kind });
+  };
+  const ceoRole = org.ceo_position.trim() === '' ? 'Гүйцэтгэх захирал' : org.ceo_position;
+  add(org.ceo_reg_no, ceoRole, 'CEO');
+  for (const f of org.founders) add(f.reg_no, 'Үүсгэн байгуулагч', 'FOUNDER');
+  for (const sh of org.stake_holders) {
+    add(sh.reg_no, sh.position.trim() === '' ? 'Хувь эзэмшигч' : sh.position, 'STAKEHOLDER');
+  }
+  return out;
 }
 
 /** emptyPoll нь identity/токенгүй poll хариуг бүтээнэ. */
@@ -720,9 +1100,10 @@ export function newAuthUsecase(
   users: UsersUsecase,
   jwtService: JWTService,
   eid: EidClient,
+  xyp: Lookuper | null,
   google: GoogleClient | null,
   redisCache: RedisCache,
   cfg: AuthConfig,
 ): AuthUsecase {
-  return new AuthUsecaseImpl(users, jwtService, eid, google, redisCache, cfg);
+  return new AuthUsecaseImpl(users, jwtService, eid, xyp, google, redisCache, cfg);
 }

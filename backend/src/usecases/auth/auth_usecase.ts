@@ -6,12 +6,21 @@
 //
 // ХАМРАХ ХҮРЭЭ: "Login with eID" нь цорын ганц интерактив нэвтрэх арга тул нууц
 // үг / OTP / бүртгэлийн урсгал БАЙХГҮЙ (Go хувилбарт эдгээрийн файл байгаа ч
-// route-д холбогдоогүй үхмэл код тул порт хийгээгүй). Байгууллагын төлөөлөл
-// (representations / signers) болон иргэний PKI самбар нь `org` ба `eidprofile`
-// домэйнтэй хамт нэмэгдэнэ.
+// route-д холбогдоогүй үхмэл код тул порт хийгээгүй).
+//
+// Мөн энэ давхарга нь нэвтэрсэн иргэний eID ПРОФАЙЛ-ыг (төлөөлдөг байгууллага ·
+// гарын үсэг зурагчид · PKI самбар) хариуцна — эдгээр нь eID client болон
+// users-ийн хосолсон урсгал тул тусдаа usecase болгож салгаагүй (Go-той ижил).
 
 import type { User } from '../../domain/users.js';
 import type { Ctx } from '../../pkg/ctx/ctx.js';
+import type { Representation, Signer, SignersResult } from '../../pkg/eid/eid_org.js';
+import type {
+  PersonActivity,
+  PersonCertificates,
+  PersonDevices,
+  PersonSummary,
+} from '../../pkg/eid/eid_pki.js';
 
 /** LoginResult нь нэвтрэлт амжилттай болсны дараах session-ийн бүрдэл. */
 export interface LoginResult {
@@ -88,6 +97,23 @@ export interface LogoutRequest {
 }
 
 /** AuthUsecase нь HTTP handler-ийн харьцдаг оролтын хил (input boundary) юм. */
+/**
+ * SSOTokenService нь хэрэглэгчийн хүчинтэй SSO access token-ыг (шаардвал refresh
+ * хийж) буцаана. Хадгалагдсан токен байхгүй бол ErrSSOTokenNotFound шиднэ.
+ * Хэрэгжүүлэлт нь `ssotoken` домэйнд.
+ */
+export interface SSOTokenService {
+  validAccessToken(ctx: Ctx, userId: string): Promise<string>;
+}
+
+/** ErrSSOTokenNotFound нь хэрэглэгчид хадгалагдсан SSO токен байхгүйг илэрхийлнэ. */
+export class ErrSSOTokenNotFound extends Error {
+  constructor() {
+    super('sso token not found');
+    this.name = 'ErrSSOTokenNotFound';
+  }
+}
+
 export interface AuthUsecase {
   /**
    * eidStart нь eID device-link нэвтрэлтийг IdP дээр эхлүүлнэ. callbackUrl хоосон
@@ -121,4 +147,61 @@ export interface AuthUsecase {
   refresh(ctx: Ctx, req: RefreshRequest): Promise<LoginResult>;
   /** logout нь refresh токены jti-г устгаж, (өгвөл) access токеныг deny-list-д нэмнэ. */
   logout(ctx: Ctx, req: LogoutRequest): Promise<void>;
+
+  // ── eID профайл: төлөөлдөг байгууллагууд ──
+
+  /**
+   * eidRepresentations нь хэрэглэгчийн төлөөлдөг байгууллагуудыг буцаана.
+   * eID-ээр нэвтрээгүй (civil_id хоосон) бол АЛДААГҮЙГЭЭР хоосон жагсаалт —
+   * профайлын хуудас Google хэрэглэгчид ч эвдрэхгүй.
+   */
+  eidRepresentations(ctx: Ctx, userId: string): Promise<Representation[]>;
+  /**
+   * registerEidOrganization нь регистрийн дугаараар улсын бүртгэлээс (XYP)
+   * байгууллагыг хайж, иргэнийг eID дээр төлөөлөл болгон холбоно. Эрхийн
+   * шалгалт нь eidmongolia талд — template нь зөвхөн эрх бүхий этгээдийн РД
+   * жагсаалтыг дамжуулна.
+   */
+  registerEidOrganization(ctx: Ctx, userId: string, regNo: string): Promise<Representation[]>;
+  /** unlinkEidOrganization нь өөрийн байгууллагын төлөөллийг цуцлана. */
+  unlinkEidOrganization(ctx: Ctx, userId: string, orgRegister: string): Promise<Representation[]>;
+  /** listEidOrgSigners нь байгууллагын гарын үсэг зурагчдыг буцаана. */
+  listEidOrgSigners(ctx: Ctx, userId: string, orgRegister: string): Promise<Signer[]>;
+  /** addEidOrgSigner нь өөр иргэнийг MANAGER эрхтэй зурагч болгож нэмнэ. */
+  addEidOrgSigner(
+    ctx: Ctx,
+    userId: string,
+    orgRegister: string,
+    signerRegNo: string,
+    role: string,
+  ): Promise<SignersResult>;
+  /** resendEidOrgSigner нь PENDING зурагч руу sign-push-ийг дахин илгээнэ. */
+  resendEidOrgSigner(
+    ctx: Ctx,
+    userId: string,
+    orgRegister: string,
+    signerRegNo: string,
+  ): Promise<SignersResult>;
+  /** removeEidOrgSigner нь зурагчийг хасна. */
+  removeEidOrgSigner(
+    ctx: Ctx,
+    userId: string,
+    orgRegister: string,
+    signerRegNo: string,
+  ): Promise<Signer[]>;
+
+  // ── eID профайл: иргэний PKI самбар ──
+  //
+  // SSO eID proxy тохируулагдсан бол эдгээр нь SSO-гоор дамжина (энэ RP-д
+  // PKI_READ эрх шаардахгүй); эс бөгөөс шууд eidmongolia руу.
+
+  eidSummary(ctx: Ctx, userId: string): Promise<PersonSummary | null>;
+  eidCertificates(ctx: Ctx, userId: string): Promise<PersonCertificates | null>;
+  eidDevices(ctx: Ctx, userId: string): Promise<PersonDevices | null>;
+  eidActivity(
+    ctx: Ctx,
+    userId: string,
+    limit: number,
+    offset: number,
+  ): Promise<PersonActivity | null>;
 }

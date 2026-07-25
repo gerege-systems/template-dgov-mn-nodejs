@@ -25,6 +25,7 @@ import { registerAssetsRoutes } from './route_assets.js';
 import { registerAuditRoutes } from './route_audit.js';
 import { registerAuthRoutes } from './route_auth.js';
 import { registerCoreRoutes } from './route_core.js';
+import { registerEidProfileRoutes } from './route_eidprofile.js';
 import { registerMetaRoutes } from './route_meta.js';
 import { registerRBACRoutes } from './route_rbac.js';
 import { registerSecurityRoutes } from './route_security.js';
@@ -89,6 +90,7 @@ export function registerRoutes(router: Router, deps: Deps): void {
   registerAuditRoutes(router, deps);
   registerAuthRoutes(router, deps);
   registerCoreRoutes(router, deps);
+  registerEidProfileRoutes(router, deps);
   registerRBACRoutes(router, deps);
   registerSecurityRoutes(router, deps);
   registerSiteRoutes(router, deps);

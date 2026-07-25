@@ -22,6 +22,7 @@ import {
   type EidClient,
   type Identity,
 } from '../../pkg/eid/eid.js';
+import type { Lookuper } from '../../pkg/xyp/xyp.js';
 import type { GoogleClient } from '../../pkg/google/google.js';
 import { newJWTServiceWithRefresh, type JWTService } from '../../pkg/jwt/jwt.js';
 import type { UsersUsecase } from '../users/users_usecase.js';
@@ -149,8 +150,11 @@ function build(
   users: UsersUsecase,
   eid: EidClient = mockEid(),
   google: GoogleClient | null = null,
+  xyp: Lookuper | null = null,
 ) {
-  return newAuthUsecase(users, jwtService, eid, google, redis, { eidDisplayText: 'test.dgov.mn' });
+  return newAuthUsecase(users, jwtService, eid, xyp, google, redis, {
+    eidDisplayText: 'test.dgov.mn',
+  });
 }
 
 beforeEach(() => {

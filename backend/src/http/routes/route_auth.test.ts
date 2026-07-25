@@ -104,7 +104,20 @@ beforeEach(async () => {
     }),
   );
   unlinkMock = vi.fn(() => Promise.resolve());
+  // eID профайлын method-ууд энэ route-ийн тестэд дуудагддаггүй тул stub.
+  const notUsed = () => Promise.reject(new Error('not stubbed'));
   authUC = {
+    eidRepresentations: vi.fn(notUsed),
+    registerEidOrganization: vi.fn(notUsed),
+    unlinkEidOrganization: vi.fn(notUsed),
+    listEidOrgSigners: vi.fn(notUsed),
+    addEidOrgSigner: vi.fn(notUsed),
+    resendEidOrgSigner: vi.fn(notUsed),
+    removeEidOrgSigner: vi.fn(notUsed),
+    eidSummary: vi.fn(notUsed),
+    eidCertificates: vi.fn(notUsed),
+    eidDevices: vi.fn(notUsed),
+    eidActivity: vi.fn(notUsed),
     eidStart: eidStartMock,
     eidStartByNationalId: vi.fn(() =>
       Promise.resolve({

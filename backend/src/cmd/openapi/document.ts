@@ -918,6 +918,204 @@ export function openapiDocument(): OpenApiDocument {
           },
         },
       },
+      '/users/me/eid/organizations': {
+        get: {
+          summary: 'Төлөөлдөг байгууллагууд (eID)',
+          description:
+            'Нэвтэрсэн иргэний eID-д бүртгэлтэй, төлөөлж чадах байгууллагууд. eID-ээр нэвтрээгүй (Google) хэрэглэгчид ХООСОН жагсаалт — алдаа биш.',
+          tags: ['eid-profile'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+          },
+        },
+        post: {
+          summary: 'Байгууллага холбох (eID)',
+          description:
+            'Улсын бүртгэлээс (XYP) байгууллагыг регистрээр хайж, иргэнийг eID дээр төлөөлөл болгон холбоно. ЭРХИЙН шалгалт eidmongolia талд: иргэний РД нь захирал / үүсгэн байгуулагч / хувь эзэмшигчийн жагсаалтад байх ёстой — эс бөгөөс 403.',
+          tags: ['eid-profile'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: { reg_no: { type: 'string', minLength: 4, maxLength: 16 } },
+                  required: ['reg_no'],
+                },
+              },
+            },
+          },
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '400': { $ref: '#/components/responses/Error' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+            '404': { $ref: '#/components/responses/Error' },
+            '429': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/users/me/eid/organizations/{regNo}': {
+        delete: {
+          summary: 'Байгууллага салгах (eID)',
+          description: 'Өөрийн төлөөллийг цуцлана. Зөвхөн ADMIN эрхтэй хүн салгаж чадна.',
+          tags: ['eid-profile'],
+          security: [{ bearerAuth: [] }],
+          parameters: [{ $ref: '#/components/parameters/OrgRegNo' }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '400': { $ref: '#/components/responses/Error' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/users/me/eid/organizations/{regNo}/signers': {
+        get: {
+          summary: 'Байгууллагын гарын үсэг зурагчид (eID)',
+          tags: ['eid-profile'],
+          security: [{ bearerAuth: [] }],
+          parameters: [{ $ref: '#/components/parameters/OrgRegNo' }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+          },
+        },
+        post: {
+          summary: 'Гарын үсэг зурагч нэмэх (eID)',
+          description:
+            'Өөр eID иргэнийг MANAGER эрхтэй зурагч болгож нэмнэ. Тэр хүн рүү sign-push илгээгдэж, ӨӨРӨӨ PIN-ээрээ баталгаажуулах хүртэл төлөөлөл нь PENDING (хүчингүй) — нэг талын нэмэлт болохгүй. Хариунд pending_confirmation ирнэ.',
+          tags: ['eid-profile'],
+          security: [{ bearerAuth: [] }],
+          parameters: [{ $ref: '#/components/parameters/OrgRegNo' }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    signer_reg_no: { type: 'string', minLength: 8, maxLength: 20 },
+                    role: { type: 'string', maxLength: 100 },
+                  },
+                  required: ['signer_reg_no'],
+                },
+              },
+            },
+          },
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '400': { $ref: '#/components/responses/Error' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+            '404': { $ref: '#/components/responses/Error' },
+            '429': { $ref: '#/components/responses/Error' },
+          },
+        },
+        delete: {
+          summary: 'Гарын үсэг зурагч хасах (eID)',
+          tags: ['eid-profile'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { $ref: '#/components/parameters/OrgRegNo' },
+            {
+              name: 'signer',
+              in: 'query',
+              required: true,
+              schema: { type: 'string' },
+              description: 'Хасах зурагчийн РД',
+            },
+          ],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/users/me/eid/organizations/{regNo}/signers/resend': {
+        post: {
+          summary: 'Баталгаажуулах хүсэлт дахин илгээх (eID)',
+          description: 'PENDING зурагч руу eID sign-push баталгаажуулалтыг дахин илгээнэ.',
+          tags: ['eid-profile'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { $ref: '#/components/parameters/OrgRegNo' },
+            {
+              name: 'signer',
+              in: 'query',
+              required: true,
+              schema: { type: 'string' },
+              description: 'Зурагчийн РД',
+            },
+          ],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '400': { $ref: '#/components/responses/Error' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+            '404': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/users/me/eid/summary': {
+        get: {
+          summary: 'eID PKI самбарын нэгдсэн тоо',
+          description:
+            'Гэрчилгээ / auth-sign / төхөөрөмж / байгууллагын нэгдсэн тоолол. RP-д PKI_READ эрх олгогдоогүй бол 403 (UI "эрх хүлээгдэж байна" харуулна). SSO eID proxy тохируулагдсан бол энэ өгөгдөл SSO-гоор дамжина — RP-д PKI_READ шаардахгүй.',
+          tags: ['eid-profile'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/users/me/eid/certificates': {
+        get: {
+          summary: 'eID гэрчилгээний жагсаалт + тоо',
+          tags: ['eid-profile'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/users/me/eid/devices': {
+        get: {
+          summary: 'eID холбоотой төхөөрөмжүүд',
+          tags: ['eid-profile'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/users/me/eid/activity': {
+        get: {
+          summary: 'eID үйлдлийн түүх (RP-scoped)',
+          tags: ['eid-profile'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'limit', in: 'query', schema: { type: 'integer', default: 20 } },
+            { name: 'offset', in: 'query', schema: { type: 'integer', default: 0 } },
+          ],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
       '/me/signature': {
         get: {
           summary: 'Гарын үсгийн зураг авах',

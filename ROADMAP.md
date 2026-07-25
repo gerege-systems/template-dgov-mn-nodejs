@@ -45,7 +45,7 @@ hash-ууд шалгагдсаар байна.
 | Infra | `backend/deploy/Dockerfile`, `docker-compose.yml` | distroless nodejs runtime, node healthcheck binary |
 | CI/CD | `.github/workflows/` | fmt · lint · typecheck · vitest · openapi drift · build · gitleaks → Deploy |
 
-**Тест:** 310 unit тест (apperror · config · jwt · validators · domain/users · migration · users usecase · eID client · auth usecase · auth DTO · route wiring · rbac usecase · audit hash-chain · audit usecase · site/theme usecase · core клиент · security usecase · eID байгууллага/PKI · assets usecase).
+**Тест:** 333 unit тест (apperror · config · jwt · validators · domain/users · migration · users usecase · eID client · auth usecase · auth DTO · route wiring · rbac usecase · audit hash-chain · audit usecase · site/theme usecase · core клиент · security usecase · eID байгууллага/PKI · assets usecase · eID профайл).
 
 ## ✅ Хийгдсэн — домэйн давхарга
 
@@ -58,6 +58,7 @@ hash-ууд шалгагдсаар байна.
 | `core` | usecase (Gerege Core REST клиент: 15с timeout, 4 MiB хязгаар, инерт режим) · handler · 2 route | 10 unit тест. Үндэсний бүртгэлийн PII-д хүрдэг тул `users.manage` эрхээр хамгаалагдсан. `CORE_API_TOKEN` тохируулаагүй бол домэйн **инерт**: 500 биш, тохируулах зааврыг `data.message`-д буцаана. Core-ийн эвдэрсэн/хэтэрхий том хариу `null` болно (апп 500 болохгүй). |
 | `security` | repository interface + postgres адаптер · usecase · response DTO · 2 route | 7 unit тест. `POST /security/events` нэвтэрсэн БҮХ хэрэглэгчид нээлттэй — `user_id`-г сервер JWT-ээс авдаг тул клиент өөрчилж чадахгүй, RLS бодлого нь бас `user_id = app.user_id`-г баталгаажуулна. `GET` нь admin-only (хэрэглэгчид уншуулах бодлого БАЙХГҮЙ). |
 | `assets` | eID client-ийн БАЙГУУЛЛАГА (representations · signers · латин нэр) + PKI (гэрчилгээ · төхөөрөмж · activity · summary) өргөтгөл · org_stamps repository + postgres · usecase · handler · 8 route | 45 unit тест. Гарын үсэг/тамганы ЗУРАГ энд хадгалагддаггүй — зөвхөн Drive URL. Тамга унших нь төлөөлөгч, бичих нь **ADMIN** шаардана; эрхийн эх сурвалж нь УЛСЫН БҮРТГЭЛ (eID-ээр асууна) — template өөрөө шийддэггүй. eID-ээр нэвтрээгүй хэрэглэгч байгууллагын үйлдэл хийхгүй. |
+| `eidprofile` | `pkg/xyp` (улсын бүртгэлийн байгууллагын лавлагаа) · `pkg/ssoeidproxy` (SSO-гоор PKI унших) · auth usecase-ийн 11 шинэ method · response DTO · 11 route | 23 unit тест. eID-ээр нэвтрээгүй хэрэглэгч профайлыг ЭВДЭХГҮЙ (хоосон/null, алдаа биш). Байгууллага холбоход XYP-ийн эрх бүхий этгээдийн жагсаалт **захирал эхэнд** дараалалтай явна (eidmongolia эхний таарсанаар role тодорхойлдог). Зурагч нэмэх нь sign-push баталгаажуулалт хүртэл **PENDING** — нэг талын нэмэлт болохгүй. SSO proxy тохируулагдсан бол PKI зөвхөн proxy-гоор (RP-д PKI_READ шаардахгүй). |
 | `auth` / eID | `pkg/eid` RP client (ACSP_V2 QR/push initiate + long-poll session, X.509 задлалт) · `pkg/google` OAuth · usecase (session mint/rotate, MFA gate, Google link) · request/response DTO · 7 route | 76 unit тест. Токен зөвхөн COMPLETE үед, refresh нэг л удаа (атом GetDel), super admin MFA-гүйгээр session авахгүй. **Route-ийн middleware хүрээг** тусад нь тесттэй (Express-ийн `router.use(subRouter)` нь chi-ийн `Group`-той адилгүй — middleware гоождог). |
 
 ---
@@ -80,7 +81,7 @@ hash-ууд шалгагдсаар байна.
 1. `users` · `auth` (eID · Google · SSO consumer · refresh/logout) · `rbac`
 3. ~~`site`~~ ✅ · ~~`theme`~~ ✅ · ~~`core`~~ ✅ · ~~`security`~~ ✅
 4. `ai` (Gemini pipeline) · ~~`assets`~~ ✅
-5. `org` · `applications` · `integrations` · `gspace`
+5. ~~`eidprofile`~~ ✅ · `org` · `applications` · `integrations` · `gspace`
 6. `gov` · `registry` · `relay` · `gateway`
 7. `oidc` (provider тал) · `sso` · `ssotoken` · `sign` · `provider`
 8. `superadmin` · `superadmin_onboarding`
