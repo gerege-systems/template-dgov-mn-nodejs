@@ -9,8 +9,9 @@
 
 ## Төлөв — 2026-07-26
 
-**Порт ДУУССАН.** Backend 25/25 домэйн, frontend Vite + React SPA, production-д
-[node.template.dgov.mn](https://node.template.dgov.mn) дээр ажиллаж байна.
+**Порт ДУУССАН.** Backend бүх домэйн (25 бүлэг / 28 модуль), frontend Vite +
+React SPA, production-д [node.template.dgov.mn](https://node.template.dgov.mn)
+дээр ажиллаж байна.
 
 | | |
 |---|---|
@@ -109,14 +110,16 @@ hash-ууд шалгагдсаар байна.
 **Дараалал** (хамаарлын дарааллаар):
 
 1. ~~`users`~~ ✅ · ~~`auth`~~ ✅ (eID · Google · SSO consumer · refresh/logout) · ~~`rbac`~~ ✅
-2. ~~`site`~~ ✅ · ~~`theme`~~ ✅ · ~~`core`~~ ✅ · ~~`security`~~ ✅
+2. ~~`site`~~ ✅ · ~~`theme`~~ ✅ · ~~`core`~~ ✅ · ~~`security`~~ ✅ · ~~`audit`~~ ✅
 3. ~~`ai`~~ ✅ (Gemini pipeline) · ~~`assets`~~ ✅
 4. ~~`eidprofile`~~ ✅ · ~~`org`~~ ✅ · ~~`applications`~~ ✅ · ~~`integrations`~~ ✅ · ~~`gspace`~~ ✅
 5. ~~`gov`~~ ✅ · ~~`registry`~~ ✅ · ~~`catalog`~~ ✅ · ~~`relay`~~ ✅ · ~~`gateway`~~ ✅
 6. ~~`oidc`~~ ✅ (provider тал) · ~~`sso`~~ ✅ · ~~`ssotoken`~~ ✅ · ~~`sign`~~ ✅ · ~~`provider`~~ ✅
 7. ~~`superadmin`~~ ✅ · ~~`superadmin_onboarding`~~ ✅ · ~~`admin`~~ ✅
 
-**25/25 домэйн** — 199 route, 165 баримтжуулсан OpenAPI зам (route ⇄ spec зөрүүгүй).
+**Бүгд ✅** — дээрх хүснэгтийн **25 бүлэг** нь 28 домэйн модулийг хамарна (зарим
+бүлэг хос: `site`+`theme`, `registry`+`catalog`, `oidc`+`provider`). Нийт
+**199 route**, **165 баримтжуулсан OpenAPI зам** — route ⇄ spec зөрүүгүй.
 
 Порт дууссан тул лавлагаа болж байсан Go эх код (`.go-reference/`) **устгагдлаа**.
 Эх хувилбарыг [gerege-systems/template-dgov-mn](https://github.com/gerege-systems/template-dgov-mn)-ээс
