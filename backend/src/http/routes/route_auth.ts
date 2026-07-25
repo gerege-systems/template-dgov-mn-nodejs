@@ -17,18 +17,20 @@ import type { Deps } from './index.js';
  * Google холболт (/google, /google/link) болон session-ийн амьдралын мөчлөг
  * (/refresh, /logout).
  *
- * Бүлэг нь гурван дэд бүлэгт хуваагдана:
- *   1. rate-limit-тэй  — нэвтрэлт эхлүүлэх + session lifecycle (чанга, ~5/мин)
- *   2. authMiddleware-тэй — нэвтэрсэн хэрэглэгчийн Google салгах
- *   3. poll-ийн СУЛ limiter — long-poll-ийг 429-дэхгүй (~120/мин)
- *
- * Бүх дэд бүлэг body хязгаар (4 KiB) + serviceRLSContext авна.
+ * ⚠️ MIDDLEWARE-ИЙН ХҮРЭЭ: chi-д `r.Group(...)` нь middleware-ийг ЗӨВХӨН тэр
+ * бүлэгт тодорхойлсон route-уудад хэрэглэдэг. Express-д ийм зүйл БАЙХГҮЙ —
+ * `router.use(subRouter)` нь дэд router-ийн `use()`-г тэр цэгээс хойших БҮХ
+ * хүсэлтэд ажиллуулна. Тиймээс бүлэг тус бүрийн middleware-ийг route ТУС БҮРД
+ * ил дамжуулна. Эс бөгөөс:
+ *   - authMiddleware нь /eid/poll руу "гоожиж" нэвтрэлтийг 401 болгоно;
+ *   - чанга (5/мин) limiter нь /eid/poll-д хүрч, long-poll байнга 429 болно.
  */
 export function registerAuthRoutes(router: Router, deps: Deps): void {
   const handler = newAuthHandler(deps.authUC);
 
   const auth = Router();
 
+  // Бүх auth route-д хамаарах хамгаалалт:
   // Auth payload-ууд жижиг JSON хэсгүүд — 4 KiB-д хязгаарлах нь хэт том
   // payload-ийн дайралтыг хууль ёсны ямар ч хүсэлтэд нөлөөлөхгүйгээр хаадаг.
   auth.use(bodySizeLimitMiddleware(AuthBodyMaxBytes));
@@ -38,32 +40,26 @@ export function registerAuthRoutes(router: Router, deps: Deps): void {
   // user/admin identity нь дараа нь ажиллаж үүнийг дарж бичдэг.
   auth.use(serviceRLSContext());
 
-  // ── 1. Rate limiter-тэй: нэвтрэлт эхлүүлэх + session lifecycle ──
-  // Эдгээр нь ховор дуудагддаг тул чанга хязгаар (IP тус бүрт ~5/мин) тохирно.
-  const limited = Router();
-  limited.use(deps.authRateLimiter.middleware());
-  limited.post('/eid/start', wrap(handler.eidStart));
-  limited.post('/eid/start-id', wrap(handler.eidStartByNationalId));
-  limited.post('/google', wrap(handler.googleLogin));
-  limited.post('/refresh', wrap(handler.refresh));
-  limited.post('/logout', wrap(handler.logout));
-  auth.use(limited);
+  // ── Чанга rate limiter (IP тус бүрт ~5/мин): нэвтрэлт эхлүүлэх + session
+  // lifecycle. Эдгээр нь ховор дуудагддаг тул чанга хязгаар тохирно. ──
+  const strict = deps.authRateLimiter.middleware();
+  auth.post('/eid/start', strict, wrap(handler.eidStart));
+  auth.post('/eid/start-id', strict, wrap(handler.eidStartByNationalId));
+  auth.post('/google', strict, wrap(handler.googleLogin));
+  auth.post('/refresh', strict, wrap(handler.refresh));
+  auth.post('/logout', strict, wrap(handler.logout));
 
-  // ── 2. Нэвтэрсэн хэрэглэгч Google холболтоо САЛГАХ ──
-  const authed = Router();
-  authed.use(deps.authMiddleware);
-  authed.delete('/google/link', wrap(handler.googleUnlink));
-  auth.use(authed);
+  // ── /eid/poll — СУЛ limiter (~120/мин). Frontend нь session-ийг ~2.5с тутамд
+  // long-poll-оор асуудаг тул чанга 5/мин хязгаарт орвол байнга 429 болж
+  // амжилттай COMPLETE ХЭЗЭЭ Ч гарахгүй. Сул хязгаар нь хууль ёсны poll-д
+  // хангалттай зайтай ч нэг IP-гээс хязгааргүй concurrent 25с long-poll
+  // эхлүүлэх slow-DoS-д тааз тавина. authMiddleware ЭНД БАЙХГҮЙ — poll нь
+  // нэвтрэхээс ӨМНӨХ урсгал. ──
+  auth.post('/eid/poll', deps.pollRateLimiter.middleware(), wrap(handler.eidPoll));
 
-  // ── 3. /eid/poll — СУЛ limiter ──
-  // Frontend нь session-ийг ~2.5с тутамд long-poll-оор асуудаг тул /auth-ийн
-  // чанга 5/мин хязгаарт орвол байнга 429 болж амжилттай COMPLETE ХЭЗЭЭ Ч
-  // гарахгүй. Иймд тусдаа сул limiter: хууль ёсны poll-д хангалттай зайтай ч нэг
-  // IP-гээс хязгааргүй concurrent 25с long-poll эхлүүлэх slow-DoS-д тааз тавина.
-  const polling = Router();
-  polling.use(deps.pollRateLimiter.middleware());
-  polling.post('/eid/poll', wrap(handler.eidPoll));
-  auth.use(polling);
+  // ── Нэвтэрсэн хэрэглэгч Google холболтоо САЛГАХ — ЗӨВХӨН энэ route
+  // authMiddleware-тэй. ──
+  auth.delete('/google/link', deps.authMiddleware, wrap(handler.googleUnlink));
 
   router.use('/auth', auth);
 }
