@@ -29,7 +29,9 @@ COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --ignore-scripts
 
-COPY tsconfig.json ./
+# tsconfig.json (editor/lint — тестийг оруулна) БОЛОН tsconfig.build.json
+# (тестийг хасна) хоёуланг хуулна — build нь сүүлийнхийг хэрэглэдэг.
+COPY tsconfig.json tsconfig.build.json ./
 COPY src ./src
 
 RUN npm run build
