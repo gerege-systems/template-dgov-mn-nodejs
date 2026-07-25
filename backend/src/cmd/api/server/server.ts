@@ -15,6 +15,7 @@ import {
 import { newMemoryCache } from '../../../datasources/caches/memory.js';
 import { newRedisCache, type RedisCache } from '../../../datasources/caches/redis.js';
 import { newAuditRepository } from '../../../datasources/repositories/postgres/audit/audit_postgres.js';
+import { newGatewayRepository } from '../../../datasources/repositories/postgres/gateway/gateway_postgres.js';
 import { newOrgRepository } from '../../../datasources/repositories/postgres/org/org_postgres.js';
 import { newOrgStampRepository } from '../../../datasources/repositories/postgres/orgstamp/orgstamp_postgres.js';
 import { newRBACRepository } from '../../../datasources/repositories/postgres/rbac/rbac_postgres.js';
@@ -35,6 +36,7 @@ import {
   UploadBodyMaxBytes,
 } from '../../../http/middlewares/bodysizelimit.js';
 import { clientIPMiddleware } from '../../../http/middlewares/clientip.js';
+import { gatewayRequestLogMiddleware } from '../../../http/middlewares/gateway_log.js';
 import { corsMiddleware } from '../../../http/middlewares/cors.js';
 import {
   metricsMiddleware,
@@ -58,6 +60,7 @@ import { newAuditUsecase } from '../../../usecases/audit/audit_usecase.js';
 import { newAuthUsecase } from '../../../usecases/auth/auth_impl.js';
 import { newAssetsUsecase } from '../../../usecases/assets/assets_usecase.js';
 import { newCoreUsecase } from '../../../usecases/core/core_impl.js';
+import { newGatewayUsecase } from '../../../usecases/gateway/gateway_usecase.js';
 import { newGSpaceUsecase } from '../../../usecases/gspace/gspace_usecase.js';
 import { newOrgUsecase } from '../../../usecases/org/org_usecase.js';
 import { newRBACUsecase } from '../../../usecases/rbac/rbac_impl.js';
@@ -159,6 +162,10 @@ export async function newApp(): Promise<App> {
     AppConfig.REDIS_EXPIRED,
   );
 
+  // API Gateway — upstream service-ийн бүртгэл + бодит хүсэлтийн телеметр.
+  // Глобал middleware нь үүнийг ашигладаг тул app үүсгэхээс ӨМНӨ бэлдэнэ.
+  const gatewayUC = newGatewayUsecase(newGatewayRepository(db));
+
   const app = express();
   // Proxy-гийн X-Forwarded-* header-т Express-ийн өөрийн итгэлийг УНТРААНА —
   // бид клиент IP-г clientIP() дотор TRUSTED_PROXIES-ээр өөрсдөө шийддэг.
@@ -190,6 +197,14 @@ export async function newApp(): Promise<App> {
   );
   app.use(express.json({ limit: DefaultBodyMaxBytes, strict: true }));
   app.use(accessLogMiddleware());
+  // API Gateway-ийн телеметр — ЗӨВХӨН гуравдагч талын RP-ийн зам (/rp/sign,
+  // /api/v1/provider) бичигдэнэ. Хариу бүрэн илгээгдсэний дараа бичдэг тул
+  // хэрэглэгчийн хүлээх хугацаанд нөлөөлөхгүй.
+  app.use(
+    gatewayRequestLogMiddleware((ctx, input) => {
+      gatewayUC.recordRequest(ctx, input);
+    }),
+  );
   app.use(timeoutMiddleware(DefaultRequestTimeoutMs));
 
   // Дэд бүтцийн endpoint-ууд (/api бүлгээс гадуур). /health, /ready нь load
@@ -326,6 +341,7 @@ export async function newApp(): Promise<App> {
     assetsUC,
     orgUC,
     gspaceUC,
+    gatewayUC,
     // SSO eID proxy нь SSO_EID_PROXY_BASE_URL тохируулагдсан үед идэвхжинэ.
     eidProxyEnabled: AppConfig.SSO_EID_PROXY_BASE_URL !== '',
     authMiddleware,

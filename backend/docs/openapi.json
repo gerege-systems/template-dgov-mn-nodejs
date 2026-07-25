@@ -448,6 +448,67 @@
       }
     },
     "requestBodies": {
+      "GatewayService": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 80
+                },
+                "protocol": {
+                  "type": "string",
+                  "enum": [
+                    "http",
+                    "https"
+                  ]
+                },
+                "host": {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                "port": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65535
+                },
+                "path": {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                "retries": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10
+                },
+                "connect_timeout_ms": {
+                  "type": "integer",
+                  "minimum": 100,
+                  "maximum": 600000
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "maxLength": 40
+                  }
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "name",
+                "host"
+              ]
+            }
+          }
+        }
+      },
       "AssetURL": {
         "required": true,
         "description": "Google Drive-д байршуулсан зургийн URL",
@@ -2328,6 +2389,212 @@
             "$ref": "#/components/responses/Error"
           },
           "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/gateway/overview": {
+      "get": {
+        "summary": "API Gateway dashboard (сүүлийн 24 цаг)",
+        "description": "Хүсэлтийн тоо/алдааны хувь/дундаж ба p95 хоцролт, статусын хуваарилалт, хамгийн их хүсэлттэй замууд. Тоологдох утгууд (services/applications/эрх) нь бүх хугацааных; телеметр нь 24 цагийнх.",
+        "tags": [
+          "gateway"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/gateway/logs": {
+      "get": {
+        "summary": "Gateway хүсэлтийн лог",
+        "description": "ЗӨВХӨН гуравдагч талын RP-ийн зам (`/rp/sign`, `/api/v1/provider`) лог-д ордог — платформын өөрийн дотоод API трафик телеметрийг бохирдуулахгүй.",
+        "tags": [
+          "gateway"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "maximum": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/gateway/services": {
+      "get": {
+        "summary": "Upstream service-үүд",
+        "tags": [
+          "gateway"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "summary": "Upstream service үүсгэх",
+        "description": "Дутуу талбарууд хэвийшинэ: протокол http/https биш бол `https`, порт хүрээнээс гадуур бол протоколын өгөгдмөл (80/443), зам хоосон бол `/`, timeout тэг бол 60000мс. Нэрээс OAuth scope (`svc:<нэр>`) автоматаар үүснэ — тэр нь application-д оноогдох эрх болно.",
+        "tags": [
+          "gateway"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/GatewayService"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/gateway/services/{id}": {
+      "put": {
+        "summary": "Upstream service шинэчлэх",
+        "tags": [
+          "gateway"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/GatewayService"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Upstream service устгах",
+        "tags": [
+          "gateway"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
             "$ref": "#/components/responses/Error"
           }
         }
