@@ -124,6 +124,27 @@ export function openapiDocument(): OpenApiDocument {
           },
           required: ['id', 'key', 'name', 'is_system', 'permissions'],
         },
+        AuditEntry: {
+          type: 'object',
+          description:
+            'hash-chained audit бүртгэлийн нэг мөр. chain_hash = SHA-256(prev_hash || canonical-json(entry)).',
+          properties: {
+            id: { type: 'integer' },
+            occurred_at: { type: 'string', format: 'date-time' },
+            actor_user_id: { type: 'string', format: 'uuid' },
+            action: { type: 'string' },
+            category: { type: 'string' },
+            target: { type: 'string' },
+            request_id: { type: 'string' },
+            metadata: { type: 'object', additionalProperties: true },
+            prev_hash: {
+              type: 'string',
+              description: 'Өмнөх мөрийн chain_hash; genesis мөрд байхгүй',
+            },
+            chain_hash: { type: 'string' },
+          },
+          required: ['id', 'occurred_at', 'action', 'chain_hash'],
+        },
         Permission: {
           type: 'object',
           properties: {
@@ -191,6 +212,91 @@ export function openapiDocument(): OpenApiDocument {
                 'application/json': { schema: { $ref: '#/components/schemas/BaseResponse' } },
               },
             },
+          },
+        },
+      },
+      '/audit': {
+        get: {
+          summary: 'Audit бүртгэлийг жагсаах',
+          description:
+            'hash-chained audit бүртгэлийг id БУУРАХААР (сүүлийнх эхэндээ) хуудаслан буцаана. `action` болон `actor` query-гээр шүүнэ. prev_hash/chain_hash-г оруулдаг тул ГАДНЫ аудитор гинжийг сервертэй харилцахгүйгээр өөрөө дахин тооцоолж шалгах боломжтой.',
+          tags: ['audit'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'action', in: 'query', schema: { type: 'string' } },
+            { name: 'actor', in: 'query', schema: { type: 'string', format: 'uuid' } },
+            {
+              name: 'limit',
+              in: 'query',
+              schema: { type: 'integer', default: 50, maximum: 200 },
+            },
+            { name: 'offset', in: 'query', schema: { type: 'integer', default: 0 } },
+          ],
+          responses: {
+            '200': {
+              description: 'Audit бүртгэл',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/BaseResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'array',
+                            items: { $ref: '#/components/schemas/AuditEntry' },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/audit/verify': {
+        get: {
+          summary: 'Audit гинжийн бүрэн бүтэн байдлыг шалгах',
+          description:
+            'Гинжийг genesis-ээс эхлэн ДАХИН ТООЦООЛЖ шалгана. Хоёр төрлийн эвдрэлийг ялгаж барина: (1) prev_hash нь өмнөх мөрийн chain_hash-тай таарахгүй — мөр устсан/оруулсан; (2) дахин тооцоолсон hash нь хадгалагдсантай таарахгүй — агуулга засварласан. Эвдэрсэн бол эвдрэл гарсан ЭХНИЙ мөрийн id-г буцаана.',
+          tags: ['audit'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            '200': {
+              description: 'Гинжийн төлөв',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/BaseResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              ok: { type: 'boolean' },
+                              broken_id: {
+                                type: 'integer',
+                                description: 'ok=false үед эвдэрсэн эхний мөрийн id',
+                              },
+                            },
+                            required: ['ok'],
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
           },
         },
       },

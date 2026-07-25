@@ -26,7 +26,7 @@ import type { Deps } from './index.js';
  *   - чанга (5/мин) limiter нь /eid/poll-д хүрч, long-poll байнга 429 болно.
  */
 export function registerAuthRoutes(router: Router, deps: Deps): void {
-  const handler = newAuthHandler(deps.authUC);
+  const handler = newAuthHandler(deps.authUC, deps.auditUC);
 
   const auth = Router();
 

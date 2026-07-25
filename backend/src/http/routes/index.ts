@@ -11,11 +11,13 @@ import type { Router } from 'express';
 import type { RedisCache } from '../../datasources/caches/redis.js';
 import type { Db } from '../../datasources/drivers/pg.js';
 import type { JWTService } from '../../pkg/jwt/jwt.js';
+import type { AuditUsecase } from '../../usecases/audit/audit_usecase.js';
 import type { AuthUsecase } from '../../usecases/auth/auth_usecase.js';
 import type { RBACUsecase } from '../../usecases/rbac/rbac_usecase.js';
 import type { UsersUsecase } from '../../usecases/users/users_usecase.js';
 import type { RateLimiter } from '../middlewares/ratelimit.js';
 import type { Middleware } from '../types.js';
+import { registerAuditRoutes } from './route_audit.js';
 import { registerAuthRoutes } from './route_auth.js';
 import { registerCoreRoutes } from './route_core.js';
 import { registerRBACRoutes } from './route_rbac.js';
@@ -38,6 +40,11 @@ export interface Deps {
    */
   rbacUC: RBACUsecase;
   /**
+   * auditUC нь hash-chained audit log. Нэвтрэлт/RBAC-ийн handler-ууд түүнд
+   * best-effort бичдэг тул хамаарал нь ил байх ёстой.
+   */
+  auditUC: AuditUsecase;
+  /**
    * eidProxyEnabled нь SSO eID proxy тохируулагдсан эсэх — /users/me хариунд
    * eid_proxy болж, frontend eID хуудсуудыг SSO хэрэглэгчид нээнэ.
    */
@@ -54,6 +61,7 @@ export interface Deps {
  */
 export function registerRoutes(router: Router, deps: Deps): void {
   registerCoreRoutes(router, deps);
+  registerAuditRoutes(router, deps);
   registerAuthRoutes(router, deps);
   registerRBACRoutes(router, deps);
   registerUsersRoutes(router, deps);

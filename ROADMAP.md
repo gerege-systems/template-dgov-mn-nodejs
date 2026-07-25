@@ -45,13 +45,14 @@ hash-ууд шалгагдсаар байна.
 | Infra | `backend/deploy/Dockerfile`, `docker-compose.yml` | distroless nodejs runtime, node healthcheck binary |
 | CI/CD | `.github/workflows/` | fmt · lint · typecheck · vitest · openapi drift · build · gitleaks → Deploy |
 
-**Тест:** 195 unit тест (apperror · config · jwt · validators · domain/users · migration · users usecase · eID client · auth usecase · auth DTO · route wiring · rbac usecase).
+**Тест:** 221 unit тест (apperror · config · jwt · validators · domain/users · migration · users usecase · eID client · auth usecase · auth DTO · route wiring · rbac usecase · audit hash-chain · audit usecase).
 
 ## ✅ Хийгдсэн — домэйн давхарга
 
 | Домэйн | Юу орсон | Тэмдэглэл |
 |---|---|---|
 | `users` | record + mapper · repository interface · postgres адаптер (19 method, бүх SQL 1:1) · usecase (кэш + single-flight) · UserResponse DTO · `GET /users/me` | 26 unit тест. Эрх нэмэгдүүлэхээс хамгаалах бүх дүрэм (super admin оноож/өөрчилж болохгүй; ADMIN эрхийг зөвхөн super admin) тесттэй. |
+| `audit` | `pkg/audit` hash-chain (Go-той **байт-нийцтэй** canonical JSON) · repository interface + postgres адаптер · usecase · response DTO · 2 route. `auth` болон `rbac` handler-ууд best-effort бичдэг. | 41 unit тест. Go хувилбараас гаргасан **5 эталон hash вектор**-оор байт-нийцлийг шалгасан — шилжилтийн үед Go/Node нэг DB хуваалцаж болно. |
 | `rbac` | repository interface + postgres адаптер · usecase (эрхийн resolve + процессийн кэш) · request/response DTO · 6 route | 26 unit тест. admin/superadmin нь каталогийн БҮХ эрхийг авна; ашиглагдаж буй эрх устгагдахгүй; `countUsersWithRole` нь RLS-тэй `users`-д "service" identity дор хүрнэ. `requirePermission`-ийн resolver нь ЭНЭ usecase өөрөө. |
 | `auth` / eID | `pkg/eid` RP client (ACSP_V2 QR/push initiate + long-poll session, X.509 задлалт) · `pkg/google` OAuth · usecase (session mint/rotate, MFA gate, Google link) · request/response DTO · 7 route | 76 unit тест. Токен зөвхөн COMPLETE үед, refresh нэг л удаа (атом GetDel), super admin MFA-гүйгээр session авахгүй. **Route-ийн middleware хүрээг** тусад нь тесттэй (Express-ийн `router.use(subRouter)` нь chi-ийн `Group`-той адилгүй — middleware гоождог). |
 
@@ -73,12 +74,12 @@ hash-ууд шалгагдсаар байна.
 **Дараалал** (хамаарлын дарааллаар):
 
 1. `users` · `auth` (eID · Google · SSO consumer · refresh/logout) · `rbac`
-2. `audit` · `core` · `security` · `site` · `theme`
-3. `ai` (Gemini pipeline) · `assets`
-4. `org` · `applications` · `integrations` · `gspace`
-5. `gov` · `registry` · `relay` · `gateway`
-6. `oidc` (provider тал) · `sso` · `ssotoken` · `sign` · `provider`
-7. `superadmin` · `superadmin_onboarding`
+3. `core` · `security` · `site` · `theme`
+4. `ai` (Gemini pipeline) · `assets`
+5. `org` · `applications` · `integrations` · `gspace`
+6. `gov` · `registry` · `relay` · `gateway`
+7. `oidc` (provider тал) · `sso` · `ssotoken` · `sign` · `provider`
+8. `superadmin` · `superadmin_onboarding`
 
 Эх Go код нь `.go-reference/` дор (gitignored) порт хийх лавлагаа болж байрлана;
 порт дуусмагц устгагдана.

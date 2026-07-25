@@ -20,7 +20,7 @@ import type { Deps } from './index.js';
  * (route_auth.ts дахь тайлбарыг үз).
  */
 export function registerRBACRoutes(router: Router, deps: Deps): void {
-  const handler = newRBACHandler(deps.rbacUC);
+  const handler = newRBACHandler(deps.rbacUC, deps.auditUC);
 
   const rbac = Router();
   // Бүх /rbac/* route нэвтрэлт шаардана.

@@ -14,6 +14,7 @@ import {
 } from '../../../constants/index.js';
 import { newMemoryCache } from '../../../datasources/caches/memory.js';
 import { newRedisCache, type RedisCache } from '../../../datasources/caches/redis.js';
+import { newAuditRepository } from '../../../datasources/repositories/postgres/audit/audit_postgres.js';
 import { newRBACRepository } from '../../../datasources/repositories/postgres/rbac/rbac_postgres.js';
 import { newUserRepository } from '../../../datasources/repositories/postgres/users/users_postgres.js';
 import { setupPostgres, type Db } from '../../../datasources/drivers/pg.js';
@@ -42,6 +43,7 @@ import { registerRoutes, type Deps } from '../../../http/routes/index.js';
 import { newEidClient } from '../../../pkg/eid/eid.js';
 import { newGoogleClient } from '../../../pkg/google/google.js';
 import { newJWTServiceWithRefresh } from '../../../pkg/jwt/jwt.js';
+import { newAuditUsecase } from '../../../usecases/audit/audit_usecase.js';
 import { newAuthUsecase } from '../../../usecases/auth/auth_impl.js';
 import { newRBACUsecase } from '../../../usecases/rbac/rbac_impl.js';
 import { newUsersUsecase } from '../../../usecases/users/users_impl.js';
@@ -222,6 +224,10 @@ export async function newApp(): Promise<App> {
   const rbacRepo = newRBACRepository(db);
   const rbacUC = newRBACUsecase(rbacRepo);
 
+  // Audit — hash-chained, append-only бүртгэл. Бичилт нь өөрийн "service" GUC
+  // дор явдаг тул хүсэлтийн identity-аас үл хамаарна.
+  const auditUC = newAuditUsecase(newAuditRepository(db));
+
   const deps: Deps = {
     db,
     redisCache,
@@ -229,6 +235,7 @@ export async function newApp(): Promise<App> {
     usersUC,
     authUC,
     rbacUC,
+    auditUC,
     // SSO eID proxy нь SSO_EID_PROXY_BASE_URL тохируулагдсан үед идэвхжинэ.
     eidProxyEnabled: AppConfig.SSO_EID_PROXY_BASE_URL !== '',
     authMiddleware,

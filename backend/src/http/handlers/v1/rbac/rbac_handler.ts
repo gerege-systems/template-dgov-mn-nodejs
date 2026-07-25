@@ -5,6 +5,8 @@
 
 import { RoleAdmin, RoleUser } from '../../../../domain/users.js';
 import type { CurrentUser } from '../../../../pkg/ctx/ctx.js';
+import * as logger from '../../../../pkg/logger/logger.js';
+import { recordEventSafely, type AuditUsecase } from '../../../../usecases/audit/audit_usecase.js';
 import type { RBACUsecase } from '../../../../usecases/rbac/rbac_usecase.js';
 import {
   createRoleSchema,
@@ -48,7 +50,11 @@ function roleIdParam(req: Request): number | undefined {
 }
 
 export class RBACHandler {
-  constructor(private readonly usecase: RBACUsecase) {}
+  constructor(
+    private readonly usecase: RBACUsecase,
+    /** auditUC нь эрхийн өөрчлөлтийг бүртгэнэ; null бол алгасна. */
+    private readonly auditUC: AuditUsecase | null = null,
+  ) {}
 
   /**
    * myPermissions нь нэвтэрсэн хэрэглэгчийн ӨӨРИЙН эрхүүдийг буцаана — frontend
@@ -144,7 +150,28 @@ export class RBACHandler {
       return;
     }
     const body = decodeBody(req, setRolePermissionsSchema);
-    await this.usecase.setRolePermissions(req.ctx, id, body.permissions ?? []);
+    const keys = body.permissions ?? [];
+    await this.usecase.setRolePermissions(req.ctx, id, keys);
+
+    // Эрхийн өөрчлөлт нь аюулгүй байдлын хувьд ЧУХАЛ үйлдэл тул бүртгэнэ.
+    // Best-effort — бүртгэл унасан ч үйлдэл аль хэдийн хийгдсэн.
+    await recordEventSafely(
+      this.auditUC,
+      req.ctx,
+      'rbac.role.permissions.set',
+      'rbac',
+      String(id),
+      { permission_count: keys.length },
+      (err) => {
+        logger.errorWithContext(req.ctx, 'audit write failed (non-fatal)', {
+          controller: 'rbac',
+          method: 'setRolePermissions',
+          step: 'audit_record',
+          error: logger.errText(err),
+        });
+      },
+    );
+
     newSuccessResponse(req, res, 200, 'role permissions updated successfully');
   };
 
@@ -165,6 +192,9 @@ export class RBACHandler {
   };
 }
 
-export function newRBACHandler(usecase: RBACUsecase): RBACHandler {
-  return new RBACHandler(usecase);
+export function newRBACHandler(
+  usecase: RBACUsecase,
+  auditUC: AuditUsecase | null = null,
+): RBACHandler {
+  return new RBACHandler(usecase, auditUC);
 }

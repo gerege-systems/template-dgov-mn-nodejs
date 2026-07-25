@@ -5,7 +5,9 @@
 // амьдралын мөчлөг. Хэрэглэгчийн ӨӨРИЙН профайлын endpoint-ууд нь ах дүү модуль
 // handlers/v1/users-д байрладаг.
 
+import { withUser } from '../../../../pkg/ctx/ctx.js';
 import * as logger from '../../../../pkg/logger/logger.js';
+import { recordEventSafely, type AuditUsecase } from '../../../../usecases/audit/audit_usecase.js';
 import type { AuthUsecase } from '../../../../usecases/auth/auth_usecase.js';
 import {
   eidPollSchema,
@@ -37,7 +39,44 @@ const logCtx = (method: string, extra: logger.Fields = {}): logger.Fields => ({
 });
 
 export class AuthHandler {
-  constructor(private readonly usecase: AuthUsecase) {}
+  constructor(
+    private readonly usecase: AuthUsecase,
+    /**
+     * auditUC нь hash-chained бүртгэл. null байж болно (audit тохируулаагүй) —
+     * тэр үед бичилт чимээгүй алгасагдана.
+     */
+    private readonly auditUC: AuditUsecase | null = null,
+  ) {}
+
+  /**
+   * auditLogin нь нэвтрэлтийн амжилтыг бүртгэнэ. BEST-EFFORT: audit бичиж
+   * чадаагүй нь нэвтрэлтийг ХЭЗЭЭ Ч унагахгүй (зөвхөн логдоно) — эс бөгөөс
+   * audit-ийн саатал бүх хэрэглэгчийг нэвтрүүлэхгүй болгоно.
+   *
+   * actor нь ШИНЭЭР нэвтэрсэн хэрэглэгч тул ctx-д тухайн identity-г суулгаж
+   * дамжуулна.
+   */
+  private async auditLogin(
+    ctx: Parameters<AuthUsecase['eidPoll']>[0],
+    userId: string,
+    method: string,
+  ): Promise<void> {
+    await recordEventSafely(
+      this.auditUC,
+      withUser(ctx, userId),
+      `auth.${method}.login`,
+      'auth',
+      userId,
+      { method },
+      (err) => {
+        logger.errorWithContext(
+          ctx,
+          'persisted audit write failed (non-fatal)',
+          logCtx('auditLogin', { step: 'audit_record', error: logger.errText(err) }),
+        );
+      },
+    );
+  }
 
   /**
    * eidStart нь гадаад eID identity provider дээр QR/deep-link нэвтрэлтийг
@@ -83,14 +122,9 @@ export class AuthHandler {
       googleLinkToken: body.google_link_token ?? '',
     });
 
-    // COMPLETE үед л шинэ session үүссэн — нэвтрэлтийн амжилтыг тэмдэглэнэ.
-    // (Hash-chain audit бүртгэл нь `audit` домэйнтэй хамт нэмэгдэнэ.)
+    // COMPLETE үед л шинэ session үүссэн — нэвтрэлтийн амжилтыг бүртгэнэ.
     if (result.state === 'COMPLETE' && result.user) {
-      logger.infoWithContext(
-        req.ctx,
-        'eid login success',
-        logCtx('eidPoll', { step: 'login_success', user_id: result.user.id, auth_method: 'eid' }),
-      );
+      await this.auditLogin(req.ctx, result.user.id, 'eid');
     }
 
     newSuccessResponse(req, res, 200, 'eid session state', eidPollResponse(result));
@@ -107,15 +141,7 @@ export class AuthHandler {
     const result = await this.usecase.googleLogin(req.ctx, body.code, body.redirect_uri);
 
     if (result.linked && result.login) {
-      logger.infoWithContext(
-        req.ctx,
-        'google login success',
-        logCtx('googleLogin', {
-          step: 'login_success',
-          user_id: result.login.user.id,
-          auth_method: 'google',
-        }),
-      );
+      await this.auditLogin(req.ctx, result.login.user.id, 'google');
     }
 
     newSuccessResponse(req, res, 200, 'google login processed', googleLoginResponse(result));
@@ -178,6 +204,9 @@ function optionalBody<T>(
   return parsed.success ? parsed.data : undefined;
 }
 
-export function newAuthHandler(usecase: AuthUsecase): AuthHandler {
-  return new AuthHandler(usecase);
+export function newAuthHandler(
+  usecase: AuthUsecase,
+  auditUC: AuditUsecase | null = null,
+): AuthHandler {
+  return new AuthHandler(usecase, auditUC);
 }
