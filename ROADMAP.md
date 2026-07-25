@@ -45,13 +45,14 @@ hash-ууд шалгагдсаар байна.
 | Infra | `backend/deploy/Dockerfile`, `docker-compose.yml` | distroless nodejs runtime, node healthcheck binary |
 | CI/CD | `.github/workflows/` | fmt · lint · typecheck · vitest · openapi drift · build · gitleaks → Deploy |
 
-**Тест:** 93 unit тест (apperror · config · jwt · validators · domain/users · migration · users usecase).
+**Тест:** 158 unit тест (apperror · config · jwt · validators · domain/users · migration · users usecase · eID client · auth usecase · auth DTO).
 
 ## ✅ Хийгдсэн — домэйн давхарга
 
 | Домэйн | Юу орсон | Тэмдэглэл |
 |---|---|---|
 | `users` | record + mapper · repository interface · postgres адаптер (19 method, бүх SQL 1:1) · usecase (кэш + single-flight) · UserResponse DTO · `GET /users/me` | 26 unit тест. Эрх нэмэгдүүлэхээс хамгаалах бүх дүрэм (super admin оноож/өөрчилж болохгүй; ADMIN эрхийг зөвхөн super admin) тесттэй. |
+| `auth` / eID | `pkg/eid` RP client (ACSP_V2 QR/push initiate + long-poll session, X.509 задлалт) · `pkg/google` OAuth · usecase (session mint/rotate, MFA gate, Google link) · request/response DTO · 7 route | 65 unit тест. Токен зөвхөн COMPLETE үед, refresh нэг л удаа (атом GetDel), super admin MFA-гүйгээр session авахгүй. |
 
 ---
 
@@ -60,6 +61,13 @@ hash-ууд шалгагдсаар байна.
 Домэйн бүр `records → repository (interface + postgres) → usecase → DTO → handler
 → route` дарааллаар порт хийгдэнэ, дараа нь `backend/docs/` дахь EN/MN хос
 шинэчлэгдэнэ.
+
+> **Хамрах хүрээний тэмдэглэл:** Go repo-д `register` / `login` / OTP /
+> `forgot-password` / `reset-password` файлууд байгаа ч route-д ХОЛБОГДООГҮЙ
+> (үхмэл код) — "Login with eID" нь цорын ганц интерактив нэвтрэх арга. Тэднийг
+> порт хийгээгүй. Мөн `auth` usecase-ийн байгууллагын төлөөлөл (representations /
+> signers) болон иргэний PKI самбарын method-ууд нь `route_org.go` /
+> `route_eidprofile.go`-д холбогддог тул тэр домэйнуудтай хамт нэмэгдэнэ.
 
 **Дараалал** (хамаарлын дарааллаар):
 

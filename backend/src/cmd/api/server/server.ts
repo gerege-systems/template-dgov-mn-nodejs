@@ -21,6 +21,7 @@ import { accessLogMiddleware } from '../../../http/middlewares/access_log.js';
 import { newAuthMiddleware } from '../../../http/middlewares/auth.js';
 import {
   bodySizeLimitMiddleware,
+  DefaultBodyMaxBytes,
   UploadBodyMaxBytes,
 } from '../../../http/middlewares/bodysizelimit.js';
 import { clientIPMiddleware } from '../../../http/middlewares/clientip.js';
@@ -37,7 +38,10 @@ import { requestIDMiddleware } from '../../../http/middlewares/requestid.js';
 import { securityHeadersMiddleware } from '../../../http/middlewares/security.js';
 import { DefaultRequestTimeoutMs, timeoutMiddleware } from '../../../http/middlewares/timeout.js';
 import { registerRoutes, type Deps } from '../../../http/routes/index.js';
+import { newEidClient } from '../../../pkg/eid/eid.js';
+import { newGoogleClient } from '../../../pkg/google/google.js';
 import { newJWTServiceWithRefresh } from '../../../pkg/jwt/jwt.js';
+import { newAuthUsecase } from '../../../usecases/auth/auth_impl.js';
 import { newUsersUsecase } from '../../../usecases/users/users_impl.js';
 import * as logger from '../../../pkg/logger/logger.js';
 import { setupTracing, type Shutdown } from '../../../pkg/observability/tracing.js';
@@ -152,6 +156,10 @@ export async function newApp(): Promise<App> {
   // route-ууд үүнийг шаарддаг. Ердийн JSON route-уудыг express.json-ий 1 MiB
   // cap + auth-ийн 4 KiB route-cap хамгаална.
   app.use(bodySizeLimitMiddleware(UploadBodyMaxBytes));
+  // JSON body parser — Go-ийн DecodeBody-тай ижил 1 MiB гүний cap. Route-түвшний
+  // чанга хязгаарууд (auth = 4 KiB) bodySizeLimitMiddleware-ээр давхар барина.
+  // `strict` нь top-level объект/массивыг Л хүлээн авна.
+  app.use(express.json({ limit: DefaultBodyMaxBytes, strict: true }));
   app.use(accessLogMiddleware());
   app.use(timeoutMiddleware(DefaultRequestTimeoutMs));
 
@@ -194,11 +202,26 @@ export async function newApp(): Promise<App> {
     bcryptCost: AppConfig.BCRYPT_COST,
   });
 
+  // eID Mongolia RP client — "Login with eID" нь цорын ганц интерактив нэвтрэх арга.
+  const eidClient = newEidClient(
+    AppConfig.EID_BASE_URL,
+    AppConfig.EID_RP_UUID,
+    AppConfig.EID_RP_NAME,
+    AppConfig.EID_RP_SECRET,
+    AppConfig.EID_CERT_LEVEL,
+  );
+  // Google OAuth — креденшл тохируулаагүй бол feature fail-closed (configured()=false).
+  const googleClient = newGoogleClient(AppConfig.GOOGLE_CLIENT_ID, AppConfig.GOOGLE_CLIENT_SECRET);
+  const authUC = newAuthUsecase(usersUC, jwtService, eidClient, googleClient, redisCache, {
+    eidDisplayText: AppConfig.EID_DISPLAY_TEXT,
+  });
+
   const deps: Deps = {
     db,
     redisCache,
     jwtService,
     usersUC,
+    authUC,
     // SSO eID proxy нь SSO_EID_PROXY_BASE_URL тохируулагдсан үед идэвхжинэ.
     eidProxyEnabled: AppConfig.SSO_EID_PROXY_BASE_URL !== '',
     authMiddleware,
