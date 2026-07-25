@@ -15,6 +15,7 @@ import type { AuditUsecase } from '../../usecases/audit/audit_usecase.js';
 import type { AssetsUsecase } from '../../usecases/assets/assets_usecase.js';
 import type { AuthUsecase } from '../../usecases/auth/auth_usecase.js';
 import type { CoreUsecase } from '../../usecases/core/core_usecase.js';
+import type { OrgUsecase } from '../../usecases/org/org_usecase.js';
 import type { RBACUsecase } from '../../usecases/rbac/rbac_usecase.js';
 import type { SecurityUsecase } from '../../usecases/security/security_usecase.js';
 import type { SiteUsecase, ThemeUsecase } from '../../usecases/site/site_usecase.js';
@@ -27,6 +28,7 @@ import { registerAuthRoutes } from './route_auth.js';
 import { registerCoreRoutes } from './route_core.js';
 import { registerEidProfileRoutes } from './route_eidprofile.js';
 import { registerMetaRoutes } from './route_meta.js';
+import { registerOrgRoutes } from './route_org.js';
 import { registerRBACRoutes } from './route_rbac.js';
 import { registerSecurityRoutes } from './route_security.js';
 import { registerSiteRoutes } from './route_site.js';
@@ -70,6 +72,11 @@ export interface Deps {
    */
   assetsUC: AssetsUsecase;
   /**
+   * orgUC нь байгууллага + гишүүнчлэл. Эрх олголт (owner/admin) нь usecase
+   * давхаргад тул route-д нэмэлт gate байхгүй.
+   */
+  orgUC: OrgUsecase;
+  /**
    * eidProxyEnabled нь SSO eID proxy тохируулагдсан эсэх — /users/me хариунд
    * eid_proxy болж, frontend eID хуудсуудыг SSO хэрэглэгчид нээнэ.
    */
@@ -91,6 +98,7 @@ export function registerRoutes(router: Router, deps: Deps): void {
   registerAuthRoutes(router, deps);
   registerCoreRoutes(router, deps);
   registerEidProfileRoutes(router, deps);
+  registerOrgRoutes(router, deps);
   registerRBACRoutes(router, deps);
   registerSecurityRoutes(router, deps);
   registerSiteRoutes(router, deps);

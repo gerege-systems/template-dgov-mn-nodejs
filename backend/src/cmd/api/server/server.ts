@@ -15,6 +15,7 @@ import {
 import { newMemoryCache } from '../../../datasources/caches/memory.js';
 import { newRedisCache, type RedisCache } from '../../../datasources/caches/redis.js';
 import { newAuditRepository } from '../../../datasources/repositories/postgres/audit/audit_postgres.js';
+import { newOrgRepository } from '../../../datasources/repositories/postgres/org/org_postgres.js';
 import { newOrgStampRepository } from '../../../datasources/repositories/postgres/orgstamp/orgstamp_postgres.js';
 import { newRBACRepository } from '../../../datasources/repositories/postgres/rbac/rbac_postgres.js';
 import { newSecurityEventRepository } from '../../../datasources/repositories/postgres/security/security_postgres.js';
@@ -55,6 +56,7 @@ import { newAuditUsecase } from '../../../usecases/audit/audit_usecase.js';
 import { newAuthUsecase } from '../../../usecases/auth/auth_impl.js';
 import { newAssetsUsecase } from '../../../usecases/assets/assets_usecase.js';
 import { newCoreUsecase } from '../../../usecases/core/core_impl.js';
+import { newOrgUsecase } from '../../../usecases/org/org_usecase.js';
 import { newRBACUsecase } from '../../../usecases/rbac/rbac_impl.js';
 import { newSecurityUsecase } from '../../../usecases/security/security_usecase.js';
 import { newSiteUsecase, newThemeUsecase } from '../../../usecases/site/site_usecase.js';
@@ -275,6 +277,10 @@ export async function newApp(): Promise<App> {
   // Security event — RASP-style ингест (хэрэглэгчийн RLS дор) + admin жагсаалт.
   const securityUC = newSecurityUsecase(newSecurityEventRepository(db));
 
+  // Байгууллага + гишүүнчлэл. Эрх олголт usecase давхаргад; RLS зөвхөн
+  // мөрийн харагдах байдлыг хариуцна.
+  const orgUC = newOrgUsecase(newOrgRepository(db));
+
   // Гарын үсэг / байгууллагын тамга — байгууллагын эрхийг eID-ээр шалгана.
   const assetsUC = newAssetsUsecase(usersUC, userRepo, newOrgStampRepository(db), eidClient);
 
@@ -291,6 +297,7 @@ export async function newApp(): Promise<App> {
     coreUC,
     securityUC,
     assetsUC,
+    orgUC,
     // SSO eID proxy нь SSO_EID_PROXY_BASE_URL тохируулагдсан үед идэвхжинэ.
     eidProxyEnabled: AppConfig.SSO_EID_PROXY_BASE_URL !== '',
     authMiddleware,
