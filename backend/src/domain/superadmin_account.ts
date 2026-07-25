@@ -24,3 +24,25 @@ export interface SuperadminAccount {
   createdAt: Date;
   updatedAt: Date | null;
 }
+
+/**
+ * SuperadminInvite нь superadmin болох эрхтэй и-мэйлийн урилга
+ * (superadmin_invites) юм — onboarding нь урилгагүй и-мэйлээр эхэлж чадахгүй
+ * (allow-list). acceptedAt тэмдэглэгдсэн урилга дахин хэрэглэгдэхгүй.
+ */
+export interface SuperadminInvite {
+  email: string;
+  invitedBy: string;
+  createdAt: Date;
+  acceptedAt: Date | null;
+}
+
+/** inviteAccepted нь урилгыг аль хэдийн ашигласан эсэхийг мэдээлнэ. */
+export const inviteAccepted = (i: SuperadminInvite): boolean => i.acceptedAt !== null;
+
+/**
+ * normalizeInviteEmail нь урилгын и-мэйлийг каноник хэлбэрт (жижиг үсэг,
+ * зайгүй) буулгана — superadmin_invites.email нь primary key тул хадгалах ба
+ * хайх талдаа ИЖИЛ нормчлолыг хэрэглэнэ.
+ */
+export const normalizeInviteEmail = (s: string): string => s.trim().toLowerCase();

@@ -29,6 +29,7 @@ import { newRegistryRepository } from '../../../datasources/repositories/postgre
 import { newRelayRepository } from '../../../datasources/repositories/postgres/relay/relay_postgres.js';
 import { newSSOTokenRepository } from '../../../datasources/repositories/postgres/ssotoken/ssotoken_postgres.js';
 import { newSSOUserRepository } from '../../../datasources/repositories/postgres/ssouser/ssouser_postgres.js';
+import { newSuperadminInviteRepository } from '../../../datasources/repositories/postgres/superadmininvite/superadmininvite_postgres.js';
 import { newUserIntegrationsRepository } from '../../../datasources/repositories/postgres/userintegrations/userintegrations_postgres.js';
 import { newOrgStampRepository } from '../../../datasources/repositories/postgres/orgstamp/orgstamp_postgres.js';
 import { newRBACRepository } from '../../../datasources/repositories/postgres/rbac/rbac_postgres.js';
@@ -98,6 +99,7 @@ import type { RelayUsecase } from '../../../usecases/relay/relay_usecase.js';
 import { newSecurityUsecase } from '../../../usecases/security/security_usecase.js';
 import { newSignUsecase } from '../../../usecases/sign/sign_usecase.js';
 import { newSiteUsecase, newThemeUsecase } from '../../../usecases/site/site_usecase.js';
+import { newSuperadminUsecase } from '../../../usecases/superadmin/superadmin_usecase.js';
 import { newUsersUsecase } from '../../../usecases/users/users_impl.js';
 import { background } from '../../../pkg/ctx/ctx.js';
 import type { Ctx } from '../../../pkg/ctx/ctx.js';
@@ -411,6 +413,10 @@ export async function newApp(): Promise<App> {
       : newSSOEidProxy(AppConfig.SSO_EID_PROXY_BASE_URL);
   // SSO нэвтрэлтийн урсгал. Токен хадгалагч нь eID proxy идэвхтэй үед л
   // залгагдана; хандалтын горим уншигч нь private платформын хаалт.
+  // Платформын хандалтын горим (public|private) — sso болон superadmin
+  // ХОЁУЛАА нэг эх сурвалжийг уншина.
+  const platformSettingsRepo = newPlatformSettingsRepository(db);
+
   const ssoUC = newSSOUsecase(
     ssoOidc,
     newSSOUserRepository(db),
@@ -418,7 +424,7 @@ export async function newApp(): Promise<App> {
     redisCache,
     AppConfig.SSO_NATIVE_CLIENT_ID,
     ssoEidProxy === null ? null : ssoTokenUC,
-    newPlatformSettingsRepository(db),
+    platformSettingsRepo,
   );
 
   const authUC = newAuthUsecase(
@@ -442,6 +448,15 @@ export async function newApp(): Promise<App> {
   // Audit — hash-chained, append-only бүртгэл. Бичилт нь өөрийн "service" GUC
   // дор явдаг тул хүсэлтийн identity-аас үл хамаарна.
   const auditUC = newAuditUsecase(newAuditRepository(db));
+
+  // Super admin — админ удирдлага, урилгын allow-list, хандалтын горим.
+  // Урилга нь super admin эрхийг ШУУД олгодоггүй (onboarding шидтэн шаардлагатай).
+  const superadminUC = newSuperadminUsecase(
+    usersUC,
+    auditUC,
+    newSuperadminInviteRepository(db),
+    platformSettingsRepo,
+  );
 
   // Site харагдац + landing theme — нийтийн config (RLS-д хамаарахгүй). Хоёулаа
   // богино TTL кэштэй: нэвтрээгүй зочны landing тэднийг хүсэлт бүрд уншдаг.
@@ -579,6 +594,7 @@ export async function newApp(): Promise<App> {
     registryUC,
     providerUC,
     signUC,
+    superadminUC,
     relayUC,
     govUC,
     assetsUC,

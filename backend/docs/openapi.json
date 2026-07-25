@@ -6847,6 +6847,481 @@
         }
       }
     },
+    "/superadmin/admins": {
+      "get": {
+        "summary": "Админуудыг жагсаах",
+        "description": "Админ түвшний бүх бүртгэл (super admin + admin). Зөвхөн super admin — энгийн admin ч ХҮРЭХГҮЙ.",
+        "tags": [
+          "superadmin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "summary": "Шинэ админ үүсгэх",
+        "description": "Шинэ, ИДЭВХТЭЙ admin бүртгэл. Энэ давхарга super admin зэрэглэлийг ХЭЗЭЭ Ч үүсгэдэггүй (bootstrap/onboarding-оор л).",
+        "tags": [
+          "superadmin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 50
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 128
+                  },
+                  "first_name": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "last_name": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "first_name_en": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "last_name_en": {
+                    "type": "string",
+                    "maxLength": 100
+                  }
+                },
+                "required": [
+                  "username",
+                  "email",
+                  "password"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/superadmin/admins/by-register": {
+      "get": {
+        "summary": "Регистрээр хэрэглэгч хайх (preview)",
+        "description": "Эрх ОЛГОХГҮЙ — зөвхөн нэр/эрхийг харуулна. Тухайн регистрээр платформд хэрэглэгч байхгүй бол **404** (шинэ хэрэглэгч үүсгэхгүй: тэр хүн эхлээд eID-ээр нэвтэрсэн байх ёстой).",
+        "tags": [
+          "superadmin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "register",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "summary": "Регистрээр админ нэмэх",
+        "description": "БАЙГАА хэрэглэгчийг admin болгоно; үндэсний бүртгэл рүү ХАНДАХГҮЙ. Аль хэдийн админ бол 409.",
+        "tags": [
+          "superadmin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "register": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 20
+                  }
+                },
+                "required": [
+                  "register"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/superadmin/admins/{id}/grant": {
+      "put": {
+        "summary": "Хэрэглэгчид админ эрх олгох",
+        "description": "ЗӨВХӨН admin зэрэглэл олгоно. Аль хэдийн админ (admin эсвэл super admin) бол 409.",
+        "tags": [
+          "superadmin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/superadmin/admins/{id}": {
+      "delete": {
+        "summary": "Админ эрхийг хасах",
+        "description": "Lockout хаалт: super admin ӨӨРИЙГӨӨ хасаж БОЛОХГҮЙ (403), super admin-г API-аар хасаж БОЛОХГҮЙ (403). Админ биш хэрэглэгчийг \"хасах\" нь 400.",
+        "tags": [
+          "superadmin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/superadmin/invites": {
+      "get": {
+        "summary": "Super admin урилгуудыг жагсаах",
+        "tags": [
+          "superadmin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "summary": "Super admin урилга үүсгэх",
+        "description": "⚠️ Урилга нь super admin эрхийг **ШУУД ОЛГОДОГГҮЙ** — зөвхөн onboarding шидтэнг (Google + eID + и-мэйл OTP + TOTP) эхлүүлэх хаалгыг нээнэ. И-мэйл нормчлогдоно (жижиг үсэг); давхардвал 409.",
+        "tags": [
+          "superadmin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "email"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/superadmin/invites/{email}": {
+      "delete": {
+        "summary": "Урилгыг цуцлах",
+        "tags": [
+          "superadmin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "email",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/superadmin/access-mode": {
+      "get": {
+        "summary": "Платформын хандалтын горим",
+        "tags": [
+          "superadmin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "put": {
+        "summary": "Хандалтын горим тохируулах",
+        "description": "`public`: хэн ч Government SSO-оор нэвтэрнэ; `private`: зөвхөн админаас урьдчилан бүртгэсэн хэрэглэгч. Горим уншигдахгүй бол SSO нэвтрэлт ЗОГСОНО (fail-open биш).",
+        "tags": [
+          "superadmin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "public",
+                      "private"
+                    ]
+                  }
+                },
+                "required": [
+                  "mode"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/sign/init": {
       "post": {
         "summary": "PDF гарын үсэг эхлүүлэх (eID PIN2)",

@@ -30,6 +30,7 @@ import type { SecurityUsecase } from '../../usecases/security/security_usecase.j
 import type { SignUsecase } from '../../usecases/sign/sign_usecase.js';
 import type { SSOUsecase } from '../../usecases/sso/sso_usecase.js';
 import type { SiteUsecase, ThemeUsecase } from '../../usecases/site/site_usecase.js';
+import type { SuperadminUsecase } from '../../usecases/superadmin/superadmin_usecase.js';
 import type { UsersUsecase } from '../../usecases/users/users_usecase.js';
 import type { RateLimiter } from '../middlewares/ratelimit.js';
 import type { Middleware } from '../types.js';
@@ -54,6 +55,7 @@ import { registerSecurityRoutes } from './route_security.js';
 import { registerSignRoutes } from './route_sign.js';
 import { registerSiteRoutes } from './route_site.js';
 import { registerSSORoutes } from './route_sso.js';
+import { registerSuperadminRoutes } from './route_superadmin.js';
 import { registerUsersRoutes } from './route_users.js';
 
 /** Deps нь route бүртгэлд шаардлагатай бүх хамаарлын багц. */
@@ -110,6 +112,11 @@ export interface Deps {
    * reminder/overdue/escalate sweep).
    */
   relayUC: RelayUsecase;
+  /**
+   * superadminUC нь super admin-ий админ удирдлага, урилга (allow-list) болон
+   * платформын хандалтын горим.
+   */
+  superadminUC: SuperadminUsecase;
   /**
    * signUC нь PDF гарын үсэг (PAdES) — eID PIN2-оор баталгаажиж, eidmongolia-ийн
    * stamp эсвэл серверийн Document-Signer-ээр лацлагдана.
@@ -175,5 +182,6 @@ export function registerRoutes(router: Router, deps: Deps): void {
   registerSignRoutes(router, deps);
   registerSiteRoutes(router, deps);
   registerSSORoutes(router, deps);
+  registerSuperadminRoutes(router, deps);
   registerUsersRoutes(router, deps);
 }
