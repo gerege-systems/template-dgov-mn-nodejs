@@ -21,6 +21,13 @@ export const DefaultBodyMaxBytes = 1 << 20;
 export const UploadBodyMaxBytes = 26 << 20; // 25 MB + overhead (sign PDF)
 
 /**
+ * GSpaceUploadBodyMaxBytes нь /gspace/upload-ийн JSON body-ийн дээд хэмжээ.
+ * Файл base64-ээр дамждаг тул 2 MB квотод base64 (≈4/3) + JSON overhead нэмээд
+ * 4 MiB тавина — эс бөгөөс глобал 1 MiB cap файлыг ~750 KB дээр таслана.
+ */
+export const GSpaceUploadBodyMaxBytes = 4 << 20;
+
+/**
  * AuthBodyMaxBytes нь register / login / refresh / logout payload-уудыг хамардаг.
  * Эдгээрийн аль нь ч хэдэн зуун байтаас илүү JSON авч явдаггүй; 4 KiB-д
  * хязгаарлах нь нэрээ нууцалсан урсгал хүлээн авдаг цорын ганц route-уудын эсрэг

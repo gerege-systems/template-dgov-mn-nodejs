@@ -2333,6 +2333,171 @@
         }
       }
     },
+    "/gspace": {
+      "get": {
+        "summary": "Gerege Space товч (файлууд + квот)",
+        "description": "Хэрэглэгчийн өөрийн SFTP хадгалалт. Хэрэглэгчийн ID нь ЗӨВХӨН JWT-ээс гардаг тул өөр хүний хавтас руу хандах боломжгүй; файлын нэр нь замын сегмент болж ариутгагдана (path traversal хаалттай). Тохируулаагүй бол 500 (тодорхой мессежтэй).",
+        "tags": [
+          "gspace"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Gerege Space-с файл устгах",
+        "tags": [
+          "gspace"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/gspace/upload": {
+      "post": {
+        "summary": "Gerege Space-д файл оруулах",
+        "description": "Файл base64-ээр JSON body-д ирнэ (энэ зам 4 MiB body хязгаартай — глобал 1 MiB биш). Квотыг сервер шалгана: ижил нэртэй файл байвал ОРЛУУЛАГДАХ тул түүний хэмжээ квотоос хасагдана. Квот хэтэрвэл 400.",
+        "tags": [
+          "gspace"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "data": {
+                    "type": "string",
+                    "description": "base64"
+                  }
+                },
+                "required": [
+                  "name",
+                  "data"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/gspace/download": {
+      "get": {
+        "summary": "Gerege Space-с файл татах",
+        "description": "Хариу нь `application/octet-stream` + `Content-Disposition: attachment` + `nosniff` — байт нь ТАТАГДАНА, HTML болж рендерлэгдэхгүй. Олдоогүй бүх шалтгаан 404 (өөр хэрэглэгчийн файлын оршихуйг илчлэхгүй).",
+        "tags": [
+          "gspace"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Файлын агуулга",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/me/signature": {
       "get": {
         "summary": "Гарын үсгийн зураг авах",

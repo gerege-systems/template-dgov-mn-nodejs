@@ -15,6 +15,7 @@ import type { AuditUsecase } from '../../usecases/audit/audit_usecase.js';
 import type { AssetsUsecase } from '../../usecases/assets/assets_usecase.js';
 import type { AuthUsecase } from '../../usecases/auth/auth_usecase.js';
 import type { CoreUsecase } from '../../usecases/core/core_usecase.js';
+import type { GSpaceUsecase } from '../../usecases/gspace/gspace_usecase.js';
 import type { OrgUsecase } from '../../usecases/org/org_usecase.js';
 import type { RBACUsecase } from '../../usecases/rbac/rbac_usecase.js';
 import type { SecurityUsecase } from '../../usecases/security/security_usecase.js';
@@ -28,6 +29,7 @@ import { registerAuthRoutes } from './route_auth.js';
 import { registerCoreRoutes } from './route_core.js';
 import { registerEidProfileRoutes } from './route_eidprofile.js';
 import { registerMetaRoutes } from './route_meta.js';
+import { registerGSpaceRoutes } from './route_gspace.js';
 import { registerOrgRoutes } from './route_org.js';
 import { registerRBACRoutes } from './route_rbac.js';
 import { registerSecurityRoutes } from './route_security.js';
@@ -76,6 +78,8 @@ export interface Deps {
    * давхаргад тул route-д нэмэлт gate байхгүй.
    */
   orgUC: OrgUsecase;
+  /** gspaceUC нь хэрэглэгчийн өөрийн файлын SFTP хадгалалт (квоттой). */
+  gspaceUC: GSpaceUsecase;
   /**
    * eidProxyEnabled нь SSO eID proxy тохируулагдсан эсэх — /users/me хариунд
    * eid_proxy болж, frontend eID хуудсуудыг SSO хэрэглэгчид нээнэ.
@@ -98,6 +102,7 @@ export function registerRoutes(router: Router, deps: Deps): void {
   registerAuthRoutes(router, deps);
   registerCoreRoutes(router, deps);
   registerEidProfileRoutes(router, deps);
+  registerGSpaceRoutes(router, deps);
   registerOrgRoutes(router, deps);
   registerRBACRoutes(router, deps);
   registerSecurityRoutes(router, deps);

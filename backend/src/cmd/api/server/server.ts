@@ -31,6 +31,7 @@ import { newAuthMiddleware } from '../../../http/middlewares/auth.js';
 import {
   bodySizeLimitMiddleware,
   DefaultBodyMaxBytes,
+  GSpaceUploadBodyMaxBytes,
   UploadBodyMaxBytes,
 } from '../../../http/middlewares/bodysizelimit.js';
 import { clientIPMiddleware } from '../../../http/middlewares/clientip.js';
@@ -49,6 +50,7 @@ import { DefaultRequestTimeoutMs, timeoutMiddleware } from '../../../http/middle
 import { registerRoutes, type Deps } from '../../../http/routes/index.js';
 import { newEidClient } from '../../../pkg/eid/eid.js';
 import { newGoogleClient } from '../../../pkg/google/google.js';
+import { newGSpaceClient } from '../../../pkg/gspace/gspace.js';
 import { newJWTServiceWithRefresh } from '../../../pkg/jwt/jwt.js';
 import { newSSOEidProxy } from '../../../pkg/ssoeidproxy/ssoeidproxy.js';
 import { newXypClient } from '../../../pkg/xyp/xyp.js';
@@ -56,6 +58,7 @@ import { newAuditUsecase } from '../../../usecases/audit/audit_usecase.js';
 import { newAuthUsecase } from '../../../usecases/auth/auth_impl.js';
 import { newAssetsUsecase } from '../../../usecases/assets/assets_usecase.js';
 import { newCoreUsecase } from '../../../usecases/core/core_impl.js';
+import { newGSpaceUsecase } from '../../../usecases/gspace/gspace_usecase.js';
 import { newOrgUsecase } from '../../../usecases/org/org_usecase.js';
 import { newRBACUsecase } from '../../../usecases/rbac/rbac_impl.js';
 import { newSecurityUsecase } from '../../../usecases/security/security_usecase.js';
@@ -177,6 +180,14 @@ export async function newApp(): Promise<App> {
   // JSON body parser — Go-ийн DecodeBody-тай ижил 1 MiB гүний cap. Route-түвшний
   // чанга хязгаарууд (auth = 4 KiB) bodySizeLimitMiddleware-ээр давхар барина.
   // `strict` нь top-level объект/массивыг Л хүлээн авна.
+  // ⚠️ Дараалал чухал: /gspace/upload нь файлыг base64-ээр JSON-д зөөдөг тул
+  // ердийн 1 MiB-д багтахгүй. express.json нь аль хэдийн задлагдсан body-г
+  // алгасдаг учир энэ ТУСГАЙ parser нь глобалаас ӨМНӨ сууж, зөвхөн тэр замд
+  // өндөр хязгаар өгнө (глобал hard ceiling нь дээр хэвээр).
+  app.use(
+    `${EndpointV1}/gspace/upload`,
+    express.json({ limit: GSpaceUploadBodyMaxBytes, strict: true }),
+  );
   app.use(express.json({ limit: DefaultBodyMaxBytes, strict: true }));
   app.use(accessLogMiddleware());
   app.use(timeoutMiddleware(DefaultRequestTimeoutMs));
@@ -277,6 +288,22 @@ export async function newApp(): Promise<App> {
   // Security event — RASP-style ингест (хэрэглэгчийн RLS дор) + admin жагсаалт.
   const securityUC = newSecurityUsecase(newSecurityEventRepository(db));
 
+  // Gerege Space — хэрэглэгчийн өөрийн файлын SFTP хадгалалт. Креденшлгүй бол
+  // домэйн инерт (endpoint бүр "тохируулаагүй" гэсэн алдаа өгнө), boot зогсохгүй.
+  const gspaceUC = newGSpaceUsecase(
+    newGSpaceClient({
+      host: AppConfig.GSPACE_HOST,
+      port: AppConfig.GSPACE_PORT,
+      user: AppConfig.GSPACE_USER,
+      password: AppConfig.GSPACE_PASSWORD,
+      basePath: AppConfig.GSPACE_BASE_PATH,
+      hostKey: AppConfig.GSPACE_HOST_KEY,
+      // Production-д host key ЗААВАЛ шаардлагатай (MITM-аас хамгаална).
+      allowInsecureHostKey: AppConfig.ENVIRONMENT !== 'production',
+    }),
+    AppConfig.GSPACE_QUOTA_BYTES,
+  );
+
   // Байгууллага + гишүүнчлэл. Эрх олголт usecase давхаргад; RLS зөвхөн
   // мөрийн харагдах байдлыг хариуцна.
   const orgUC = newOrgUsecase(newOrgRepository(db));
@@ -298,6 +325,7 @@ export async function newApp(): Promise<App> {
     securityUC,
     assetsUC,
     orgUC,
+    gspaceUC,
     // SSO eID proxy нь SSO_EID_PROXY_BASE_URL тохируулагдсан үед идэвхжинэ.
     eidProxyEnabled: AppConfig.SSO_EID_PROXY_BASE_URL !== '',
     authMiddleware,
