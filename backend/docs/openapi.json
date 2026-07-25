@@ -470,6 +470,121 @@
       }
     },
     "requestBodies": {
+      "RegistryService": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "зөвхөн үүсгэхэд; A-Z0-9_-"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 300
+                },
+                "name_en": {
+                  "type": "string",
+                  "maxLength": 300
+                },
+                "description": {
+                  "type": "string",
+                  "maxLength": 4000
+                },
+                "authority": {
+                  "type": "string",
+                  "maxLength": 300
+                },
+                "legal_basis": {
+                  "type": "string",
+                  "maxLength": 4000
+                },
+                "channels": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "office",
+                      "e-mongolia",
+                      "mobile",
+                      "phone",
+                      "post"
+                    ]
+                  }
+                },
+                "fee": {
+                  "type": "integer"
+                },
+                "max_days": {
+                  "type": "integer",
+                  "maximum": 3650
+                },
+                "steps_count": {
+                  "type": "integer",
+                  "maximum": 500
+                },
+                "annual_volume": {
+                  "type": "integer"
+                },
+                "proactivity": {
+                  "type": "string",
+                  "enum": [
+                    "information",
+                    "online",
+                    "once_only",
+                    "proactive"
+                  ]
+                },
+                "life_event_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "assurance_level": {
+                  "type": "string",
+                  "enum": [
+                    "low",
+                    "substantial",
+                    "high"
+                  ]
+                },
+                "fulfilment": {
+                  "type": "string",
+                  "enum": [
+                    "auto",
+                    "manual"
+                  ]
+                },
+                "has_discretion": {
+                  "type": "boolean"
+                },
+                "has_assessment": {
+                  "type": "boolean"
+                },
+                "sla_hours": {
+                  "type": "integer"
+                },
+                "tacit_approval": {
+                  "type": "boolean"
+                },
+                "online": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "name",
+                "authority"
+              ]
+            }
+          }
+        }
+      },
       "Application": {
         "required": true,
         "content": {
@@ -3562,6 +3677,413 @@
             "$ref": "#/components/responses/Error"
           },
           "429": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/registry/overview": {
+      "get": {
+        "summary": "Регистрийн нэгтгэл (Ring R1)",
+        "description": "\"Төрийн үйлчилгээний инвентар хэр бүрэн, хэр дижитал, once-only-д хэр ойрхон вэ\" — паспортын тоо, ХУР-д байгаа нотолгоо, once-only зөрчил ба тэдгээрийн жилийн давтамж, проактив байдлын шатны хуваарилалт.",
+        "tags": [
+          "registry"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/registry/services": {
+      "get": {
+        "summary": "Үйлчилгээний паспортууд",
+        "tags": [
+          "registry"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "published",
+                "archived"
+              ]
+            }
+          },
+          {
+            "name": "authority",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "life_event_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "proactivity",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "нэр/код дотор хайх"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "summary": "Паспорт үүсгэх",
+        "description": "Шинэ паспорт ҮРГЭЛЖ `draft`-аар эхэлнэ. `fulfilment=auto` нь `has_discretion`/`has_assessment` аль нэг нь үнэн байхад ТАТГАЛЗАГДАНА (Германы VwVfG §35a-ийн загвар: үнэлэх эрх/үнэлгээний зайтай шийдвэрийг бүрэн автоматжуулж болохгүй).",
+        "tags": [
+          "registry"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/RegistryService"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/registry/services/{id}": {
+      "get": {
+        "summary": "Паспорт харах (нотолгоотой)",
+        "tags": [
+          "registry"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RegistryId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "put": {
+        "summary": "Паспорт засах",
+        "description": "Архивласан паспорт ЗАСАГДАХГҮЙ (409). Код өөрчлөгддөггүй.",
+        "tags": [
+          "registry"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RegistryId"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/RegistryService"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Паспорт устгах",
+        "description": "НИЙТЛЭГДСЭН паспорт устгагдахгүй (409) — түүхэн мөрдөлт (хувилбар, delta, once-only статистик) тасарна. Оронд нь архивлана.",
+        "tags": [
+          "registry"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RegistryId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/registry/services/{id}/publish": {
+      "post": {
+        "summary": "Паспорт нийтлэх (хувилбар бэхлэх)",
+        "description": "Одоогийн төлөвийг шинэ хувилбар болгон бэхэлж, baseline-тай харьцуулсан delta-г хадгална (СӨРӨГ = сайжралт). ЭХНИЙ нийтлэлт нь өөрөө baseline. Зарласан проактив байдал нь БОДИТ once-only байдалтай зөрчилдвөл **409** — регистр өөрөө худал мэдээлэл агуулахгүй. Амжилттай бол иргэний порталын каталог руу автоматаар буудаг.",
+        "tags": [
+          "registry"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RegistryId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "change_note": {
+                    "type": "string",
+                    "maxLength": 4000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/registry/services/{id}/once-only": {
+      "get": {
+        "summary": "Нэг үйлчилгээний once-only шалгалт",
+        "description": "Иргэнээс шаардаж буй баримтуудаас ХУР-д АЛЬ ХЭДИЙН байгааг нь (=устгах боломжтой) илрүүлж, хүрч болох дээд проактив шатыг хэлнэ.",
+        "tags": [
+          "registry"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RegistryId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/registry/once-only": {
+      "get": {
+        "summary": "Бүх once-only зөрчил",
+        "tags": [
+          "registry"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "authority",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/catalog/services": {
+      "get": {
+        "summary": "Нийтийн үйлчилгээний каталог (иргэн)",
+        "description": "ТУСГАЙ ЭРХ ШААРДАХГҮЙ — нэвтэрсэн дурын иргэн үзнэ. Зөвхөн НИЙТЛЭГДСЭН паспорт буцна: `status` query-гээр ноорог гуйхыг үл тоомсорлоно.",
+        "tags": [
+          "catalog"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/catalog/services/{id}": {
+      "get": {
+        "summary": "Нийтийн үйлчилгээний дэлгэрэнгүй",
+        "description": "Нийтлэгдээгүй паспорт нь иргэнд ОГТ БАЙХГҮЙ мэт харагдана.",
+        "tags": [
+          "catalog"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RegistryId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
             "$ref": "#/components/responses/Error"
           }
         }

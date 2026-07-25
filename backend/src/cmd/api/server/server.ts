@@ -20,6 +20,7 @@ import { newOAuthClientRepository } from '../../../datasources/repositories/post
 import { newServiceScopeResolver } from '../../../datasources/repositories/postgres/oauth/service_scope_postgres.js';
 import { newOrgRepository } from '../../../datasources/repositories/postgres/org/org_postgres.js';
 import { newPlatformSettingsRepository } from '../../../datasources/repositories/postgres/platformsettings/platformsettings_postgres.js';
+import { newRegistryRepository } from '../../../datasources/repositories/postgres/registry/registry_postgres.js';
 import { newSSOTokenRepository } from '../../../datasources/repositories/postgres/ssotoken/ssotoken_postgres.js';
 import { newSSOUserRepository } from '../../../datasources/repositories/postgres/ssouser/ssouser_postgres.js';
 import { newUserIntegrationsRepository } from '../../../datasources/repositories/postgres/userintegrations/userintegrations_postgres.js';
@@ -71,6 +72,7 @@ import { newAssetsUsecase } from '../../../usecases/assets/assets_usecase.js';
 import { newCoreUsecase } from '../../../usecases/core/core_impl.js';
 import { newGatewayUsecase } from '../../../usecases/gateway/gateway_usecase.js';
 import { newGSpaceUsecase } from '../../../usecases/gspace/gspace_usecase.js';
+import { newRegistryUsecase } from '../../../usecases/registry/registry_usecase.js';
 import { newSSOTokenUsecase } from '../../../usecases/ssotoken/ssotoken_usecase.js';
 import { newSSOUsecase } from '../../../usecases/sso/sso_usecase.js';
 import { newIntegrationsUsecase } from '../../../usecases/integrations/integrations_usecase.js';
@@ -343,6 +345,9 @@ export async function newApp(): Promise<App> {
   // Security event — RASP-style ингест (хэрэглэгчийн RLS дор) + admin жагсаалт.
   const securityUC = newSecurityUsecase(newSecurityEventRepository(db));
 
+  // Ring R1 — үйлчилгээний нэгдсэн регистр (паспорт · нотолгоо · once-only).
+  const registryUC = newRegistryUsecase(newRegistryRepository(db));
+
   // Интеграци — гуравдагч талын OAuth токен (AES-256-GCM-ээр шифрлэнэ).
   // Production-д INTEGRATION_ENC_KEY ЗААВАЛ — эс бөгөөс токенууд нийтэд
   // мэдэгдэх default түлхүүрээр "шифрлэгдэж" бодитоор ил хэвтэнэ.
@@ -395,6 +400,7 @@ export async function newApp(): Promise<App> {
     coreUC,
     securityUC,
     ssoUC,
+    registryUC,
     assetsUC,
     orgUC,
     gspaceUC,

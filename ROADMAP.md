@@ -45,7 +45,7 @@ hash-ууд шалгагдсаар байна.
 | Infra | `backend/deploy/Dockerfile`, `docker-compose.yml` | distroless nodejs runtime, node healthcheck binary |
 | CI/CD | `.github/workflows/` | fmt · lint · typecheck · vitest · openapi drift · build · gitleaks → Deploy |
 
-**Тест:** 455 unit тест (apperror · config · jwt · validators · domain/users · migration · users usecase · eID client · auth usecase · auth DTO · route wiring · rbac usecase · audit hash-chain · audit usecase · site/theme usecase · core клиент · security usecase · eID байгууллага/PKI · assets usecase · eID профайл · org usecase · gspace usecase · gateway usecase · secrethash · applications usecase · integrations usecase · ssotoken/crypto · sso usecase).
+**Тест:** 479 unit тест (apperror · config · jwt · validators · domain/users · migration · users usecase · eID client · auth usecase · auth DTO · route wiring · rbac usecase · audit hash-chain · audit usecase · site/theme usecase · core клиент · security usecase · eID байгууллага/PKI · assets usecase · eID профайл · org usecase · gspace usecase · gateway usecase · secrethash · applications usecase · integrations usecase · ssotoken/crypto · sso usecase · registry usecase).
 
 ## ✅ Хийгдсэн — домэйн давхарга
 
@@ -66,6 +66,7 @@ hash-ууд шалгагдсаар байна.
 | `integrations` | domain · repository interface + postgres (RLS) · usecase (AES-256-GCM) · handler · 4 route | 12 unit тест. OAuth токен DB-д **ил текстээр хэзээ ч очихгүй** — `base64(nonce‖ciphertext‖tag)` нь Go-ийн `gcm.Seal`-тэй байт-нийцтэй. Production-д `INTEGRATION_ENC_KEY` **заавал** (хоосон бол түлхүүр нь `sha256("")` — нийтэд мэдэгдэх тогтмол болж токен бодитоор ил хэвтэнэ). `GET /:provider/token` нь шифргүй токен буцаадаг тул зөвхөн server-тал дуудна. |
 | `ssotoken` | `pkg/crypto` (AES-256-GCM, Go-ийн `gcm.Seal`-тэй байт-нийцтэй) · `pkg/oidc` (RP client: code/refresh/PKCE/userinfo/logout) · sso_tokens repository · usecase | 10 unit тест. Токен хугацаа дуусахаас **60с өмнө** урьдчилан refresh хийнэ; provider refresh token эргүүлэхгүй бол хуучныг хадгална. refresh_token-гүй нэвтрэлтийг хадгалахгүй. Хадгалалт унасан ч дуудлага нэг удаа гүйцэднэ. Энэ нь `eidprofile`-ийн SSO proxy замыг **бүрэн ажиллагаатай** болгов (өмнө `ssoTokens: null` байсан). |
 | `sso` | domain/platform · ssouser repository (3 шатлалт upsert) · platform_settings repository · usecase · handler · 4 route | 17 unit тест. State нь Redis-д **нэг удаагийн** (replay/CSRF хаалттай). Иргэний дугаартай бол eID дансанд **нэгтгэнэ** — 3 шатлалт upsert: ① админаас урьдчилан бүртгэсэн мөр → ② пайрвайз мөрийг дэвшүүлэх → ③ civil_id-ээр merge. Private платформд бүртгээгүй иргэн **403, данс ч үүсэхгүй**; горим уншиж чадаагүй бол нэвтрэлт зогсоно (**fail-open биш**). id_token нь cookie-д ордоггүй — 32 hex ref-ээр Redis-д. |
+| `registry` + `catalog` | domain (CPSV-AP паспорт) · repository interface + postgres (679 мөр SQL) · usecase · response DTO · **21 route** | 24 unit тест. **Германы VwVfG §35a-ийн загвар**: үнэлэх эрх (Ermessen) эсвэл үнэлгээний зайтай (Beurteilungsspielraum) үйлчилгээг `auto` болгохыг татгалзана — хүний оролцоо шаардах шийдвэр чимээгүйхэн машинд шилжихээс сэргийлнэ. Нийтлэхэд зарласан проактив шатыг **бодит once-only байдалтай тулгана** (зөрчилтэй бол 409) — регистр өөрөө худал мэдээлэл агуулахгүй. Нийтлэгдсэн паспорт устгагдахгүй (архивлана); архивлахад иргэний каталогоос ч гарна. `/catalog/*` нь эрхгүй ч зөвхөн нийтлэгдсэнийг эргүүлнэ. |
 | `auth` / eID | `pkg/eid` RP client (ACSP_V2 QR/push initiate + long-poll session, X.509 задлалт) · `pkg/google` OAuth · usecase (session mint/rotate, MFA gate, Google link) · request/response DTO · 7 route | 76 unit тест. Токен зөвхөн COMPLETE үед, refresh нэг л удаа (атом GetDel), super admin MFA-гүйгээр session авахгүй. **Route-ийн middleware хүрээг** тусад нь тесттэй (Express-ийн `router.use(subRouter)` нь chi-ийн `Group`-той адилгүй — middleware гоождог). |
 
 ---
@@ -89,7 +90,7 @@ hash-ууд шалгагдсаар байна.
 3. ~~`site`~~ ✅ · ~~`theme`~~ ✅ · ~~`core`~~ ✅ · ~~`security`~~ ✅
 4. `ai` (Gemini pipeline) · ~~`assets`~~ ✅
 5. ~~`eidprofile`~~ ✅ · ~~`org`~~ ✅ · ~~`applications`~~ ✅ · ~~`integrations`~~ ✅ · ~~`gspace`~~ ✅
-6. `gov` · `registry` · `relay` · ~~`gateway`~~ ✅
+6. `gov` · ~~`registry`~~ ✅ · ~~`catalog`~~ ✅ · `relay` · ~~`gateway`~~ ✅
 7. `oidc` (provider тал) · ~~`sso`~~ ✅ · ~~`ssotoken`~~ ✅ · `sign` · `provider`
 8. `superadmin` · `superadmin_onboarding`
 

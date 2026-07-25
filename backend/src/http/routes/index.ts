@@ -21,6 +21,7 @@ import type { GSpaceUsecase } from '../../usecases/gspace/gspace_usecase.js';
 import type { IntegrationsUsecase } from '../../usecases/integrations/integrations_usecase.js';
 import type { OrgUsecase } from '../../usecases/org/org_usecase.js';
 import type { RBACUsecase } from '../../usecases/rbac/rbac_usecase.js';
+import type { RegistryUsecase } from '../../usecases/registry/registry_usecase.js';
 import type { SecurityUsecase } from '../../usecases/security/security_usecase.js';
 import type { SSOUsecase } from '../../usecases/sso/sso_usecase.js';
 import type { SiteUsecase, ThemeUsecase } from '../../usecases/site/site_usecase.js';
@@ -39,6 +40,7 @@ import { registerGSpaceRoutes } from './route_gspace.js';
 import { registerIntegrationsRoutes } from './route_integrations.js';
 import { registerOrgRoutes } from './route_org.js';
 import { registerRBACRoutes } from './route_rbac.js';
+import { registerRegistryRoutes } from './route_registry.js';
 import { registerSecurityRoutes } from './route_security.js';
 import { registerSiteRoutes } from './route_site.js';
 import { registerSSORoutes } from './route_sso.js';
@@ -78,6 +80,11 @@ export interface Deps {
   securityUC: SecurityUsecase;
   /** ssoUC нь гадаад SSO (OIDC)-ээр нэвтрэх урсгал (eID-ийн зэрэгцээ 2 дахь арга). */
   ssoUC: SSOUsecase;
+  /**
+   * registryUC нь Ring R1 — үйлчилгээний нэгдсэн регистр (паспорт · нотолгоо ·
+   * once-only · нийтийн каталог).
+   */
+  registryUC: RegistryUsecase;
   /**
    * assetsUC нь гарын үсэг · байгууллагын тамга · латин нэр. Байгууллагын
    * эрхийг eID (улсын бүртгэл)-ээр шалгадаг тул eID client-аас хамаарна.
@@ -127,6 +134,7 @@ export function registerRoutes(router: Router, deps: Deps): void {
   registerIntegrationsRoutes(router, deps);
   registerOrgRoutes(router, deps);
   registerRBACRoutes(router, deps);
+  registerRegistryRoutes(router, deps);
   registerSecurityRoutes(router, deps);
   registerSiteRoutes(router, deps);
   registerSSORoutes(router, deps);
