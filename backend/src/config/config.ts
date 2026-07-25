@@ -86,6 +86,12 @@ export interface Config {
 
   BCRYPT_COST: number;
 
+  /**
+   * COOKIE_SECURE нь session cookie-д Secure флаг тавих эсэх. Хоосон бол
+   * production-д ҮРГЭЛЖ Secure (fail-closed); зөвхөн ил `'false'` өгсөн үед
+   * (дотоод http dev орчин) Secure-гүй болно.
+   */
+  COOKIE_SECURE: string;
   // Gemini AI pipeline (/api/v1/ai/*) — REST-ээр шууд дуудна (SDK-гүй).
   GEMINI_API_KEY: string;
   GEMINI_MODEL: string;
@@ -194,6 +200,7 @@ function blankConfig(): Config {
     GOOGLE_CLIENT_ID: '',
     GOOGLE_CLIENT_SECRET: '',
     BCRYPT_COST: 0,
+    COOKIE_SECURE: '',
     GEMINI_API_KEY: '',
     GEMINI_MODEL: '',
     GEMINI_TTS_MODEL: '',
@@ -472,6 +479,7 @@ export function initializeAppConfig(): void {
 
   AppConfig.BCRYPT_COST = num(src, 'BCRYPT_COST');
 
+  AppConfig.COOKIE_SECURE = str(src, 'COOKIE_SECURE');
   AppConfig.GEMINI_API_KEY = str(src, 'GEMINI_API_KEY');
   AppConfig.GEMINI_MODEL = str(src, 'GEMINI_MODEL');
   AppConfig.GEMINI_TTS_MODEL = str(src, 'GEMINI_TTS_MODEL');

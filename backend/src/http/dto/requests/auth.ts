@@ -55,9 +55,13 @@ export const googleLoginSchema = strictObject({
 });
 export type GoogleLoginBody = z.infer<typeof googleLoginSchema>;
 
-/** refreshSchema нь POST /auth/refresh-ийн body. */
+/**
+ * refreshSchema нь POST /auth/refresh-ийн body. `refresh_token` нь СОНГОЛТТОЙ:
+ * cookie-д суурилсан SPA нь токеныг ЖС-д хадгалдаггүй тул handler нь httpOnly
+ * `dgov_refresh` cookie-гоос уншина. Хоёулаа хоосон бол handler 400 өгнө.
+ */
 export const refreshSchema = strictObject({
-  refresh_token: nonEmpty(4096),
+  refresh_token: z.string().max(4096).optional(),
 });
 export type RefreshBody = z.infer<typeof refreshSchema>;
 
@@ -66,7 +70,7 @@ export type RefreshBody = z.infer<typeof refreshSchema>;
  * өгвөл түүний jti deny-list-д орж access токен шууд хүчингүй болно.
  */
 export const logoutSchema = strictObject({
-  refresh_token: nonEmpty(4096),
+  refresh_token: z.string().max(4096).optional(),
   access_token: z.string().max(4096).optional(),
 });
 export type LogoutBody = z.infer<typeof logoutSchema>;

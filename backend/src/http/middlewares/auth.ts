@@ -6,6 +6,7 @@ import { withAdmin, withUser, type CurrentUser } from '../../pkg/ctx/ctx.js';
 import type { JWTService } from '../../pkg/jwt/jwt.js';
 import * as logger from '../../pkg/logger/logger.js';
 import { accessDenyKey, tokenCutoffKey } from '../../usecases/auth/redis_keys.js';
+import { accessTokenFromCookie } from '../cookies.js';
 import { newAbortResponse, newErrorResponse } from '../response.js';
 import type { Middleware } from '../types.js';
 
@@ -27,9 +28,44 @@ export function newAuthMiddleware(
     void (async () => {
       const path = req.path;
 
+      // Токеныг ХОЁР эх сурвалжаас хүлээж авна:
+      //   • `Authorization: Bearer …` — мобайл / m2m / server-to-server;
+      //   • `dgov_access` httpOnly cookie — browser SPA (токен ЖС-д хүрэхгүй).
+      // Cookie нь ambient credential тул мутацийн хүсэлтэд CSRF давхарга
+      // (csrfMiddleware) нэмэлт баталгаа шаардана.
       const authHeader = req.get('authorization') ?? '';
-      if (authHeader === '') {
-        logger.warnWithContext(req.ctx, 'Auth: missing Authorization header', {
+      let rawToken = '';
+      if (authHeader !== '') {
+        const headerParts = authHeader.split(' ');
+        if (headerParts.length !== 2) {
+          logger.warnWithContext(req.ctx, 'Auth: invalid Authorization header format', {
+            middleware: middlewareName,
+            file: fileName,
+            step: 'parse_header',
+            path,
+          });
+          newAbortResponse(req, res, 'invalid header format');
+          return;
+        }
+        if (headerParts[0] !== 'Bearer') {
+          logger.warnWithContext(req.ctx, 'Auth: non-Bearer scheme', {
+            middleware: middlewareName,
+            file: fileName,
+            step: 'scheme_check',
+            path,
+            scheme: headerParts[0],
+          });
+          newAbortResponse(req, res, 'token must content bearer');
+          return;
+        }
+        rawToken = headerParts[1] ?? '';
+      } else {
+        rawToken = accessTokenFromCookie(req);
+        if (rawToken !== '') req.cookieAuth = true;
+      }
+
+      if (rawToken === '') {
+        logger.warnWithContext(req.ctx, 'Auth: missing credentials', {
           middleware: middlewareName,
           file: fileName,
           step: 'read_header',
@@ -39,33 +75,9 @@ export function newAuthMiddleware(
         return;
       }
 
-      const headerParts = authHeader.split(' ');
-      if (headerParts.length !== 2) {
-        logger.warnWithContext(req.ctx, 'Auth: invalid Authorization header format', {
-          middleware: middlewareName,
-          file: fileName,
-          step: 'parse_header',
-          path,
-        });
-        newAbortResponse(req, res, 'invalid header format');
-        return;
-      }
-
-      if (headerParts[0] !== 'Bearer') {
-        logger.warnWithContext(req.ctx, 'Auth: non-Bearer scheme', {
-          middleware: middlewareName,
-          file: fileName,
-          step: 'scheme_check',
-          path,
-          scheme: headerParts[0],
-        });
-        newAbortResponse(req, res, 'token must content bearer');
-        return;
-      }
-
       let user;
       try {
-        user = jwtService.parseToken(headerParts[1] ?? '');
+        user = jwtService.parseToken(rawToken);
       } catch (err) {
         logger.warnWithContext(req.ctx, 'Auth: token parse failed', {
           middleware: middlewareName,

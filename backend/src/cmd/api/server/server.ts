@@ -60,6 +60,7 @@ import {
   registry as metricsRegistry,
 } from '../../../http/middlewares/metrics.js';
 import { observabilityGate } from '../../../http/middlewares/observability_gate.js';
+import { csrfMiddleware } from '../../../http/middlewares/csrf.js';
 import { newRateLimiter, type RateLimiter } from '../../../http/middlewares/ratelimit.js';
 import { newGeminiClient } from '../../../pkg/gemini/gemini.js';
 import { newVerifyClient } from '../../../pkg/verify/verify.js';
@@ -323,6 +324,10 @@ export async function newApp(): Promise<App> {
   // OAuth2 token/introspect/revoke нь x-www-form-urlencoded (RFC 6749 §4.1.3) —
   // JSON parser эдгээрийг задлахгүй тул form parser-ийг дараа нь суулгана.
   app.use(express.urlencoded({ extended: false, limit: DefaultBodyMaxBytes }));
+  // CSRF: httpOnly cookie-гоор баталгаажсан МУТАЦИЙН хүсэлт бүр `x-dgov-csrf`
+  // толгойг `dgov_csrf` cookie-тэй тааруулна (double-submit). Bearer токентой
+  // хүсэлт ambient credential биш тул хамаарахгүй.
+  app.use(csrfMiddleware());
   app.use(accessLogMiddleware());
   // API Gateway-ийн телеметр — ЗӨВХӨН гуравдагч талын RP-ийн зам (/rp/sign,
   // /api/v1/provider) бичигдэнэ. Хариу бүрэн илгээгдсэний дараа бичдэг тул

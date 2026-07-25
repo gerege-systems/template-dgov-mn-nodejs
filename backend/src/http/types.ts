@@ -21,6 +21,11 @@ declare global {
       clientIp?: string;
       /** rawBody нь webhook гарын үсэг шалгахад хэрэгтэй түүхий body. */
       rawBody?: Buffer;
+      /**
+       * cookieAuth нь хүсэлт httpOnly cookie-гоор (Bearer толгойгүй)
+       * баталгаажсаныг заана — CSRF давхарга зөвхөн ийм хүсэлтэд хамаарна.
+       */
+      cookieAuth?: boolean;
     }
   }
 }

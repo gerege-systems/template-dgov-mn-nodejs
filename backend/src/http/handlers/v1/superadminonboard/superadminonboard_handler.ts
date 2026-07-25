@@ -11,6 +11,7 @@ import { z } from 'zod';
 import { strictObject } from '../../../../pkg/validators/validators.js';
 import type { OnboardingUsecase } from '../../../../usecases/superadmin_onboarding/onboarding_usecase.js';
 import { userResponseFromDomain } from '../../../dto/responses/user.js';
+import { issueSessionCookies } from '../../../cookies.js';
 import { decodeBody, newSuccessResponse } from '../../../response.js';
 import type { AsyncHandler } from '../../../types.js';
 
@@ -144,6 +145,7 @@ export class SuperadminOnboardHandler {
   totpVerify: AsyncHandler = async (req, res) => {
     const body = decodeBody(req, codeSchema);
     const out = await this.usecase.totpVerify(req.ctx, body.onboard_token, body.code);
+    issueSessionCookies(res, out.accessToken, out.refreshToken);
     newSuccessResponse(req, res, 200, 'ok', {
       ...userResponseFromDomain(out.user),
       token: out.accessToken,
@@ -162,6 +164,7 @@ export class SuperadminOnboardHandler {
   mfa: AsyncHandler = async (req, res) => {
     const body = decodeBody(req, mfaSchema);
     const out = await this.usecase.superadminMfa(req.ctx, body.mfa_token, body.code);
+    issueSessionCookies(res, out.accessToken, out.refreshToken);
     newSuccessResponse(req, res, 200, 'ok', {
       ...userResponseFromDomain(out.user),
       token: out.accessToken,

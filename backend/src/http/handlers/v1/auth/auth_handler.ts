@@ -24,6 +24,12 @@ import {
   loginResponse,
 } from '../../../dto/responses/auth.js';
 import { currentUserFromRequest } from '../../../middlewares/auth.js';
+import {
+  accessTokenFromCookie,
+  clearSessionCookies,
+  issueSessionCookies,
+  refreshTokenFromCookie,
+} from '../../../cookies.js';
 import { decodeBody, newErrorResponse, newSuccessResponse } from '../../../response.js';
 import type { AsyncHandler, Request } from '../../../types.js';
 
@@ -125,6 +131,9 @@ export class AuthHandler {
     // COMPLETE үед л шинэ session үүссэн — нэвтрэлтийн амжилтыг бүртгэнэ.
     if (result.state === 'COMPLETE' && result.user) {
       await this.auditLogin(req.ctx, result.user.id, 'eid');
+      // SPA-д зориулж токенуудыг httpOnly cookie-д тавина; JSON биед мөн
+      // хэвээр буцна (мобайл/m2m клиент өөрчлөгдөхгүй).
+      issueSessionCookies(res, result.accessToken, result.refreshToken);
     }
 
     newSuccessResponse(req, res, 200, 'eid session state', eidPollResponse(result));
@@ -142,6 +151,7 @@ export class AuthHandler {
 
     if (result.linked && result.login) {
       await this.auditLogin(req.ctx, result.login.user.id, 'google');
+      issueSessionCookies(res, result.login.accessToken, result.login.refreshToken);
     }
 
     newSuccessResponse(req, res, 200, 'google login processed', googleLoginResponse(result));
@@ -171,7 +181,15 @@ export class AuthHandler {
    */
   refresh: AsyncHandler = async (req, res) => {
     const body = decodeBody(req, refreshSchema);
-    const result = await this.usecase.refresh(req.ctx, { refreshToken: body.refresh_token });
+    // SPA нь refresh токеныг ЖС-д хадгалдаггүй тул биед байхгүй бол httpOnly
+    // cookie-гоос уншина.
+    const refreshToken = body.refresh_token ?? refreshTokenFromCookie(req);
+    if (refreshToken === '') {
+      newErrorResponse(req, res, 400, 'refresh token is required');
+      return;
+    }
+    const result = await this.usecase.refresh(req.ctx, { refreshToken });
+    issueSessionCookies(res, result.accessToken, result.refreshToken);
     newSuccessResponse(req, res, 200, 'token refreshed successfully', loginResponse(result));
   };
 
@@ -183,10 +201,26 @@ export class AuthHandler {
    */
   logout: AsyncHandler = async (req, res) => {
     const body = decodeBody(req, logoutSchema);
-    await this.usecase.logout(req.ctx, {
-      refreshToken: body.refresh_token,
-      accessToken: body.access_token ?? '',
-    });
+    // Cookie-д суурилсан SPA нь токенуудыг биедээ дамжуулж чадахгүй — cookie-оос
+    // авна. Ингэснээр refresh jti устаж, access токен deny-list-д орно.
+    const refreshToken = body.refresh_token ?? refreshTokenFromCookie(req);
+    const accessToken = body.access_token ?? accessTokenFromCookie(req);
+
+    // Токен огт байхгүй (cookie нь хугацаа дуусаж устсан) бол гарах нь
+    // ИДЕМПОТЕНТ: клиентийн төлөвийг цэвэрлээд амжилттай хариулна.
+    if (refreshToken === '') {
+      clearSessionCookies(res);
+      newSuccessResponse(req, res, 200, 'logged out successfully');
+      return;
+    }
+
+    try {
+      await this.usecase.logout(req.ctx, { refreshToken, accessToken });
+    } finally {
+      // Токен хүчингүй байсан ч browser-ийн cookie-г ҮРГЭЛЖ цэвэрлэнэ —
+      // эс бөгөөс хэрэглэгч "гарч чадахгүй" гацна.
+      clearSessionCookies(res);
+    }
     newSuccessResponse(req, res, 200, 'logged out successfully');
   };
 }

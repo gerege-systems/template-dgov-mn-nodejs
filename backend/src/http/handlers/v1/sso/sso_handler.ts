@@ -12,6 +12,7 @@ import { z } from 'zod';
 import { strictObject } from '../../../../pkg/validators/validators.js';
 import type { SSOUsecase } from '../../../../usecases/sso/sso_usecase.js';
 import { userResponseFromDomain } from '../../../dto/responses/user.js';
+import { issueSessionCookies } from '../../../cookies.js';
 import { decodeBody, newSuccessResponse } from '../../../response.js';
 import type { AsyncHandler } from '../../../types.js';
 
@@ -50,6 +51,8 @@ export class SSOHandler {
   callback: AsyncHandler = async (req, res) => {
     const body = decodeBody(req, callbackSchema);
     const out = await this.usecase.complete(req.ctx, body.state, body.code);
+    // Browser урсгал — токенуудыг httpOnly cookie-д (JSON бие хэвээр).
+    issueSessionCookies(res, out.token, out.refreshToken);
     newSuccessResponse(req, res, 200, 'sso login complete', {
       token: out.token,
       refresh_token: out.refreshToken,
