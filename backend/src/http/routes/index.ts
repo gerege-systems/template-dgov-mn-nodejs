@@ -27,6 +27,7 @@ import type { RBACUsecase } from '../../usecases/rbac/rbac_usecase.js';
 import type { RegistryUsecase } from '../../usecases/registry/registry_usecase.js';
 import type { RelayUsecase } from '../../usecases/relay/relay_usecase.js';
 import type { SecurityUsecase } from '../../usecases/security/security_usecase.js';
+import type { SignUsecase } from '../../usecases/sign/sign_usecase.js';
 import type { SSOUsecase } from '../../usecases/sso/sso_usecase.js';
 import type { SiteUsecase, ThemeUsecase } from '../../usecases/site/site_usecase.js';
 import type { UsersUsecase } from '../../usecases/users/users_usecase.js';
@@ -50,6 +51,7 @@ import { registerRBACRoutes } from './route_rbac.js';
 import { registerRegistryRoutes } from './route_registry.js';
 import { registerRelayRoutes } from './route_relay.js';
 import { registerSecurityRoutes } from './route_security.js';
+import { registerSignRoutes } from './route_sign.js';
 import { registerSiteRoutes } from './route_site.js';
 import { registerSSORoutes } from './route_sso.js';
 import { registerUsersRoutes } from './route_users.js';
@@ -109,6 +111,11 @@ export interface Deps {
    */
   relayUC: RelayUsecase;
   /**
+   * signUC нь PDF гарын үсэг (PAdES) — eID PIN2-оор баталгаажиж, eidmongolia-ийн
+   * stamp эсвэл серверийн Document-Signer-ээр лацлагдана.
+   */
+  signUC: SignUsecase;
+  /**
    * assetsUC нь гарын үсэг · байгууллагын тамга · латин нэр. Байгууллагын
    * эрхийг eID (улсын бүртгэл)-ээр шалгадаг тул eID client-аас хамаарна.
    */
@@ -165,6 +172,7 @@ export function registerRoutes(router: Router, deps: Deps): void {
   registerRegistryRoutes(router, deps);
   registerRelayRoutes(router, deps);
   registerSecurityRoutes(router, deps);
+  registerSignRoutes(router, deps);
   registerSiteRoutes(router, deps);
   registerSSORoutes(router, deps);
   registerUsersRoutes(router, deps);

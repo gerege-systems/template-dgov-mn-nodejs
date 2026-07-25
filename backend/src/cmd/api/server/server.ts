@@ -1,6 +1,7 @@
 // Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
 
+import { readFileSync } from 'node:fs';
 import type { Server } from 'node:http';
 
 import express, { type Express } from 'express';
@@ -95,6 +96,7 @@ import { newProviderUsecase } from '../../../usecases/provider/provider_usecase.
 import { newRelayUsecase } from '../../../usecases/relay/relay_impl.js';
 import type { RelayUsecase } from '../../../usecases/relay/relay_usecase.js';
 import { newSecurityUsecase } from '../../../usecases/security/security_usecase.js';
+import { newSignUsecase } from '../../../usecases/sign/sign_usecase.js';
 import { newSiteUsecase, newThemeUsecase } from '../../../usecases/site/site_usecase.js';
 import { newUsersUsecase } from '../../../usecases/users/users_impl.js';
 import { background } from '../../../pkg/ctx/ctx.js';
@@ -212,6 +214,25 @@ export class App {
     await this.db.close().catch(() => undefined);
     await this.tracerShutdown().catch(() => undefined);
     logger.info('shutdown complete', { [LoggerCategory]: LoggerCategoryServer });
+  }
+}
+
+/**
+ * readPemFile нь Document-Signer-ийн PEM файлыг уншина. Зам хоосон эсвэл файл
+ * байхгүй бол хоосон мөр буцаана — production-д sign usecase өөрөө fail-closed
+ * шалгалт хийнэ (энд boot-ыг чимээгүй унагахгүй).
+ */
+function readPemFile(path: string): string {
+  if (path.trim() === '') return '';
+  try {
+    return readFileSync(path, 'utf8');
+  } catch (err) {
+    logger.warn('sign: Document-Signer PEM уншиж чадсангүй', {
+      [LoggerCategory]: LoggerCategoryServer,
+      path,
+      error: logger.errText(err),
+    });
+    return '';
   }
 }
 
@@ -479,6 +500,25 @@ export async function newApp(): Promise<App> {
   // Гарын үсэг / байгууллагын тамга — байгууллагын эрхийг eID-ээр шалгана.
   const assetsUC = newAssetsUsecase(usersUC, userRepo, newOrgStampRepository(db), eidClient);
 
+  // PDF гарын үсэг (PAdES) — eID PIN2-оор баталгаажина. Document-Signer-ийн PEM
+  // хос нь production-д ЗААВАЛ (эфемер түлхүүр нь шалгах/цуцлах боломжгүй тул).
+  const signUC = newSignUsecase(
+    {
+      // Redis-ийн cache-miss нь sign-д алдаа БИШ (session олдоогүй) — null болгоно.
+      set: (ctx, key, value) => redisCache.set(ctx, key, value),
+      get: (ctx, key) => redisCache.get(ctx, key).catch(() => null),
+    },
+    {
+      v3BaseUrl: AppConfig.EID_BASE_URL.replace(/\/v3\/?$/, ''),
+      rpUuid: AppConfig.EID_RP_UUID,
+      rpName: AppConfig.EID_RP_NAME,
+      apiSecret: AppConfig.EID_RP_SECRET,
+      signerCertPem: readPemFile(AppConfig.SIGN_SIGNER_CERT_FILE),
+      signerKeyPem: readPemFile(AppConfig.SIGN_SIGNER_KEY_FILE),
+      isProduction,
+    },
+  );
+
   // ── ӨӨРИЙН OAuth2/OIDC provider ─────────────────────────────────────
   // Протоколын service (authorize/consent/token) + гарын үсгийн түлхүүрийн
   // менежер. Түлхүүр нь INTEGRATION_ENC_KEY-ээр шифрлэгдэж DB-д хадгалагдана.
@@ -538,6 +578,7 @@ export async function newApp(): Promise<App> {
     ssoUC,
     registryUC,
     providerUC,
+    signUC,
     relayUC,
     govUC,
     assetsUC,

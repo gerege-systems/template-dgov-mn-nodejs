@@ -6847,6 +6847,139 @@
         }
       }
     },
+    "/sign/init": {
+      "post": {
+        "summary": "PDF гарын үсэг эхлүүлэх (eID PIN2)",
+        "description": "Нэвтэрсэн иргэний eID РЕГИСТРЭЭР eidmongolia /v3 PIN2 гарын үсгийн session эхлүүлж, `session_id` + `verification_code` буцаана. Иргэн утсан дээрээ PIN2-оор зөвшөөрнө (ХУУЛЬ ЗҮЙН зөвшөөрөл). Гарын үсэг/тамганы зураг эх PDF-д давхарлагдаж, digest ТҮҮНЭЭС тооцогдоно — иргэний зөвшөөрсөн байт болон эцсийн файлын суурь байт ижил. `onBehalfOf` (NTRMN-<РД>) өгвөл байгууллагын нэрийн өмнөөс; төлөөллийн эрхийг eidmongolia шалгаж, эрхгүй бол **403**.",
+        "tags": [
+          "sign"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "PDF (≤25 MB)"
+                  },
+                  "onBehalfOf": {
+                    "type": "string",
+                    "description": "NTRMN-<РД> — байгууллагын нэрийн өмнөөс (сонголттой)"
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/sign/{id}": {
+      "get": {
+        "summary": "Гарын үсгийн session-ийн төлөв",
+        "description": "Төлөв: `running` | `completed` | `failed` | `rejected`. Зөвхөн session-ийг эхлүүлсэн иргэн хандана — \"байхгүй\" ба \"чинийх биш\" ИЖИЛ 404 (IDOR хаалт).",
+        "tags": [
+          "sign"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/sign/{id}/download": {
+      "get": {
+        "summary": "Гарын үсэгтэй PDF татах",
+        "description": "eidmongolia-ийн албан ёсны PAdES-T stamp (timestamp + verify хуудас); боломжгүй бол СЕРВЕРИЙН Document-Signer-ээр PDF-д гарын үсэг шигтгэнэ. Дуусаагүй session нь 400; өөр иргэний session нь 404.",
+        "tags": [
+          "sign"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Гарын үсэгтэй PDF",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/site/appearance": {
       "get": {
         "summary": "Сайтын нийтийн харагдац",
