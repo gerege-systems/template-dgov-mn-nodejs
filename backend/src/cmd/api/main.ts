@@ -29,6 +29,8 @@ async function main(): Promise<void> {
   });
 
   const app = await newApp();
+  // SLA хяналтын background sweep-үүд — shutdown үед цуцлагдана.
+  app.startBackgroundWorkers();
   await app.listen();
 
   let shuttingDown = false;

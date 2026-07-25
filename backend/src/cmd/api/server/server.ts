@@ -23,6 +23,7 @@ import { newOrgRepository } from '../../../datasources/repositories/postgres/org
 import { newPlatformSettingsRepository } from '../../../datasources/repositories/postgres/platformsettings/platformsettings_postgres.js';
 import { newGovRepository } from '../../../datasources/repositories/postgres/gov/gov_postgres.js';
 import { newRegistryRepository } from '../../../datasources/repositories/postgres/registry/registry_postgres.js';
+import { newRelayRepository } from '../../../datasources/repositories/postgres/relay/relay_postgres.js';
 import { newSSOTokenRepository } from '../../../datasources/repositories/postgres/ssotoken/ssotoken_postgres.js';
 import { newSSOUserRepository } from '../../../datasources/repositories/postgres/ssouser/ssouser_postgres.js';
 import { newUserIntegrationsRepository } from '../../../datasources/repositories/postgres/userintegrations/userintegrations_postgres.js';
@@ -78,24 +79,40 @@ import { newCoreUsecase } from '../../../usecases/core/core_impl.js';
 import { newGatewayUsecase } from '../../../usecases/gateway/gateway_usecase.js';
 import { newGSpaceUsecase } from '../../../usecases/gspace/gspace_usecase.js';
 import { newGovUsecase } from '../../../usecases/gov/gov_usecase.js';
+import type { GovUsecase } from '../../../usecases/gov/gov_usecase.js';
 import { newRegistryUsecase } from '../../../usecases/registry/registry_usecase.js';
 import { newSSOTokenUsecase } from '../../../usecases/ssotoken/ssotoken_usecase.js';
 import { newSSOUsecase } from '../../../usecases/sso/sso_usecase.js';
 import { newIntegrationsUsecase } from '../../../usecases/integrations/integrations_usecase.js';
 import { newOrgUsecase } from '../../../usecases/org/org_usecase.js';
 import { newRBACUsecase } from '../../../usecases/rbac/rbac_impl.js';
+import { newRelayUsecase } from '../../../usecases/relay/relay_impl.js';
+import type { RelayUsecase } from '../../../usecases/relay/relay_usecase.js';
 import { newSecurityUsecase } from '../../../usecases/security/security_usecase.js';
 import { newSiteUsecase, newThemeUsecase } from '../../../usecases/site/site_usecase.js';
 import { newUsersUsecase } from '../../../usecases/users/users_impl.js';
+import { background } from '../../../pkg/ctx/ctx.js';
+import type { Ctx } from '../../../pkg/ctx/ctx.js';
 import * as logger from '../../../pkg/logger/logger.js';
 import { setupTracing, type Shutdown } from '../../../pkg/observability/tracing.js';
 import { openapiDocument } from '../../openapi/document.js';
 
 const serviceName = 'gerege-template-node';
 
+/** workerStepTimeoutMs нь background алхам бүрийн дээд хугацаа. */
+const workerStepTimeoutMs = 20_000;
+
+/** BackgroundWorkerDeps нь background sweep-үүдийн шаарддаг usecase-ууд. */
+interface BackgroundWorkerDeps {
+  relayUC: RelayUsecase;
+  govUC: GovUsecase;
+}
+
 /** App нь ажиллаж буй үйлчилгээ болон түүний унтраах ёстой нөөцүүдийг агуулна. */
 export class App {
   private server: Server | null = null;
+  /** workers нь background sweep-үүдийг зогсоох цуцлагч. */
+  private readonly workersAbort = new AbortController();
 
   constructor(
     readonly app: Express,
@@ -103,7 +120,54 @@ export class App {
     private readonly redisCache: RedisCache,
     private readonly tracerShutdown: Shutdown,
     private readonly rateLimiters: RateLimiter[],
+    private readonly workers: BackgroundWorkerDeps,
   ) {}
+
+  /**
+   * startBackgroundWorkers нь SLA хяналтын background давталтуудыг эхлүүлнэ:
+   *   • relay sweep (reminder/overdue/breach/escalate) 20с тутам
+   *   • gov sweep (иргэний хүсэлтийн хугацаа хэтрэлт + чимээгүй зөвшөөрөл) 60с тутам
+   *   • relay demo simulator (RELAY_DEMO_MODE) 10/25с тутам
+   *
+   * Модуль тус бүр ТУСДАА шалгагдана — нэг нь холбогдоогүй байхад нөгөө нь
+   * зогсох ёсгүй. Алхам бүр ӨӨРИЙН 20 секундын таймауттай бөгөөд өмнөх алхам
+   * дуустал дараагийнх ЭХЛЭХГҮЙ (давхцахгүй) — Go-ийн ticker goroutine-тэй ижил.
+   */
+  startBackgroundWorkers(): void {
+    const tick = (everyMs: number, fn: (ctx: Ctx) => Promise<void>): void => {
+      const run = (): void => {
+        if (this.workersAbort.signal.aborted) return;
+        const stepTimeout = AbortSignal.timeout(workerStepTimeoutMs);
+        const signal = AbortSignal.any([this.workersAbort.signal, stepTimeout]);
+        void fn({ ...background(), signal })
+          .catch((err: unknown) => {
+            logger.error('background worker step failed', {
+              [LoggerCategory]: LoggerCategoryServer,
+              error: logger.errText(err),
+            });
+          })
+          .finally(() => {
+            if (this.workersAbort.signal.aborted) return;
+            setTimeout(run, everyMs).unref();
+          });
+      };
+      setTimeout(run, everyMs).unref();
+    };
+
+    if (this.workers.relayUC) {
+      tick(20_000, (ctx) => this.workers.relayUC.slaSweep(ctx));
+      if (AppConfig.RELAY_DEMO_MODE) {
+        // Доод platform-уудын хариуг дуурайх / шинэ демо хүсэлт үүсгэх.
+        tick(10_000, (ctx) => this.workers.relayUC.simulateStep(ctx));
+        tick(25_000, (ctx) => this.workers.relayUC.simulateIngest(ctx));
+      }
+    }
+    // Иргэний хүсэлтийн SLA — relay-ээс СИЙРЭГ (60с): хүний хугацаа цаг/хоногоор
+    // хэмжигддэг тул илүү нягт шалгах нь ачааллаас өөр үр дүн авчрахгүй.
+    if (this.workers.govUC) {
+      tick(60_000, (ctx) => this.workers.govUC.slaSweep(ctx));
+    }
+  }
 
   /** listen нь HTTP серверийг тохируулсан порт дээр эхлүүлнэ. */
   async listen(): Promise<void> {
@@ -135,6 +199,8 @@ export class App {
         setTimeout(() => resolve(), 15_000).unref();
       });
     }
+    // Background sweep-үүдийг зогсооно — явж буй алхам ч цуцлагдана.
+    this.workersAbort.abort();
     for (const rl of this.rateLimiters) rl.stop();
     await this.redisCache.close().catch(() => undefined);
     await this.db.close().catch(() => undefined);
@@ -215,6 +281,11 @@ export async function newApp(): Promise<App> {
     `${EndpointV1}/gspace/upload`,
     express.json({ limit: GSpaceUploadBodyMaxBytes, strict: true }),
   );
+  // ⚠️ /relay/webhook нь ТҮҮХИЙ body шаардана: HMAC гарын үсэг нь ЯГ илгээсэн
+  // байт дээр тооцогддог тул JSON-оор задлаад дахин цувуулбал (re-serialize)
+  // гарын үсэг таарахаа болино. Энэ parser нь глобал JSON-оос ӨМНӨ сууна
+  // (express.json нь аль хэдийн задлагдсан body-г алгасдаг).
+  app.use(`${EndpointV1}/relay/webhook`, express.raw({ type: '*/*', limit: DefaultBodyMaxBytes }));
   app.use(express.json({ limit: DefaultBodyMaxBytes, strict: true }));
   app.use(accessLogMiddleware());
   // API Gateway-ийн телеметр — ЗӨВХӨН гуравдагч талын RP-ийн зам (/rp/sign,
@@ -399,6 +470,10 @@ export async function newApp(): Promise<App> {
   // Гарын үсэг / байгууллагын тамга — байгууллагын эрхийг eID-ээр шалгана.
   const assetsUC = newAssetsUsecase(usersUC, userRepo, newOrgStampRepository(db), eidClient);
 
+  // Platform-хоорондын хүсэлт дамжуулах + SLA хяналт (relay). Peer webhook нь
+  // HMAC-аар баталгаажна; SLA sweep болон demo simulator нь background worker.
+  const relayUC = newRelayUsecase(newRelayRepository(db));
+
   // AI pipeline (Gemini · SDK-гүй REST). Чат ба TTS нь ӨӨР ӨӨР model —
   // чат model audio гаргадаггүй. GEMINI_API_KEY хоосон бол /ai/* нь 500
   // өгнө (тохиргооны алдаа), бусад домэйн хэвийн ажиллана.
@@ -432,6 +507,7 @@ export async function newApp(): Promise<App> {
     securityUC,
     ssoUC,
     registryUC,
+    relayUC,
     govUC,
     assetsUC,
     orgUC,
@@ -469,10 +545,12 @@ export async function newApp(): Promise<App> {
   // Алдаа боогч нь ХАМГИЙН СҮҮЛД — доод урсгалын бүх алдааг барина.
   app.use(recovererMiddleware());
 
-  return new App(app, db, redisCache, tracerShutdown, [
-    authRateLimiter,
-    aiRateLimiter,
-    pollRateLimiter,
-    govWriteRateLimiter,
-  ]);
+  return new App(
+    app,
+    db,
+    redisCache,
+    tracerShutdown,
+    [authRateLimiter, aiRateLimiter, pollRateLimiter, govWriteRateLimiter],
+    { relayUC, govUC },
+  );
 }
