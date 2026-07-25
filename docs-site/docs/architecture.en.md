@@ -8,15 +8,21 @@ domain`. The business core never imports the web framework.
 ```
 Internet ──► nginx (TLS)
    │
-   ├─ /oauth2/*, /.well-known/*, /userinfo ─► api — the platform's own OIDC issuer
-   ├─ /rp/sign/*    ─► eID sign relay (api)
-   ├─ /rp/eid/*     ─► eID service proxy — personal (api)
-   ├─ /rp/eid-org/* ─► eID service proxy — organizations (api)
-   ├─ /api/v1/*     ─► api (:8080)
-   └─ everything else ─► web — static React SPA (nginx)
+   ├─ /oauth2/*, /userinfo, /.well-known/*  ─► api — the platform's own OIDC issuer
+   ├─ /api/v1/*                              ─► api (:8080)
+   └─ everything else                        ─► web — static React SPA (nginx)
                                                    │
-   internal network:  db (PostgreSQL) · redis
+   internal network:  db (PostgreSQL 16) · redis (7)
 ```
+
+!!! warning "Some Go-edition surfaces are NOT here"
+    The original also exposes `/rp/sign/*` (eID sign relay), `/rp/eid/*` ·
+    `/rp/eid-org/*` (eID service proxy) and `/admin` (the operator API for RP
+    OAuth2 clients, backed by `developer_apps`). Those were **not part of the 25
+    ported domains**, so the Node.js edition does not have them yet.
+
+    The `/api/v1/admin/*` you see here is a different thing — user management and
+    AI prompt configuration (gated by `users.manage` / `settings.manage`).
 
 !!! info "No BFF"
     In the Go/Next.js edition the browser talked to Next.js BFF routes which

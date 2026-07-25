@@ -49,6 +49,31 @@ bash deploy/deploy.sh
 
 ## nginx (жишээ)
 
+!!! note "Доорх жишээ нь **SSO** deployment-ийнх"
+    `server_name sso.dgov.mn` — энэ нь eID креденшл эзэмшдэг **Government SSO**
+    суулгац бөгөөд `/rp/*` (sign relay, eID proxy) гадаргууг тэр л хангадаг.
+    Node.js хэвлэлийн апп-д тэдгээр зам **байхгүй** (Архитектур хуудсыг үз).
+
+    Энэ хэвлэлийн апп-д зориулсан хамгийн бага тохиргоо:
+
+    ```nginx
+    server {
+        server_name node.template.dgov.mn;
+        client_max_body_size 30m;
+
+        # OIDC issuer нь API дээр ҮНДСЭН замаар суудаг тул ил проксилно —
+        # эс бөгөөс SPA-ийн fallback тэдгээрийг залгиж, discovery эвдэрнэ.
+        location /oauth2/                            { proxy_pass http://127.0.0.1:8080; include /etc/nginx/proxy_params; }
+        location = /userinfo                         { proxy_pass http://127.0.0.1:8080; include /etc/nginx/proxy_params; }
+        location = /.well-known/openid-configuration { proxy_pass http://127.0.0.1:8080; include /etc/nginx/proxy_params; }
+        location = /.well-known/jwks.json            { proxy_pass http://127.0.0.1:8080; include /etc/nginx/proxy_params; }
+
+        location /api/ { proxy_pass http://127.0.0.1:8080; include /etc/nginx/proxy_params; }
+        location /     { proxy_pass http://127.0.0.1:3012; include /etc/nginx/proxy_params; }
+        listen 443 ssl;  # certbot managed
+    }
+    ```
+
 ```nginx
 server {
     server_name sso.dgov.mn;

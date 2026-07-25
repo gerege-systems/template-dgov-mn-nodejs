@@ -49,6 +49,32 @@ bash deploy/deploy.sh
 
 ## nginx (example)
 
+!!! note "The example below is the **SSO** deployment"
+    `server_name sso.dgov.mn` — that is the **Government SSO** install which holds
+    the eID credentials and is what provides the `/rp/*` surfaces (sign relay, eID
+    proxy). The Node.js edition app **does not have** those paths (see
+    Architecture).
+
+    A minimal config for this edition's app:
+
+    ```nginx
+    server {
+        server_name node.template.dgov.mn;
+        client_max_body_size 30m;
+
+        # The OIDC issuer is mounted at the API root, so proxy it explicitly —
+        # otherwise the SPA fallback swallows it and discovery breaks.
+        location /oauth2/                            { proxy_pass http://127.0.0.1:8080; include /etc/nginx/proxy_params; }
+        location = /userinfo                         { proxy_pass http://127.0.0.1:8080; include /etc/nginx/proxy_params; }
+        location = /.well-known/openid-configuration { proxy_pass http://127.0.0.1:8080; include /etc/nginx/proxy_params; }
+        location = /.well-known/jwks.json            { proxy_pass http://127.0.0.1:8080; include /etc/nginx/proxy_params; }
+
+        location /api/ { proxy_pass http://127.0.0.1:8080; include /etc/nginx/proxy_params; }
+        location /     { proxy_pass http://127.0.0.1:3012; include /etc/nginx/proxy_params; }
+        listen 443 ssl;  # certbot managed
+    }
+    ```
+
 ```nginx
 server {
     server_name sso.dgov.mn;

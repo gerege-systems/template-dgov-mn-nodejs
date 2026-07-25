@@ -5,21 +5,26 @@
 This document describes the high-level architecture of the **Government Template
 Platform V3.0** (Цахим засаглалыг бүтээх суурь) — a production-ready foundation on
 which any digital-government service can be built. Its flagship reference
-deployment is **Government Template Platform** (at **template.dgov.mn**), an **eID-based
-government service platform** — a Relying Party of Government SSO. The backend module is `template`; the stack is **chi (net/http)
-+ pgx (pgxpool) + PostgreSQL + Redis + Gemini AI**, organized along Clean
-Architecture lines and fronted by a Next.js BFF.
+deployment is **Government Template Platform** (at **node.template.dgov.mn**), an
+**eID-based government service platform** — a Relying Party of Government SSO. The
+stack is **Node.js 22 · Express 5 · TypeScript (ESM) + node-postgres (`pg`) +
+PostgreSQL + Redis + Gemini AI**, organized along Clean Architecture lines and
+fronted by a **static Vite + React SPA** (no BFF).
+
+> **Edition.** This repo is the Node.js/React port of the Go/Next.js original
+> ([template.dgov.mn](https://template.dgov.mn)). The HTTP contract, SQL schema
+> and security behaviour are preserved 1:1 — see [ROADMAP](../../ROADMAP.md).
 
 In that reference deployment the platform serves as both an **eID Relying Party**
 (users log in with eID) and an **OIDC Identity Provider** (other government apps
-log in *through* it via the built-in Go provider). Row-Level Security in PostgreSQL is the
+log in *through* it via the built-in provider — no Ory Hydra). Row-Level Security in PostgreSQL is the
 load-bearing per-user isolation boundary — see
 [Row-Level Security](#row-level-security-rls).
 
-> **Origin.** The Clean-Architecture layering, pgx data layer, caching,
-> observability, and test strategy descend from the open-source
-> [snykk/go-rest-boilerplate](https://github.com/snykk/go-rest-boilerplate) by
-> Najib Fikri (MIT). The auth stack, RLS security model, eID/SSO/OIDC-provider
+> **Origin.** The Clean-Architecture layering, data layer, caching,
+> observability, and test strategy descend (via the Go edition) from the
+> open-source [snykk/go-rest-boilerplate](https://github.com/snykk/go-rest-boilerplate)
+> by Najib Fikri (MIT). The auth stack, RLS security model, eID/SSO/OIDC-provider
 > integrations, and the feature modules below were built for this platform. As an
 > MIT derivative the upstream copyright is retained — see
 > [Credits](#credits--license).
@@ -29,29 +34,27 @@ load-bearing per-user isolation boundary — see
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        HTTP Layer                                 │
-│  cmd/api/server → Middleware → internal/http/handlers/v1          │
-│  internal/http/{routes, datatransfers, middlewares, auth}         │
-│  + internal/provider/{adminapi, adminkeys, devapps, signrelay}    │
+│  src/cmd/api/server → Middleware → src/http/handlers/v1           │
+│  src/http/{routes, dto, middlewares, cookies}                     │
 ├─────────────────────────────────────────────────────────────────┤
 │                       Usecase Layer                               │
-│  internal/business/usecases/*  (19 bounded contexts)              │
+│  src/usecases/*  (25 bounded contexts)                            │
 │  (Business logic, validation, orchestration)                      │
 ├─────────────────────────────────────────────────────────────────┤
 │                     Repository Layer                              │
-│  internal/datasources/repositories/{interface, postgres}          │
-│  (pgx hand-written SQL, RLS transactions, soft-delete, caching)   │
+│  src/datasources/repositories/{interface, postgres}               │
+│  (hand-written SQL via `pg`, RLS transactions, soft-delete)       │
 ├─────────────────────────────────────────────────────────────────┤
 │                       Domain Layer                                │
-│  internal/business/domain                                         │
+│  src/domain                                                       │
 │  (Entities, value objects, business rules)                        │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Feature Modules (bounded contexts)
 
-The platform is composed of **19 usecase modules** under
-`internal/business/usecases/`, each an interface + implementation wired by hand in
-the composition root. Beyond the boilerplate core (`auth`, `users`, `rbac`, `ai`)
+The platform is composed of **24 usecase modules** under `src/usecases/`, each an
+interface + implementation wired by hand in the composition root. Beyond the boilerplate core (`auth`, `users`, `rbac`, `ai`)
 the platform adds the eID/SSO/government-service surface:
 
 | Module         | Responsibility |
@@ -63,9 +66,9 @@ the platform adds the eID/SSO/government-service surface:
 | `org`          | Organizations + memberships (eID-linked; **RLS**). |
 | `gov`          | Citizen "Government services" portal — applications, references, notifications, payments, appointments (per-user, **RLS**) over a public service catalogue. |
 | `gateway`      | API gateway — services / routes / policies + telemetry (each service carries an OAuth `scope`). |
-| `applications` | Unified OAuth2 **client registry** (RP + m2m) backed by **Ory Hydra** — merges the old gateway consumers/API-keys and the SSO RP registration; per-service access = OAuth scopes (`application_services` → `gateway_services.scope`). Admin-managed (`gateway.manage`), gated on Hydra. |
+| `applications` | Unified OAuth2 **client registry** (RP + m2m) backed by the platform's **own** `oauth_clients` table — merges the old gateway consumers/API-keys and the SSO RP registration; per-service access = OAuth scopes (`application_services` → `gateway_services.scope`). Admin-managed (`gateway.manage`). Secrets stored as Argon2id; Hydra's PBKDF2 format is still *verified* so existing clients keep working. |
 | `core`         | Gerege Core (`core.gerege.mn`) USER FIND / ORG FIND lookup wrapper. |
-| `provider`     | **OIDC Provider** — login/consent/logout core in front of **Ory Hydra**; dan is itself an SSO IdP. |
+| `provider`     | **OIDC Provider** — login/consent/logout core in front of the built-in `usecases/oidc`; the platform is itself an SSO IdP. |
 | `integrations` | User third-party OAuth (Google Drive/Meet, Dropbox); tokens stored **AES-256-GCM encrypted** (**RLS**). |
 | `assets`       | Personal signature image + organization stamp (images to Google Drive, URL in DB). |
 | `gspace`       | Gerege Space — the app's own SFTP storage, per-user quota (default 2 MB). |
@@ -74,55 +77,65 @@ the platform adds the eID/SSO/government-service surface:
 | `security`     | Security-event ingest (authenticated users write, admin reads). |
 | `site`         | Site-wide appearance defaults (accent / font / density / theme). |
 | `sign`         | PDF signing (**PAdES**) via eidmongolia `/v3` with a server-held Document-Signer certificate. |
+| `oidc`         | The **OIDC issuer** itself — authorize/token/introspect/userinfo/revoke, RSA key manager + JWKS, single-use codes and refresh-token families. |
+| `sso`          | The platform as an SSO **consumer** (Relying Party of `sso.dgov.mn`): one-time state in Redis, 3-tier user upsert that merges an SSO identity into the existing eID account by civil ID. |
+| `ssotoken`     | Stores/refreshes the user's SSO tokens (AES-256-GCM), which is what makes the optional PKI-over-SSO proxy path work. |
+| `registry`     | Service **registry** (CPSV-AP passport): drafts, versions, evidences, life events, publish/archive, once-only violation analysis. Also serves the public `catalog` read model. |
+| `relay`        | Inter-agency request **relay**: peer registry, HMAC-signed webhooks, routing, SLA sweep with escalation, plus a demo simulator. |
+| `superadmin_onboarding` | The only door to super admin: invite → Google → eID → email OTP → TOTP, with backup codes. No session is minted until TOTP is verified. |
 
 ## Directory Structure
 
 ```
-.
-├── cmd/
-│   ├── api/
-│   │   ├── main.go                 # Entry point (config + logger init)
-│   │   └── server/server.go        # Composition root (manual DI) — reads all mounts here
-│   ├── migration/                  # Migration CLI (SQL only; NO ORM/AutoMigrate)
-│   └── seed/                       # DB seeder CLI
-├── docs/                           # EN/MN docs + OpenAPI spec (swagger.json/yaml, docs.go)
-├── internal/
+backend/
+├── src/
+│   ├── cmd/
+│   │   ├── api/
+│   │   │   ├── main.ts             # Entry point (config + logger init)
+│   │   │   └── server/server.ts    # Composition root (manual DI) — every mount is read here
+│   │   ├── migration/              # Migration CLI (SQL only; NO ORM/AutoMigrate)
+│   │   ├── healthcheck/            # Tiny binary used by the container HEALTHCHECK
+│   │   └── openapi/                # Emits docs/openapi.json (drift-checked in CI)
 │   ├── apperror/                   # Typed domain errors (→ HTTP status)
-│   ├── business/
-│   │   ├── domain/                 # Enterprise entities (innermost circle)
-│   │   └── usecases/               # 19 bounded contexts (interface + impl)
-│   ├── config/                     # Viper-backed config + .env.example
+│   ├── config/                     # Env loader + guards + .env parser
 │   ├── constants/                  # Env, logger, error, endpoint constants
+│   ├── domain/                     # Enterprise entities (innermost circle)
+│   ├── usecases/                   # 25 bounded contexts (interface + impl)
 │   ├── datasources/
-│   │   ├── caches/                 # Redis + Ristretto two-tier cache
-│   │   ├── drivers/                # pgx (pgxpool) conn + RLS-enforceability boot guard
-│   │   ├── migration/              # SQL migration runner
-│   │   ├── records/                # pgx record structs + record↔domain mappers
-│   │   ├── rls/                    # Per-request RLS identity carried on context.Context
+│   │   ├── caches/                 # redis.ts + memory.ts (two-tier)
+│   │   ├── drivers/                # pg pool + `withRLS` + RLS-enforceability boot guard
+│   │   ├── migration/              # SQL migration runner (advisory-locked)
+│   │   ├── records/                # snake_case row interfaces + record↔domain mappers
 │   │   └── repositories/
-│   │       ├── interface/          # Gateway abstractions (package _interface)
-│   │       └── postgres/*          # pgx implementations (hand-written SQL, withRLS)
+│   │       ├── interface/          # Gateway abstractions (what usecases depend on)
+│   │       └── postgres/*          # Implementations (hand-written SQL, withRLS)
 │   ├── http/
-│   │   ├── auth/                   # CurrentUser from request context
-│   │   ├── datatransfers/          # Request / Response DTOs
+│   │   ├── cookies.ts              # httpOnly session cookies + CSRF + OAuth state
+│   │   ├── dto/                    # requests (zod strictObject) + response shapes
 │   │   ├── handlers/v1/            # HTTP handlers (per module)
-│   │   ├── middlewares/            # Global + per-group middleware
-│   │   └── routes/                 # Route registration (per module)
-│   └── provider/                   # OIDC-provider operator surfaces:
-│       ├── adminapi/               #   /admin RP OAuth2-client management
-│       ├── adminkeys/ devapps/     #   admin API keys + developer-app store
-│       └── signrelay/              #   /rp/sign relay for downstream RPs
-├── migrations/                     # Numbered SQL migrations (N_name.up.sql + .down.sql)
-├── pkg/                            # Framework-agnostic clients & utilities (15 packages)
-│   ├── eid/ google/ hydra/         # Identity: eID RP, Google OAuth, Hydra admin
-│   ├── xyp/ gspace/ verify/        # XYP org registry, SFTP storage, GeregeCloud Verify OTP
-│   ├── gemini/                     # SDK-free Gemini REST (function calling, audio, PCM→WAV)
-│   ├── jwt/ logger/ clock/         # JWT, Zap logging, time abstraction
-│   ├── helpers/ validators/        # Utilities + struct-tag payload validation
-│   ├── audit/                      # Auth-event audit helpers
-│   └── observability/              # OTel tracing + Prometheus metrics setup
-└── internal/test/                  # Mocks, fixtures, testcontainers harness
+│   │   ├── middlewares/            # Global + per-route middleware (16)
+│   │   ├── routes/                 # Route registration — one route_<domain>.ts per module
+│   │   └── response.ts             # wrap · decodeBody · the BaseResponse envelope
+│   └── pkg/                        # Framework-agnostic clients & utilities (21 packages)
+│       ├── eid/ google/ xyp/       # Identity: eID RP, Google OAuth, XYP org registry
+│       ├── oidc/ jwt/ secrethash/  # OIDC RP client, JWT, Argon2id/PBKDF2 secret hashing
+│       ├── oauthproviders/ cloudfiles/  # 3rd-party OAuth + Drive/Dropbox/Meet REST
+│       ├── gemini/                 # SDK-free Gemini REST (function calling, audio, PCM→WAV)
+│       ├── pdf/ gspace/ verify/    # PAdES signing, SFTP storage, Verify API OTP
+│       ├── totp/ recovery/ crypto/ # MFA, backup codes, AES-256-GCM
+│       ├── audit/                  # Hash-chained audit (byte-compatible with Go)
+│       ├── ctx/ logger/ validators/# Explicit request context, pino logging, zod helpers
+│       └── observability/          # OTel tracing + Prometheus metrics setup
+├── migrations/                     # Numbered SQL (N_name.up.sql + .down.sql) — UNCHANGED from Go
+├── docs/                           # EN/MN docs + generated openapi.json
+└── scripts/                        # smoke-esm.mjs (CommonJS/ESM interop gate)
 ```
+
+> **No `internal/`.** The Go edition used Go's `internal/` visibility rule to keep
+> packages private. TypeScript has no such mechanism, so the boundary is enforced
+> by **lint rules + review + the dependency direction below** instead of by the
+> compiler. Treat "usecases must not import a postgres adapter" as a hard rule
+> even though `tsc` will not stop you.
 
 ## Dependency Flow
 
@@ -132,99 +145,111 @@ Dependencies flow inward only (Clean Architecture principle):
 HTTP → Usecase → Repository → Domain
   │        │          │
   ▼        ▼          ▼
- DTO   Interface   pgx/SQL
+ DTO   Interface   pg/SQL
 ```
 
-- **HTTP Layer** depends on **Usecase** interfaces (`auth.Usecase`, `users.Usecase`, …).
-- **Usecase Layer** depends on **Repository** interfaces (`_interface.UserRepository`, …), never on postgres adapters.
+- **HTTP Layer** depends on **Usecase** interfaces (`AuthUsecase`, `UsersUsecase`, …).
+- **Usecase Layer** depends on **Repository** interfaces
+  (`datasources/repositories/interface`), never on postgres adapters.
 - **Repository Layer** depends on **Domain** entities.
-- **Domain Layer** imports only the standard library + `golang.org/x/crypto/bcrypt` — never `internal/` or `pkg/`.
+- **Domain Layer** imports nothing internal — only `node:*` and `bcryptjs`.
 
-This is verified structurally: `internal/business/**` and
-`internal/datasources/repositories/**` import **no** chi/net-http web package, so
-the delivery framework can be swapped without touching business code. One
-exception to "domain imports nothing internal" is deliberate: the leaf package
-`internal/datasources/rls` depends only on stdlib `context` and is shared across
-all three layers to carry per-request RLS identity without an import cycle.
+`src/usecases/**` and `src/datasources/repositories/**` import **no** Express
+type, so the delivery framework can be swapped without touching business code.
+
+The one shared leaf is `pkg/ctx` — it carries the per-request RLS identity,
+request ID and `AbortSignal` across all three layers without creating an import
+cycle. **Context is explicit**: every repository and usecase takes `ctx: Ctx` as
+its first argument. That is the Node equivalent of Go's `context.Context`, and it
+makes "forgot to pass the identity" a **compile error** rather than a silent RLS
+bypass.
 
 ## Key Components
 
 ### 1. HTTP Layer
 
-**Composition root:** `cmd/api/server/server.go` — the single manual-DI wiring
+**Composition root:** `src/cmd/api/server/server.ts` — the single manual-DI wiring
 point. Read it end-to-end to see every mount. It:
-- Initializes tracing, the pgx pool (with the RLS boot guard), Redis/Ristretto, the JWT service, and every external client (eID, Google, XYP, OIDC/Hydra, Gemini, GeregeCloud Verify, Gerege Space, Gerege Core).
+
+- Initializes tracing, the `pg` pool (with the RLS boot guard), Redis + the in-process cache, the JWT service, and every external client (eID, Google, XYP, OIDC, Gemini, Verify, Gerege Space, Gerege Core).
 - Wires repositories → usecases → routes by hand (no global singletons, no DI container).
-- Builds the chi router, installs the global middleware stack, and mounts each route module under `/api/v1`.
-- Conditionally mounts the OIDC-provider surfaces (`/admin`, `/rp/sign`) only when their config is present.
-- Owns graceful shutdown (drains HTTP, rate limiters, pgx pool, Redis, tracer).
+- Builds the Express app, installs the global middleware stack, and mounts each route module under `/api/v1`.
+- Mounts the OIDC-provider surface at the **root** (`/oauth2/*`, `/userinfo`, `/.well-known/*`) — those paths are defined by the spec and cannot live under `/api/v1`.
+- Starts the background workers (relay SLA sweep, demo simulators) and owns graceful shutdown (drains HTTP, rate limiters, pg pool, Redis, tracer, workers).
 
-**Routes:** `internal/http/routes/` — one file per module (`route_auth.go`,
-`route_gov.go`, `route_provider.go`, …). Each mounts `/v1/<module>` under `/api`.
+**Routes:** `src/http/routes/` — one file per module (`route_auth.ts`,
+`route_gov.ts`, `route_oidc.ts`, …).
 
-**Handlers:** `internal/http/handlers/v1/` — one package per module. Handler
-signature is `func(w http.ResponseWriter, r *http.Request) error`, wrapped by
-`v1.Wrap`; bodies decoded with `v1.DecodeBody`, DTOs validated by
-`validators.ValidatePayloads`, responses via `v1.NewSuccessResponse` /
-`v1.RespondWithError`. Handlers carry swagger annotations.
+!!! warning "Express middleware scope is NOT chi's `Group`"
+    In chi, `r.Group(...)` applies middleware only to routes declared inside it.
+    Express has no equivalent — `router.use(sub)` runs the sub-router's `use()` for
+    **every** request from that point on. So middleware is passed **per route**
+    (`auth.post('/eid/start', strict, wrap(h))`), never via `use()` inside a
+    module. Getting this wrong silently leaks auth or rate limits onto endpoints
+    that must not have them; `route_auth.test.ts` pins the real chain.
+
+**Handlers:** `src/http/handlers/v1/` — one module per domain. The handler
+signature is `(req, res) => Promise<void>`, wrapped by `wrap()`; bodies are
+decoded and validated in one step with `decodeBody(req, schema)` (zod
+`strictObject` — unknown fields are rejected, matching Go's
+`DisallowUnknownFields`), and responses go through `newSuccessResponse` /
+`respondWithError`.
 
 ### 2. Middleware Stack
 
-Global middleware, applied in this order in `server.go` (order matters — tracing
-first so a span/`trace_id` exists before request-ID logging; Recoverer right after
-Request ID so panics downstream are caught and the recovery response carries a
-`request_id`):
+Global middleware, applied in this order in `server.ts` (order matters — request
+ID first so every later log line and the recovery response carry a `request_id`):
 
-1. **Tracing** (`TracingMiddleware`) — per-request OTel span.
-2. **Request ID** (`RequestIDMiddleware`) — generates / propagates `X-Request-ID` into context + logger.
-3. **Recoverer** (`RecovererMiddleware`) — catches downstream panics, returns a clean 500.
-4. **Metrics** (`MetricsMiddleware`) — Prometheus request counters + latency.
-5. **Security Headers** (`SecurityHeadersMiddleware`) — HSTS, CSP, nosniff, frame options, referrer policy.
-6. **CORS** (`CORSMiddleware`) — origins from `ALLOWED_ORIGINS` (wildcard only in dev).
-7. **Body Size Limit** (`BodySizeLimitMiddleware`) — global ceiling (per-route tighter caps).
-8. **Access Log** (`AccessLogMiddleware`) — structured one-line access log.
-9. **Timeout** (`TimeoutMiddleware`) — per-request deadline (server `WriteTimeout` is set longer so it can fire first).
+1. **Request ID** — generates / propagates `X-Request-ID` into `ctx` + logger.
+2. **Client IP** — resolves the caller IP, trusting `X-Forwarded-For` **only** from `TRUSTED_PROXIES` (fail-safe: no trust by default).
+3. **Metrics** — Prometheus request counters + latency.
+4. **Security headers** — HSTS, CSP (`default-src 'none'` — the API returns JSON), nosniff, frame options, referrer policy.
+5. **CORS** — origins from `ALLOWED_ORIGINS` (wildcard only outside production).
+6. **Body size limit** — global ceiling; tighter caps per route group.
+7. **Body parsers** — `express.raw` for `/relay/webhook` **before** `express.json` (HMAC is verified over the *raw* bytes; a re-serialized body would break the signature), then JSON + urlencoded.
+8. **CSRF** — double-submit check on cookie-authenticated mutations (skipped for Bearer requests, which are not ambient).
+9. **Access log** — structured one-line access log.
+10. **Timeout** — per-request deadline wired to the `ctx` `AbortSignal`.
+
+Registered **last**: the 404 handler and the **recoverer** (Express 5 error
+middleware must come after the routes it protects).
 
 **Per-group / per-route middleware:**
-- **Auth** (`NewAuthMiddleware`) — validates the JWT bearer token, stashes `CurrentUser` in context, and **sets the RLS identity** on the context: `rls.WithAdmin` for admins, `rls.WithUser` otherwise (`middleware_auth.go`).
-- **Service RLS context** (`ServiceRLSContext`) — installed on the anonymous `/auth` group so pre-auth flows (eID upsert, refresh identity lookup) run under the trusted `service` RLS role (`middleware_rls.go`).
-- **RBAC** (`RequirePermission`, `RequireAdmin`, `RequireSuperAdmin`) — declarative authorization after auth; admins bypass permission checks, `RequireSuperAdmin` gates the `/superadmin` surface. Fail-closed on resolver error.
-- **Observability gate** (`ObservabilityGate`) — guards `/metrics` and `/swagger/doc.json` (see [Ops Endpoints](#ops-endpoints)).
-- **Rate limiters** — four separate limiters: `/auth` ~5/min, `/ai` ~20/min (burst 10, for translation streams), `/eid/poll` ~60/min (burst 30, for long-poll), and gov/assets/gspace/eID-profile **writes** ~30/min (burst 15).
 
-`clientIP()` (`middleware_clientip.go`) is a helper — not a global middleware —
-that resolves the client IP for rate-limiting and audit, trusting
-`X-Forwarded-For` only from `TRUSTED_PROXIES` (fail-safe: no trust by default).
+- **Auth** — validates the JWT (Bearer **or** the `dgov_access` httpOnly cookie), stashes `CurrentUser`, and **sets the RLS identity**: `withAdmin` for admins, `withUser` otherwise.
+- **Service RLS context** — installed on the anonymous `/auth` group so pre-auth flows (eID upsert, refresh identity lookup) run under the trusted `service` RLS role.
+- **RBAC** (`requirePermission`, `requireAdmin`, `requireSuperAdmin`) — declarative authorization after auth; admins bypass permission checks. Fail-closed on resolver error.
+- **Observability gate** — guards `/metrics` and `/swagger/doc.json` (see [Ops Endpoints](#ops-endpoints)).
+- **Rate limiters** — four separate limiters: `/auth` ~5/min, `/ai` ~20/min (burst 10, for translation streams), `/auth/eid/poll` ~120/min (for long-poll), and gov/assets/gspace/eID-profile **writes** ~30/min.
 
 ### 3. Usecase Layer
 
-**Location:** `internal/business/usecases/` — each bounded context exposes an
-interface + an implementation. Responsibilities: business-rule validation,
-orchestration of repository + cache + external clients, and returning `apperror.*`
-values (wrapping internal causes with `apperror.InternalCause` so library errors
-never reach clients). Usecases depend only on `repositories/interface`, never on
+**Location:** `src/usecases/` — each bounded context exposes an interface + an
+implementation. Responsibilities: business-rule validation, orchestration of
+repository + cache + external clients, and throwing `apperror.*` values (wrapping
+internal causes with `apperror.internalCause` so library errors never reach
+clients). Usecases depend only on `datasources/repositories/interface`, never on
 postgres adapters.
 
 ### 4. Repository Layer
 
-**Location:** `internal/datasources/repositories/` — the `interface/` package
-(named `_interface`, since `interface` is a keyword) holds gateway abstractions;
-`postgres/*` implements them with pgx and hand-written SQL. Key features:
+**Location:** `src/datasources/repositories/` — `interface/` holds the gateway
+abstractions; `postgres/*` implements them with `pg` and hand-written SQL. Key
+points:
 
-- Queries take `ctx` directly; rows scanned with `pgx.RowToStructByName`.
+- Every method takes `ctx` first; rows are plain interfaces with **snake_case keys matching the column names** (`records/`).
+- **Parameterized queries only** (`$1, $2 …`) — never string interpolation.
 - Soft delete via explicit `deleted_at IS NULL` predicates.
-- `Store` uses single round-trip `INSERT … RETURNING`.
-- Duplicate keys detected via pgconn error code `23505` → `apperror.Conflict`.
-- Per-user repositories run each query inside a **`withRLS` transaction** that
-  publishes the request identity as `SET LOCAL`-scoped GUCs (see
-  [Row-Level Security](#row-level-security-rls)).
+- `store` uses a single round-trip `INSERT … RETURNING`.
+- Duplicate keys are detected via PostgreSQL error code `23505` → `apperror.conflict`.
+- Per-user repositories run each query inside a **`withRLS` transaction** that publishes the request identity as `SET LOCAL`-scoped GUCs (see [Row-Level Security](#row-level-security-rls)).
 
 ### 5. Domain Layer
 
-**Location:** `internal/business/domain/` — entities carry business rules and
-depend on nothing internal. `domain_users.go` defines the role model and the eID
-user constructor (`NewEIDUser` — passwordless, `Active=true`, keyed on `civil_id`).
-See [Authorization](#authorization) for the role constants.
+**Location:** `src/domain/` — entities carry business rules and depend on nothing
+internal. `users.ts` defines the role model and the eID user constructor
+(`newEIDUser` — passwordless, `active = true`, keyed on `civil_id`). See
+[Authorization](#authorization) for the role constants.
 
 ## Authentication
 
@@ -232,7 +257,7 @@ The platform issues **JWT access + refresh tokens** (`pkg/jwt`) but has **no
 password login, no email/OTP registration, and no password reset**. Identity comes
 only from external providers. Endpoint shapes are documented in
 [API_CONTRACT.md](API_CONTRACT.md); routes are registered in
-`internal/http/routes/route_auth.go` and `route_eidprofile.go`.
+`src/http/routes/route_auth.ts` and `route_eidprofile.ts`.
 
 **1. Login with eID (the primary method).** The app is a Relying Party of eID
 Mongolia (`pkg/eid`, `EID_*` config):
@@ -245,37 +270,43 @@ Mongolia (`pkg/eid`, `EID_*` config):
 attached to the eID user; `DELETE /api/v1/auth/google/link` unlinks.
 
 **Session lifecycle** (independent of the login method):
-- `POST /api/v1/auth/refresh` rotates the token pair; tokens issued before a credential-change cutoff are rejected (`User.TokensRevokedBefore`). A `kind` claim guard prevents using a refresh token as an access token.
+- `POST /api/v1/auth/refresh` rotates the token pair; tokens issued before a credential-change cutoff are rejected (`tokensRevokedBefore`). A `kind` claim guard prevents using a refresh token as an access token.
+- **Cookies.** On every session mint the API also sets `dgov_access` / `dgov_refresh` (httpOnly) plus a JS-readable `dgov_csrf`. The token pair stays in the response body too, so Bearer clients are unaffected.
 - `POST /api/v1/auth/logout` revokes the refresh token.
 
-> **Note.** Handler files such as `auth_login.go`, `auth_register.go`,
-> `auth_send_otp.go`, `auth_forgot_password.go`, and `auth_reset_password.go`
-> still exist in the tree but are **not wired to any route** — `route_auth.go`
-> registers only the eID / Google / refresh / logout endpoints above.
+> **Note.** The Go edition still carries unrouted handler files (`auth_login.go`,
+> `auth_register.go`, `auth_send_otp.go`, `auth_forgot_password.go`,
+> `auth_reset_password.go`). Those were **not ported** — dead code should not
+> survive a port.
+>
+> The one exception is `PUT /auth/password/change`: the Go edition had a working
+> handler + usecase that was never wired to a route (the frontend's form got a
+> 404), so this edition **wires it**. On success it records a revocation cutoff
+> and clears the session cookies, forcing a fresh sign-in.
 
 ## Authorization
 
 Authorization is enforced at two layers: **JWT role/permission** at the HTTP edge
 and **RLS** at the database.
 
-**Role model** (`domain_users.go`; migration `23_superadmin_role`) — four ranked
-roles, `1` = highest:
+**Role model** (`src/domain/users.ts`; migration `23_superadmin_role`) — four
+ranked roles, `1` = highest:
 
-```go
-RoleSuperAdmin = 1  // manages admin users; gated by RequireSuperAdmin
-RoleAdmin      = 2  // full access; IsAdmin() true
-RoleManager    = 3
-RoleUser        = 4  // default for new eID users
+```ts
+RoleSuperAdmin = 1; // manages admin users; gated by requireSuperAdmin
+RoleAdmin      = 2; // full access; isAdmin() true
+RoleManager    = 3;
+RoleUser       = 4; // default for new eID users
 ```
 
-`IsAdmin()` returns true for `RoleAdmin` **and** `RoleSuperAdmin` (super admin
-inherits the admin JWT/RLS/permission paths); `IsSuperAdmin()` is true only for
+`isAdmin()` returns true for `RoleAdmin` **and** `RoleSuperAdmin` (super admin
+inherits the admin JWT/RLS/permission paths); `isSuperAdmin()` is true only for
 `RoleSuperAdmin`. Role ID `0` is a sentinel for legacy claim-less tokens and is
 downgraded to `RoleUser` by the RBAC middleware.
 
-**Dynamic RBAC** — beyond the coarse role rank, `rbac.Usecase` resolves a role's
+**Dynamic RBAC** — beyond the coarse role rank, `RBACUsecase` resolves a role's
 permission set from the database (migration `8_rbac_roles_permissions`).
-`RequirePermission(resolver, perm)` gates a route on a named permission; admins
+`requirePermission(resolver, perm)` gates a route on a named permission; admins
 bypass. Super admin is bootstrapped from `SUPERADMIN_EMAIL` (or by DB), never via
 API.
 
@@ -285,17 +316,16 @@ RLS is the platform's load-bearing per-user isolation boundary — defense-in-de
 beneath the `WHERE user_id = …` clauses the repositories already write. It ensures
 that even a query bug cannot return another user's rows.
 
-**Identity on the context** (`internal/datasources/rls/rls.go`) — a leaf package
-(stdlib `context` only) carries an `Identity{ UserID, Role }` where `Role` is one
-of three string constants that **must** match the SQL policy literals:
+**Identity on the context** (`src/pkg/ctx/ctx.ts`) — a leaf module carries an
+`identity: { userId, role }` where `role` is one of three string constants that
+**must** match the SQL policy literals:
 
-- `service` — trusted pre-auth / system flows (eID upsert, refresh identity lookup, bootstrap). Set by `ServiceRLSContext` on `/auth`; full access.
-- `admin` — full access to every row. Set by the auth middleware via `rls.WithAdmin` for admin JWTs.
-- `user` — only the caller's own rows. Set by the auth middleware via `rls.WithUser`.
+- `service` — trusted pre-auth / system flows (eID upsert, refresh identity lookup, bootstrap). Set by `serviceRLSContext()` on `/auth`; full access.
+- `admin` — full access to every row. Set by the auth middleware via `withAdmin` for admin JWTs.
+- `user` — only the caller's own rows. Set by the auth middleware via `withUser`.
 
-**Publishing the identity** (`…/postgres/users/users_postgres.go`, and copies in
-`org`, `gov`, `security`, `userintegrations`) — the `withRLS(ctx, fn)`
-helper wraps each query in a transaction and runs:
+**Publishing the identity** (`src/datasources/drivers/pg.ts`) — the shared
+`db.withRLS(ctx, fn)` helper wraps each query in a transaction and runs:
 
 ```go
 SELECT set_config('app.user_id',   $1, true),   -- is_local = true ⇒ SET LOCAL semantics
@@ -333,38 +363,45 @@ usecase/handler layer.
 
 **Boot-time enforceability guard** — RLS is silently bypassed by Postgres
 superusers and `BYPASSRLS` roles, so `guardRLSEnforceable`
-(`internal/datasources/drivers/driver_pgx.go`) inspects `pg_roles` for the
+(`src/datasources/drivers/pg.ts`) inspects `pg_roles` for the
 connecting role at startup:
 
 - If the role has `rolsuper` or `rolbypassrls`: **production fails closed** (boot aborts, pool closed); **development logs a warning** and continues (migrate/tests may run as superuser).
 - The api must therefore connect as a least-privilege non-superuser role (e.g. `app_user`) in production. (The compose stack runs `ENVIRONMENT=development` on purpose, so the guard only hard-fails in production.)
 
-## OIDC Provider (Ory Hydra)
+## OIDC Provider (built in — no Ory Hydra)
 
 The platform can itself act as an **Identity Provider**: other government apps
-delegate login to dan via **Ory Hydra**. This surface activates only when
-`ProviderConfigured()` is true (`HYDRA_ADMIN_URL` + `HYDRA_PUBLIC_URL` +
-`SSO_STATE_KEY ≥ 32 bytes`); otherwise it is inert and its routes are never
-registered.
+delegate login to it. **Ory Hydra has been removed** — the provider is implemented
+in-repo (`src/usecases/oidc` + `src/usecases/provider` + the `oauth_clients`,
+`oauth_flow` and `oauth_keys` tables). The surface activates when `OAUTH_ISSUER`
+and `SSO_STATE_KEY` are set; otherwise it stays inert.
 
-- **Login / consent / logout core** — `usecases/provider` + `pkg/hydra` handle Hydra's challenges; first-party clients (`SSO_FIRSTPARTY_CLIENTS`) skip the consent UI. Mounted under `/api/v1/provider`.
-- **Applications (unified client registry)** — `usecases/applications` (mounted at `/api/v1/applications`, guarded by `gateway.manage`) is the current way to register OAuth2 clients: RP "Login with DAN" apps (`web`/`spa`/`native` → `authorization_code`; `spa`/`native` are public, PKCE, no secret) and m2m clients (`client_credentials`). Each is a Hydra OAuth2 client whose scopes are the allowed gateway services (`application_services` → `gateway_services.scope`); the confidential `client_secret` is revealed once on create/rotate.
-- **Operator surface (legacy)** — `internal/provider/adminapi` is mounted at **`/admin`** (via `http.StripPrefix`) for RP OAuth2-client registration/management, backed by the `devapps` (`developer_apps`) store and `adminkeys` (bootstrap keys from `SSO_ADMIN_API_KEYS`, SHA-256 matched). This admin-API-key operator surface and the `developer_apps` overlay still exist but are **superseded by the unified Applications model for new work**.
-- **Sign relay** — `internal/provider/signrelay` is mounted at **`/rp/sign/*`**, a reverse proxy that lets downstream RPs perform eID PDF signing *through* dan using dan's eidmongolia RP credentials (enabled by `SIGN_RELAY_TOKEN` + `EID_RP_SECRET`).
+- **Spec endpoints** are mounted at the **root**, not under `/api/v1`, because the OIDC spec fixes them: `GET /oauth2/auth`, `POST /oauth2/token`, `POST /oauth2/introspect`, `POST /oauth2/revoke`, `GET /oauth2/sessions/logout`, `GET|POST /userinfo`, `GET /.well-known/openid-configuration`, `GET /.well-known/jwks.json`.
+- **Login / consent / logout core** — `usecases/provider` drives the challenge flow; first-party clients (`SSO_FIRSTPARTY_CLIENTS`) skip the consent UI. Mounted under `/api/v1/provider`.
+- **Applications (client registry)** — `usecases/applications` (`/api/v1/applications`, guarded by `gateway.manage`) registers OAuth2 clients: RP apps (`web`/`spa`/`native` → `authorization_code`; `spa`/`native` are public → PKCE, no secret) and m2m clients (`client_credentials`). Per-service access is expressed as OAuth scopes (`application_services` → `gateway_services.scope`); a confidential `client_secret` is revealed **once** on create/rotate and stored only as an Argon2id hash.
+- **Signing keys** — `usecases/oidc/keys.ts` manages RSA-2048 keys whose `kid` is the RFC 7638 thumbprint. Private keys are stored **AES-256-GCM encrypted**; rotation keeps the old public key in JWKS so tokens in flight still verify.
 
-> **Enforcement caveat.** Assigning services to an application sets that client's
-> OAuth **scopes** — this is registration/config only. *Runtime* per-request
-> enforcement would require a gateway proxy that introspects the presented token
-> (`hydra.Admin.Introspect` exists) against each route's service scope, and that
-> proxy **does not exist yet**. So today the service assignment is not live
-> authorization — don't mistake it for enforced authz.
+**Security properties worth knowing** (all covered by tests):
+
+- `redirect_uri` is matched **exactly** — never by prefix or wildcard. If the client or redirect is invalid the error is **not** redirected back to the RP, so redirecting to an unverified address is structurally impossible.
+- PKCE is mandatory for public clients, and only `S256` is accepted.
+- An authorization code is **single-use**: replaying one revokes every token for that subject+client pair. Replaying a *refresh* token revokes the whole token **family** (RFC 9700 §4.14.2).
+- The client's declared auth method is enforced strictly (no downgrade); public clients cannot call introspect/revoke.
+- `google` claims are only released with the `google` scope (data minimization).
+
+> **Enforcement caveat (unchanged from the Go edition).** Assigning services to an
+> application sets that client's OAuth **scopes** — that is registration/config
+> only. *Runtime* per-request enforcement would need a gateway proxy that
+> introspects the presented token against each route's service scope, and that
+> proxy **does not exist yet**. Do not mistake the assignment for enforced authz.
 
 ## Database
 
-- **Driver:** pgx v5 (`github.com/jackc/pgx/v5` + pgxpool), hand-written SQL — **no ORM**.
+- **Driver:** [node-postgres](https://node-postgres.com/) (`pg`) with a connection pool, hand-written SQL — **no ORM**.
 - **Database:** PostgreSQL, with **Row-Level Security** as the per-user boundary.
-- **Migrations:** numbered SQL files in `migrations/` (`N_name.up.sql` + `.down.sql`), applied by the `migrate` compose service / `cmd/migration`. There is **no AutoMigrate** — the schema comes only from the `*.up.sql` files (`cmd/migration/main.go`).
-- **Tracing:** OpenTelemetry via pgx pool instrumentation (`otelpgx`).
+- **Migrations:** numbered SQL files in `migrations/` (`N_name.up.sql` + `.down.sql`), applied by the `migrate` compose service / `src/cmd/migration`. The files are **byte-identical to the Go edition** — the same database serves either. There is **no AutoMigrate**; the schema comes only from the `*.up.sql` files. The runner is advisory-locked and idempotent, so concurrent boots are safe.
+- **Tracing:** OpenTelemetry via `@opentelemetry/auto-instrumentations-node` (instruments `pg` and HTTP automatically).
 
 > **Migration-numbering collision.** Two migrations share the prefix `17_`:
 > `17_least_privilege_config_grants` and `17_org_rls_recursion_fix`. They are
@@ -373,13 +410,13 @@ registered.
 
 ### Connection Management
 
-Pool configured from env (`internal/datasources/drivers/driver_pgx.go`,
-`SetupPgxPostgres`):
+Pool configured from env (`src/datasources/drivers/pg.ts`, `setupPostgres`):
 
-```go
-poolCfg.MaxConns        = cfg.MaxConns    // DB_MAX_OPEN_CONNS   (default 25)
-poolCfg.MinConns        = cfg.MinConns    // DB_MAX_IDLE_CONNS   (default 5)
-poolCfg.MaxConnLifetime = cfg.MaxLifetime // DB_CONN_MAX_LIFE_MINS (default 15)
+```ts
+max:                 AppConfig.DB_MAX_OPEN_CONNS,            // default 25
+min:                 AppConfig.DB_MAX_IDLE_CONNS,            // default 5
+maxLifetimeSeconds:  AppConfig.DB_CONN_MAX_LIFE_MINS * 60,   // default 15 min
+idleTimeoutMillis:   5 * 60 * 1000,
 ```
 
 Production requires a TLS-verified DSN (`sslmode=verify-full` or `verify-ca`) —
@@ -388,10 +425,10 @@ enforced by the config guard.
 ## Observability
 
 ### Logging
-- **Library:** Zap (structured), via `pkg/logger`. JSON in production, console in development. Request ID + trace ID propagated through `*WithContext` helpers.
+- **Library:** [pino](https://getpino.io/) (structured), via `pkg/logger`. JSON in production, pretty in development. Request ID + trace ID propagated through the `*WithContext` helpers, which take `ctx` explicitly.
 
 ### Metrics
-- **Library:** Prometheus, endpoint `GET /metrics` (gated — see [Ops Endpoints](#ops-endpoints)). HTTP request counters/latency, cache hit/miss/error per layer, OTP send outcomes, and live pgx pool stats.
+- **Library:** `prom-client`, endpoint `GET /metrics` (gated — see [Ops Endpoints](#ops-endpoints)). HTTP request counters/latency, cache hit/miss/error per layer, OTP send outcomes, and live `pg` pool stats.
 
 ### Tracing
 - **Library:** OpenTelemetry; exporter selected by `OTEL_EXPORTER` (empty = noop, `stdout`, or `otlp`), sampling by `OTEL_SAMPLE_RATIO`.
@@ -401,11 +438,11 @@ enforced by the config guard.
 | Endpoint | Access |
 |----------|--------|
 | `GET /health` | Open — liveness (for load balancers / orchestrators). |
-| `GET /ready`  | Open — readiness: DB ping (pgx pool) + Redis probe. |
+| `GET /ready`  | Open — readiness: DB ping (`pg` pool) + Redis probe. |
 | `GET /metrics` | **Gated** by `ObservabilityGate`. |
 | `GET /swagger/doc.json` | **Gated** by `ObservabilityGate`. |
 
-`ObservabilityGate` (`middleware_observability_gate.go`) protects the two
+`observabilityGate` (`src/http/middlewares/observability_gate.ts`) protects the two
 operator-sensitive endpoints: in **development** they are always open; in
 **production** they require `Authorization: Bearer <OBSERVABILITY_TOKEN>` (constant-time
 compared) and return **404** — not 401 — on any mismatch or when
@@ -414,35 +451,41 @@ reconnaissance.
 
 ## Security Features
 
-| Feature           | Implementation                          | Location                                   |
-|-------------------|-----------------------------------------|--------------------------------------------|
-| Row-Level Security| per-user DB isolation + boot guard      | `datasources/rls/`, `drivers/driver_pgx.go`, migrations `7/14/20/21` |
-| Auth (identity)   | eID RP + Google OAuth                   | `usecases/auth`, `pkg/{eid,google}`        |
-| Authorization     | 4-role model + dynamic RBAC             | `domain_users.go`, `middlewares/middleware_rbac.go` |
-| Security headers  | HSTS, CSP, nosniff, frame options       | `middlewares/middleware_security.go`       |
-| CORS              | env whitelist, wildcard dev-only        | `middlewares/middleware_cors.go`           |
-| Rate limiting     | per-IP (auth / ai / poll / gov-write)   | `middlewares/middleware_ratelimit.go`      |
-| Body size limit   | global + tighter caps on `/auth`        | `middlewares/middleware_bodysizelimit.go`  |
-| Ops-endpoint gate | bearer token, 404 in prod               | `middlewares/middleware_observability_gate.go` |
-| Input validation  | `validate:` struct tags                 | `internal/http/datatransfers/requests/`    |
-| Encrypted secrets | AES-256-GCM OAuth tokens                 | `usecases/integrations` (`INTEGRATION_ENC_KEY`) |
-| SQL injection     | pgx (parameterized queries)             | `internal/datasources/repositories/`       |
-| PDF signing       | PAdES via server Document-Signer cert   | `usecases/sign` (`SIGN_SIGNER_*`)          |
+| Feature            | Implementation                            | Location |
+|--------------------|-------------------------------------------|----------|
+| Row-Level Security | per-user DB isolation + boot guard        | `pkg/ctx`, `datasources/drivers/pg.ts`, migrations `7/14/20/21` |
+| Auth (identity)    | eID RP + Google OAuth                     | `usecases/auth`, `pkg/{eid,google}` |
+| Session transport  | httpOnly cookies + double-submit CSRF     | `http/cookies.ts`, `http/middlewares/csrf.ts` |
+| Authorization      | 4-role model + dynamic RBAC               | `domain/users.ts`, `http/middlewares/rbac.ts` |
+| Security headers   | API: `default-src 'none'`; SPA: full CSP  | `http/middlewares/security.ts`, `frontend/nginx-security-headers.conf` |
+| CORS               | env whitelist, wildcard dev-only          | `http/middlewares/cors.ts` |
+| Rate limiting      | per-IP (auth / ai / poll / gov-write)     | `http/middlewares/ratelimit.ts` |
+| Body size limit    | global + tighter caps on `/auth`          | `http/middlewares/bodysizelimit.ts` |
+| Ops-endpoint gate  | bearer token, 404 in prod                 | `http/middlewares/observability_gate.ts` |
+| Input validation   | zod `strictObject` (unknown fields → 422) | `http/dto/requests/` |
+| Encrypted secrets  | AES-256-GCM (OAuth tokens, TOTP, OIDC keys)| `pkg/crypto`, `usecases/integrations` (`INTEGRATION_ENC_KEY`) |
+| Secret hashing     | Argon2id (+ Hydra PBKDF2 verify)          | `pkg/secrethash` |
+| SQL injection      | parameterized queries only (`$1, $2 …`)   | `datasources/repositories/postgres/` |
+| PDF signing        | PAdES via server Document-Signer cert     | `usecases/sign` (`SIGN_SIGNER_*`) |
+| Supply chain       | ESM import smoke over every module        | `scripts/smoke-esm.mjs` (CI gate) |
 
 ## API Design
 
 All API routes live under `/api/v1`; each module mounts `/v1/<module>`:
-`auth`, `users`, `users/me/eid`, `rbac`, `org`, `gov`, `integrations`, `assets`,
-`gspace`, `gateway`, `core`, `sso`, `admin`, `superadmin`, `ai`, `audit`,
-`security`, `site`, `sign`, and (when Hydra is configured) `provider` +
-`applications`. Infra endpoints
-(`/health`, `/ready`, `/metrics`, `/swagger`) and the provider surfaces (`/admin`,
-`/rp/sign`) sit at the root. **Full endpoint tables live in
-[API_CONTRACT.md](API_CONTRACT.md)** and the generated OpenAPI spec (`/swagger`).
+`auth`, `users`, `users/me/eid`, `me` (assets), `rbac`, `org`, `gov`, `registry`,
+`catalog`, `relay`, `integrations`, `gspace`, `gateway`, `core`, `sso`, `admin`,
+`superadmin`, `ai`, `audit`, `security`, `site`, `themes`, `sign`, `provider` and
+`applications`. Infra endpoints (`/health`, `/ready`, `/metrics`, `/swagger`) and
+the **OIDC spec endpoints** (`/oauth2/*`, `/userinfo`, `/.well-known/*`) sit at the
+root. **Full endpoint tables live in [API_CONTRACT.md](API_CONTRACT.md)** and the
+generated OpenAPI spec (`docs/openapi.json`, served at `/swagger`).
+
+The spec is **drift-checked in CI**: add or change a route/DTO without running
+`npm run openapi` and the build fails.
 
 ### Response Format
 
-A single envelope (`internal/http/handlers/v1/handler_base_response.go`):
+A single envelope (`src/http/response.ts`):
 
 **Success**
 ```json
@@ -460,22 +503,24 @@ A single envelope (`internal/http/handlers/v1/handler_base_response.go`):
   "data": { "errors": { "national_id": "national_id is required" } }, "request_id": "…" }
 ```
 
-Domain errors (`internal/apperror`) map to status codes: NotFound→404,
+Domain errors (`src/apperror`) map to status codes: NotFound→404,
 Unauthorized→401, Forbidden→403, Conflict→409, BadRequest→400, Internal→500.
 5xx causes are logged and replaced with a generic message in the body.
 
 ## Testing Strategy
 
-- **Unit tests** — usecase + handler layers with mockery mocks (`internal/test/mocks/`). Fast, no Docker. `go test ./...`.
-- **Integration tests** — repositories (including RLS policies) against a real Postgres + Redis via testcontainers-go (`internal/test/testenv/`). `make test-integration`.
-- **Mocks** — generated by mockery. `make mock interface=… dir=… filename=…`.
-- **Authz matrix** — `routes/routes_authz_matrix_test.go` asserts the auth/permission gate on every route.
+- **Unit tests** — usecase + handler layers with hand-written [vitest](https://vitest.dev/) mocks (plain object literals typed to the repository interface — no codegen). Fast, no Docker: `npm test`. **775 tests across 45 files.**
+- **Integration tests** — repositories (including RLS policies) against a real Postgres + Redis via [testcontainers](https://testcontainers.com/): `npm run test:integration` (needs Docker).
+- **Route-wiring tests** — Express's middleware scope differs from chi's `Group`, so `route_*.test.ts` boots the real router and asserts which middleware actually runs on which path.
+- **Byte-compatibility vectors** — the audit hash chain and Argon2id secret hashing are pinned against **reference vectors produced by the Go edition**, so both editions can share one database during a migration.
+- **ESM import smoke** — `scripts/smoke-esm.mjs` imports every built module (219) to catch CommonJS/ESM interop breakage that type-checking cannot see.
 
 ## Configuration
 
-Loaded from `.env` / environment by Viper (`internal/config/config.go`; see
-`internal/config/.env.example`). The config guard enforces production invariants
-(TLS DSN, `ALLOWED_ORIGINS`, `VERIFY_API_KEY`, JWT secret length). Selected keys:
+Loaded from `.env` / environment by a hand-written loader (`src/config/config.ts`;
+see `backend/.env.example`) — no Viper equivalent, just an explicit parser plus a
+guard that enforces production invariants (TLS DSN, `ALLOWED_ORIGINS`,
+`VERIFY_API_KEY`, JWT secret length, RLS role). Selected keys:
 
 | Group | Variables |
 |-------|-----------|
@@ -493,7 +538,9 @@ Loaded from `.env` / environment by Viper (`internal/config/config.go`; see
 | **Gemini AI** | `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_TTS_MODEL`, `GEMINI_VOICE`, `GEMINI_API_BASE`, `AI_SCOPE_PROMPT` |
 | **Gerege Core** | `CORE_API_BASE` (`https://core.gerege.mn`), `CORE_API_TOKEN` |
 | **Integrations** | `INTEGRATION_ENC_KEY` (AES-256-GCM; prod required) |
-| **OIDC Provider (Hydra)** | `HYDRA_ADMIN_URL` (`http://hydra:4445`), `HYDRA_PUBLIC_URL`, `SSO_STATE_KEY` (≥32), `SSO_FIRSTPARTY_CLIENTS`, `SSO_ADMIN_API_KEYS`, `SSO_ADMIN_SUBS` |
+| **OIDC Provider (built in)** | `OAUTH_ISSUER`, `SSO_STATE_KEY` (≥32), `SSO_FIRSTPARTY_CLIENTS` — **no Hydra variables** |
+| **3rd-party integrations** | `APP_ORIGIN`, `GOOGLE_DRIVE_CLIENT_ID`/`_SECRET`, `DROPBOX_CLIENT_ID`/`_SECRET`, `GOOGLE_MEET_CLIENT_ID`/`_SECRET` |
+| **Cookies** | `COOKIE_SECURE` (unset ⇒ Secure in production) |
 | **Observability** | `OTEL_EXPORTER` (``/`stdout`/`otlp`), `OTEL_SAMPLE_RATIO`, `OBSERVABILITY_TOKEN` |
 | **Networking** | `ALLOWED_ORIGINS` (prod required), `TRUSTED_PROXIES` |
 | **Bootstrap** | `SUPERADMIN_EMAIL` |
@@ -501,12 +548,13 @@ Loaded from `.env` / environment by Viper (`internal/config/config.go`; see
 ## Deployment
 
 ```bash
-go build ./...                 # build
+cd backend && npm run build    # tsc → dist/
 docker compose up -d --build   # db + redis + migrate (one-off) + api + web
 ```
 
 Health check: `curl http://localhost:8080/health`. See `docs/DEPLOYMENT.md` for
-the deployment topology.
+the deployment topology, and `npm run pre-push` to mirror the full CI gate
+locally (fmt · lint · typecheck · test · OpenAPI drift · build · ESM smoke).
 
 ## Credits & License
 
@@ -516,11 +564,14 @@ This platform builds on open-source work:
 |---------|--------|---------|--------------|
 | [snykk/go-rest-boilerplate](https://github.com/snykk/go-rest-boilerplate) | Najib Fikri | MIT | Clean Architecture layering, caching, observability, and test strategy |
 
-The delivery layer was adapted **Gin → chi (net/http)** and the data layer
-**sqlx → pgx (pgxpool)**; the auth stack, RLS security model, eID/SSO/OIDC-provider
-integrations, and feature modules were built for this platform. As an MIT
-derivative the upstream copyright notice is retained and this code is distributed
-under the MIT License (see `LICENSE`).
+The lineage is: the boilerplate's delivery layer went **Gin → chi (net/http)** and
+its data layer **sqlx → pgx** in the Go edition; this edition then ported those to
+**Express 5** and **node-postgres (`pg`)**. What survived across all three is the
+*shape* — the layering, the caching strategy, the observability wiring and the test
+strategy. The auth stack, RLS security model, eID/SSO/OIDC-provider integrations
+and the feature modules were built for this platform. As an MIT derivative the
+upstream copyright notice is retained and this code is distributed under the MIT
+License (see `LICENSE`).
 
 ---
 

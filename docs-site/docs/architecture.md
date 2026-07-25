@@ -8,15 +8,21 @@ repository → domain`. Business core нь web framework-ийг import хийд�
 ```
 Internet ──► nginx (TLS)
    │
-   ├─ /oauth2/*, /.well-known/*, /userinfo ─► api — платформын өөрийн OIDC issuer
-   ├─ /rp/sign/*    ─► eID sign relay (api)
-   ├─ /rp/eid/*     ─► eID service proxy — хувь хүн (api)
-   ├─ /rp/eid-org/* ─► eID service proxy — байгууллага (api)
-   ├─ /api/v1/*     ─► api (:8080)
-   └─ бусад бүх     ─► web — статик React SPA (nginx)
+   ├─ /oauth2/*, /userinfo, /.well-known/*  ─► api — платформын өөрийн OIDC issuer
+   ├─ /api/v1/*                              ─► api (:8080)
+   └─ бусад бүх                              ─► web — статик React SPA (nginx)
                                                    │
-   дотоод сүлжээ:  db (PostgreSQL) · redis
+   дотоод сүлжээ:  db (PostgreSQL 16) · redis (7)
 ```
+
+!!! warning "Go хувилбарын зарим гадаргуу энд БАЙХГҮЙ"
+    Эх хувилбарт `/rp/sign/*` (eID sign relay), `/rp/eid/*` · `/rp/eid-org/*`
+    (eID service proxy) болон `/admin` (RP OAuth2 client-ийн операторын API,
+    `developer_apps`) гэсэн нэмэлт гадаргуунууд байдаг. Эдгээр нь портын 25
+    домэйнд ОРООГҮЙ тул Node.js хэвлэлд **хараахан байхгүй**.
+
+    Энд байгаа `/api/v1/admin/*` нь ӨӨР зүйл — хэрэглэгчийн удирдлага ба AI
+    prompt тохиргоо (`users.manage` / `settings.manage` эрхээр).
 
 !!! info "BFF БАЙХГҮЙ"
     Go/Next.js хувилбарт browser нь Next.js-ийн BFF route-уудтай харилцаж, тэр нь
