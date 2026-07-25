@@ -426,6 +426,40 @@
         ]
       }
     },
+    "parameters": {
+      "OrgRegNo": {
+        "name": "regNo",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Байгууллагын улсын бүртгэлийн дугаар"
+      }
+    },
+    "requestBodies": {
+      "AssetURL": {
+        "required": true,
+        "description": "Google Drive-д байршуулсан зургийн URL",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "format": "uri",
+                  "maxLength": 1000
+                }
+              },
+              "required": [
+                "url"
+              ]
+            }
+          }
+        }
+      }
+    },
     "responses": {
       "Ok": {
         "description": "OK",
@@ -1540,6 +1574,275 @@
             "$ref": "#/components/responses/Error"
           },
           "500": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/me/signature": {
+      "get": {
+        "summary": "Гарын үсгийн зураг авах",
+        "description": "Гарын үсгийн зураг нь Google Drive-д байршдаг; API зөвхөн URL хадгална. Хэрэглэгчийн ID нь ЗӨВХӨН JWT-ээс гардаг тул өөр хүний гарын үсэг рүү хандах боломжгүй.",
+        "tags": [
+          "assets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "put": {
+        "summary": "Гарын үсгийн зураг хадгалах",
+        "tags": [
+          "assets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/AssetURL"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Гарын үсгийн зураг устгах",
+        "tags": [
+          "assets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/me/latin-name": {
+      "put": {
+        "summary": "Латин нэрээ гараар засах",
+        "description": "eID-ийн автомат галиглалт заримдаа буруу гардаг тул гараар засах гарц.",
+        "tags": [
+          "assets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "first_name_en": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "last_name_en": {
+                    "type": "string",
+                    "maxLength": 120
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/me/org-name-latin/{regNo}": {
+      "put": {
+        "summary": "Байгууллагын латин нэр засах (ADMIN)",
+        "description": "ADMIN эрхийг eID (улсын бүртгэл) шалгана — энэ template өөрөө эрх шийддэггүй. Эрхгүй бол 403.",
+        "tags": [
+          "assets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrgRegNo"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name_latin": {
+                    "type": "string",
+                    "maxLength": 200
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/me/orgstamp/{regNo}": {
+      "get": {
+        "summary": "Байгууллагын тамганы дардас авах",
+        "description": "Тухайн байгууллагын АЛЬ НЭГ эрхийн төлөөлөгч байхад хангалттай. Төлөөлөгч биш бол 403 — регистрийн дугаар таамаглаж бусдын тамгыг татахаас (IDOR) хамгаална.",
+        "tags": [
+          "assets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrgRegNo"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "put": {
+        "summary": "Байгууллагын тамганы дардас хадгалах (ADMIN)",
+        "description": "Зөвхөн ADMIN эрхтэй төлөөлөгч. MANAGER эрхтэй хүн 403 авна.",
+        "tags": [
+          "assets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrgRegNo"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/AssetURL"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Байгууллагын тамганы дардас устгах (ADMIN)",
+        "tags": [
+          "assets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrgRegNo"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
             "$ref": "#/components/responses/Error"
           }
         }

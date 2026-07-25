@@ -120,7 +120,25 @@ function mockUsers(over: Partial<UsersUsecase> = {}): UsersUsecase {
 
 function mockEid(over: Partial<EidClient> = {}): EidClient {
   const no = () => Promise.reject(new Error('not stubbed'));
-  return { qrInitiate: vi.fn(no), initiate: vi.fn(no), session: vi.fn(no), ...over };
+  return {
+    qrInitiate: vi.fn(no),
+    initiate: vi.fn(no),
+    session: vi.fn(no),
+    // Байгууллагын төлөөлөл + PKI — auth урсгалд дуудагддаггүй тул stub.
+    representations: vi.fn(no),
+    addRepresentation: vi.fn(no),
+    removeRepresentation: vi.fn(no),
+    orgSigners: vi.fn(no),
+    addSigner: vi.fn(no),
+    removeSigner: vi.fn(no),
+    resendSigner: vi.fn(no),
+    updateOrgNameLatin: vi.fn(no),
+    personSummary: vi.fn(no),
+    personCertificates: vi.fn(no),
+    personDevices: vi.fn(no),
+    personActivity: vi.fn(no),
+    ...over,
+  };
 }
 
 let redis: ReturnType<typeof fakeRedis>;

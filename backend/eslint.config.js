@@ -47,6 +47,10 @@ export default tseslint.config(
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
+      // unbound-method нь "this алдагдахаас" сэргийлэх дүрэм. Тестэд бид mock
+      // функцийг `expect(repo.method)`-д ДУУДАЛГҮЙ дамжуулдаг тул `this` огт
+      // хэрэглэгддэггүй — энэ нь цэвэр false positive. Зөвхөн тест файлд унтраав.
+      '@typescript-eslint/unbound-method': 'off',
     },
   },
 );

@@ -12,7 +12,7 @@ import type {
   SecurityEventRecord,
   SecurityEventRepository,
 } from '../../datasources/repositories/interface/security.js';
-import { background, withUser } from '../../pkg/ctx/ctx.js';
+import { background, withUser, type Ctx } from '../../pkg/ctx/ctx.js';
 import { newSecurityUsecase, type IngestRequest } from './security_usecase.js';
 
 const userId = '11111111-1111-1111-1111-111111111111';
@@ -40,7 +40,9 @@ function ingestReq(over: Partial<IngestRequest> = {}): IngestRequest {
 
 describe('security usecase — ingest', () => {
   it('event-ийг repository руу дамжуулна', async () => {
-    const ingest = vi.fn(() => Promise.resolve());
+    const ingest = vi.fn((_ctx: Ctx, _e: Omit<SecurityEventRecord, 'id' | 'receivedAt'>) =>
+      Promise.resolve(),
+    );
     const repo = mockRepo({ ingest });
     const uc = newSecurityUsecase(repo);
     const ctx = withUser(background(), userId);
@@ -59,7 +61,9 @@ describe('security usecase — ingest', () => {
   });
 
   it('kind хоосон бол 400 — DB-д хүрэхгүй', async () => {
-    const ingest = vi.fn(() => Promise.resolve());
+    const ingest = vi.fn((_ctx: Ctx, _e: Omit<SecurityEventRecord, 'id' | 'receivedAt'>) =>
+      Promise.resolve(),
+    );
     const repo = mockRepo({ ingest });
     const uc = newSecurityUsecase(repo);
 
@@ -70,7 +74,9 @@ describe('security usecase — ingest', () => {
   });
 
   it('kind/severity/source-ийн хоосон зайг зассаны дараа хадгална', async () => {
-    const ingest = vi.fn(() => Promise.resolve());
+    const ingest = vi.fn((_ctx: Ctx, _e: Omit<SecurityEventRecord, 'id' | 'receivedAt'>) =>
+      Promise.resolve(),
+    );
     const repo = mockRepo({ ingest });
     const uc = newSecurityUsecase(repo);
 
@@ -79,28 +85,24 @@ describe('security usecase — ingest', () => {
       ingestReq({ kind: '  integrity.tamper  ', severity: ' low ', source: '  web ' }),
     );
 
-    const [, rec] = ingest.mock.calls[0] as [
-      unknown,
-      Omit<SecurityEventRecord, 'id' | 'receivedAt'>,
-    ];
-    expect(rec.kind).toBe('integrity.tamper');
-    expect(rec.severity).toBe('low');
-    expect(rec.source).toBe('web');
+    const rec = ingest.mock.calls[0]?.[1];
+    expect(rec?.kind).toBe('integrity.tamper');
+    expect(rec?.severity).toBe('low');
+    expect(rec?.source).toBe('web');
   });
 
   it('user-agent болон IP-г ХЭВЭЭР дамжуулна (сервер тэмдэглэсэн нотолгоо)', async () => {
-    const ingest = vi.fn(() => Promise.resolve());
+    const ingest = vi.fn((_ctx: Ctx, _e: Omit<SecurityEventRecord, 'id' | 'receivedAt'>) =>
+      Promise.resolve(),
+    );
     const repo = mockRepo({ ingest });
     const uc = newSecurityUsecase(repo);
 
     await uc.ingest(background(), ingestReq({ userAgent: '  Bot/1.0  ', ip: '2001:db8::1' }));
 
-    const [, rec] = ingest.mock.calls[0] as [
-      unknown,
-      Omit<SecurityEventRecord, 'id' | 'receivedAt'>,
-    ];
-    expect(rec.userAgent).toBe('  Bot/1.0  ');
-    expect(rec.ip).toBe('2001:db8::1');
+    const rec = ingest.mock.calls[0]?.[1];
+    expect(rec?.userAgent).toBe('  Bot/1.0  ');
+    expect(rec?.ip).toBe('2001:db8::1');
   });
 
   it('repository алдаа ДОТООД алдаа болно (Postgres-ийн дэлгэрэнгүй гарахгүй)', async () => {

@@ -15,6 +15,7 @@ import {
 import { newMemoryCache } from '../../../datasources/caches/memory.js';
 import { newRedisCache, type RedisCache } from '../../../datasources/caches/redis.js';
 import { newAuditRepository } from '../../../datasources/repositories/postgres/audit/audit_postgres.js';
+import { newOrgStampRepository } from '../../../datasources/repositories/postgres/orgstamp/orgstamp_postgres.js';
 import { newRBACRepository } from '../../../datasources/repositories/postgres/rbac/rbac_postgres.js';
 import { newSecurityEventRepository } from '../../../datasources/repositories/postgres/security/security_postgres.js';
 import {
@@ -50,6 +51,7 @@ import { newGoogleClient } from '../../../pkg/google/google.js';
 import { newJWTServiceWithRefresh } from '../../../pkg/jwt/jwt.js';
 import { newAuditUsecase } from '../../../usecases/audit/audit_usecase.js';
 import { newAuthUsecase } from '../../../usecases/auth/auth_impl.js';
+import { newAssetsUsecase } from '../../../usecases/assets/assets_usecase.js';
 import { newCoreUsecase } from '../../../usecases/core/core_impl.js';
 import { newRBACUsecase } from '../../../usecases/rbac/rbac_impl.js';
 import { newSecurityUsecase } from '../../../usecases/security/security_usecase.js';
@@ -248,6 +250,9 @@ export async function newApp(): Promise<App> {
   // Security event — RASP-style ингест (хэрэглэгчийн RLS дор) + admin жагсаалт.
   const securityUC = newSecurityUsecase(newSecurityEventRepository(db));
 
+  // Гарын үсэг / байгууллагын тамга — байгууллагын эрхийг eID-ээр шалгана.
+  const assetsUC = newAssetsUsecase(usersUC, userRepo, newOrgStampRepository(db), eidClient);
+
   const deps: Deps = {
     db,
     redisCache,
@@ -260,6 +265,7 @@ export async function newApp(): Promise<App> {
     themeUC,
     coreUC,
     securityUC,
+    assetsUC,
     // SSO eID proxy нь SSO_EID_PROXY_BASE_URL тохируулагдсан үед идэвхжинэ.
     eidProxyEnabled: AppConfig.SSO_EID_PROXY_BASE_URL !== '',
     authMiddleware,

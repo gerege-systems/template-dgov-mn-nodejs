@@ -28,6 +28,33 @@
 
 import { randomBytes, X509Certificate } from 'node:crypto';
 
+import {
+  addRepresentation,
+  addSigner,
+  orgSigners,
+  removeRepresentation,
+  removeSigner,
+  representations,
+  resendSigner,
+  updateOrgNameLatin,
+  type AddRepresentationInput,
+  type AddSignerInput,
+  type Representation,
+  type Signer,
+  type SignersResult,
+} from './eid_org.js';
+import {
+  personActivity,
+  personCertificates,
+  personDevices,
+  personSummary,
+  type PersonActivity,
+  type PersonCertificates,
+  type PersonDevices,
+  type PersonSummary,
+} from './eid_pki.js';
+import { EidHttp, parseJSON, snippet } from './transport.js';
+
 /** ErrSessionExpired нь session хугацаа дууссан (terminal) үед буцна. */
 export class ErrSessionExpired extends Error {
   constructor() {
@@ -75,9 +102,6 @@ const defaultRPName = 'template-web';
  * ийм иргэн нэвтэрч чадахгүй.
  */
 const defaultCertLevel = 'ADVANCED';
-const maxRespBytes = 256 << 10;
-/** Poll нь 25с хүртэл long-poll хийдэг тул HTTP timeout-ийг 30с болгов. */
-const httpTimeoutMs = 30_000;
 
 /** Certificate нь иргэний eID сертификатын нээлттэй хэсэг (X.509-аас задалсан). */
 export interface Certificate {
@@ -144,6 +168,81 @@ export interface EidClient {
   ): Promise<StartResult>;
   /** session нь session-ийн төлвийг long-poll-оор асууна (timeoutMs хүртэл). */
   session(sessionId: string, timeoutMs: number, signal?: AbortSignal): Promise<SessionResult>;
+
+  // ── Байгууллагын төлөөлөл ──
+  //
+  // ЭРХИЙН эх сурвалж нь УЛСЫН БҮРТГЭЛ (eidmongolia талд шалгагдана): 403 нь
+  // ErrNotRepresentative болж буцна. Энэ template хэзээ ч өөрөө "төлөөлөгч
+  // эсэх"-ийг шийддэггүй.
+
+  /**
+   * representations нь тухайн хүн (personEtsi = PNOMN-<civil_id>)-ий төлөөлж
+   * чадах идэвхтэй байгууллагуудыг буцаана (төлөөлдөггүй бол хоосон).
+   */
+  representations(personEtsi: string, signal?: AbortSignal): Promise<Representation[]>;
+  /**
+   * addRepresentation нь улсын бүртгэлээс баталгаажуулсан байгууллагыг иргэнд
+   * холбоно. Иргэний РД нь affiliates жагсаалтад байвал л нэмэгдэнэ.
+   */
+  addRepresentation(
+    personEtsi: string,
+    input: AddRepresentationInput,
+    signal?: AbortSignal,
+  ): Promise<Representation[]>;
+  /** removeRepresentation нь иргэн өөрийн төлөөллөө цуцлана. */
+  removeRepresentation(
+    personEtsi: string,
+    orgRegister: string,
+    signal?: AbortSignal,
+  ): Promise<Representation[]>;
+  /** orgSigners нь байгууллагын гарын үсэг зурагчдыг буцаана. */
+  orgSigners(
+    orgRegister: string,
+    actingPersonEtsi: string,
+    signal?: AbortSignal,
+  ): Promise<Signer[]>;
+  /** addSigner нь өөр eID иргэнийг MANAGER төлөөлөгч болгож нэмнэ (sign-push). */
+  addSigner(
+    orgRegister: string,
+    actingPersonEtsi: string,
+    input: AddSignerInput,
+    signal?: AbortSignal,
+  ): Promise<SignersResult>;
+  /** removeSigner нь гарын үсэг зурагчийг хасна. */
+  removeSigner(
+    orgRegister: string,
+    actingPersonEtsi: string,
+    signerRegNo: string,
+    signal?: AbortSignal,
+  ): Promise<Signer[]>;
+  /** resendSigner нь PENDING зурагч руу sign-push-ийг дахин илгээнэ. */
+  resendSigner(
+    orgRegister: string,
+    actingPersonEtsi: string,
+    signerRegNo: string,
+    signal?: AbortSignal,
+  ): Promise<SignersResult>;
+  /** updateOrgNameLatin нь байгууллагын латин нэрийг засна (зөвхөн ADMIN). */
+  updateOrgNameLatin(
+    orgRegister: string,
+    actingPersonEtsi: string,
+    nameLatin: string,
+    signal?: AbortSignal,
+  ): Promise<Representation[]>;
+
+  // ── Иргэний PKI самбар ──
+  //
+  // PII тул зөвхөн PKI_READ эрхтэй RP-д нээгдэнэ — эрхгүй бол ErrPKINotPermitted.
+
+  personSummary(personEtsi: string, signal?: AbortSignal): Promise<PersonSummary>;
+  personCertificates(personEtsi: string, signal?: AbortSignal): Promise<PersonCertificates>;
+  personDevices(personEtsi: string, signal?: AbortSignal): Promise<PersonDevices>;
+  personActivity(
+    personEtsi: string,
+    limit: number,
+    offset: number,
+    signal?: AbortSignal,
+  ): Promise<PersonActivity>;
 }
 
 /**
@@ -183,12 +282,6 @@ interface AuthInitiateBody {
    * poll хийнэ.
    */
   initialCallbackUrl?: string;
-}
-
-/** snippet нь алдааны мессежид тавих хариуны эхний 200 тэмдэгтийг буцаана. */
-function snippet(raw: string): string {
-  const s = raw.trim();
-  return s.length > 200 ? s.slice(0, 200) : s;
 }
 
 /**
@@ -301,20 +394,21 @@ export function parseCertificate(b64: string): Certificate | null {
 }
 
 class EidClientImpl implements EidClient {
-  private readonly base: string;
   private readonly rpName: string;
   private readonly certLevel: string;
+  /** http нь IdP руу хийх бүх дуудлагын транспорт (transport.ts). */
+  private readonly http: EidHttp;
 
   constructor(
     base: string,
     private readonly rpUUID: string,
     rpName: string,
-    private readonly secret: string,
+    secret: string,
     certLevel: string,
   ) {
-    this.base = (base === '' ? defaultBase : base).replace(/\/+$/, '');
     this.rpName = rpName === '' ? defaultRPName : rpName;
     this.certLevel = certLevel === '' ? defaultCertLevel : certLevel;
+    this.http = new EidHttp(base === '' ? defaultBase : base, secret);
   }
 
   private newAuthBody(displayText: string, callbackUrl: string): AuthInitiateBody {
@@ -449,48 +543,105 @@ class EidClientImpl implements EidClient {
   }
 
   /**
-   * request нь бүх HTTP дуудлагын нэгдсэн гарц: RP Bearer secret-ийг header-т
-   * тавьж (log-д хэзээ ч гарахгүй), хариуны биеийг maxRespBytes-ээр хязгаарлаж,
-   * дуудагчийн signal болон 30с timeout-ийг хамтад хүндэтгэнэ.
+   * request нь HTTP давхарга руу дамжуулна. Transport нь RP Bearer secret,
+   * хариуны хэмжээний хязгаар, цуцлалт + timeout-ийг хариуцна (transport.ts).
    */
-  private async request(
+  private request(
     method: 'GET' | 'POST',
     path: string,
     body: unknown,
     signal?: AbortSignal,
   ): Promise<{ raw: string; status: number }> {
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (this.secret !== '') headers.Authorization = `Bearer ${this.secret}`;
-
-    // Дуудагчийн цуцлалт БОЛОН өөрийн timeout хоёуланг хүндэтгэнэ.
-    const timeout = AbortSignal.timeout(httpTimeoutMs);
-    const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
-
-    let res: Response;
-    try {
-      res = await fetch(`${this.base}${path}`, {
-        method,
-        headers,
-        body: body === undefined ? undefined : JSON.stringify(body),
-        signal: combined,
-      });
-    } catch (err) {
-      throw new Error(`eid: http: ${err instanceof Error ? err.message : String(err)}`);
-    }
-
-    // Хариуны биеийг хязгаарлана — хортой/эвдэрсэн IdP хариу санах ойг барихгүй.
-    const buf = Buffer.from(await res.arrayBuffer());
-    const raw = buf.subarray(0, maxRespBytes).toString('utf8');
-    return { raw, status: res.status };
+    return this.http.request(method, path, body, signal);
   }
-}
 
-/** parseJSON нь хариуг задлана; JSON биш бол контексттэй алдаа шиднэ. */
-function parseJSON<T>(raw: string, context: string): T {
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    throw new Error(`${context}: invalid response: ${snippet(raw)}`);
+  // ── Байгууллагын төлөөлөл (eid_org.ts) ──
+
+  representations(personEtsi: string, signal?: AbortSignal): Promise<Representation[]> {
+    return representations(this.http, personEtsi, signal);
+  }
+
+  addRepresentation(
+    personEtsi: string,
+    input: AddRepresentationInput,
+    signal?: AbortSignal,
+  ): Promise<Representation[]> {
+    return addRepresentation(this.http, personEtsi, input, signal);
+  }
+
+  removeRepresentation(
+    personEtsi: string,
+    orgRegister: string,
+    signal?: AbortSignal,
+  ): Promise<Representation[]> {
+    return removeRepresentation(this.http, personEtsi, orgRegister, signal);
+  }
+
+  orgSigners(
+    orgRegister: string,
+    actingPersonEtsi: string,
+    signal?: AbortSignal,
+  ): Promise<Signer[]> {
+    return orgSigners(this.http, orgRegister, actingPersonEtsi, signal);
+  }
+
+  addSigner(
+    orgRegister: string,
+    actingPersonEtsi: string,
+    input: AddSignerInput,
+    signal?: AbortSignal,
+  ): Promise<SignersResult> {
+    return addSigner(this.http, orgRegister, actingPersonEtsi, input, signal);
+  }
+
+  removeSigner(
+    orgRegister: string,
+    actingPersonEtsi: string,
+    signerRegNo: string,
+    signal?: AbortSignal,
+  ): Promise<Signer[]> {
+    return removeSigner(this.http, orgRegister, actingPersonEtsi, signerRegNo, signal);
+  }
+
+  resendSigner(
+    orgRegister: string,
+    actingPersonEtsi: string,
+    signerRegNo: string,
+    signal?: AbortSignal,
+  ): Promise<SignersResult> {
+    return resendSigner(this.http, orgRegister, actingPersonEtsi, signerRegNo, signal);
+  }
+
+  updateOrgNameLatin(
+    orgRegister: string,
+    actingPersonEtsi: string,
+    nameLatin: string,
+    signal?: AbortSignal,
+  ): Promise<Representation[]> {
+    return updateOrgNameLatin(this.http, orgRegister, actingPersonEtsi, nameLatin, signal);
+  }
+
+  // ── Иргэний PKI самбар (eid_pki.ts) ──
+
+  personSummary(personEtsi: string, signal?: AbortSignal): Promise<PersonSummary> {
+    return personSummary(this.http, personEtsi, signal);
+  }
+
+  personCertificates(personEtsi: string, signal?: AbortSignal): Promise<PersonCertificates> {
+    return personCertificates(this.http, personEtsi, signal);
+  }
+
+  personDevices(personEtsi: string, signal?: AbortSignal): Promise<PersonDevices> {
+    return personDevices(this.http, personEtsi, signal);
+  }
+
+  personActivity(
+    personEtsi: string,
+    limit: number,
+    offset: number,
+    signal?: AbortSignal,
+  ): Promise<PersonActivity> {
+    return personActivity(this.http, personEtsi, limit, offset, signal);
   }
 }
 
