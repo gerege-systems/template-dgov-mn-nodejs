@@ -52,8 +52,9 @@ CSRF толгой, биеийн хязгаар, алдааны нэгдсэн д
 > бүтээгдсэн бодит үйлчилгээний нэг жишээ.
 
 > Нууц үг / имэйл / OTP-аар нэвтрэх, бүртгүүлэх, нууц үг сэргээх урсгал **байхгүй**.
-> Цорын ганц хүний баталгаа нь eID. (Backend-д `auth_register.go`,
-> `auth_send_otp.go` зэрэг файл байгаа ч ямар ч route-д холбогдоогүй.)
+> Цорын ганц хүний баталгаа нь eID. (Go хувилбарт `auth_register.go`,
+> `auth_send_otp.go` зэрэг route-д холбогдоогүй файлууд байсан; Node.js хэвлэлд
+> тэдгээрийг ПОРТ ХИЙГЭЭГҮЙ.)
 
 ---
 
@@ -153,7 +154,7 @@ refresh cookie байхгүй бол `/login?next=…` руу чиглүүлнэ
 | `/oauth/error` 🅟 | OIDC provider: алдааны дэлгэц |
 | `/profile`, `/settings` | legacy — `/me/profile`, `/me/settings` руу redirect |
 
-🅟 = OIDC provider (RP-facing). Ory Hydra browser-ыг `login_challenge` /
+🅟 = OIDC provider (RP-facing). Платформын өөрийн provider browser-ыг `login_challenge` /
 `consent_challenge`-тэй энд чиглүүлж, DAN өөрийн дизайнаар иргэнийг eID-ээр
 баталгаажуулаад Hydra-д subject-ыг өгнө (BFF: `api/provider/*`).
 
@@ -268,7 +269,8 @@ cookie. iOS native апп нь `api/auth/sso/native`-аар (ASWebAuthentication
 PKCE, public client) кодоо солино.
 
 ### OIDC provider (RP-facing)
-DAN нь Ory Hydra-гийн урд login/consent/logout challenge-уудыг зохицуулна:
+Платформ нь өөрийн OIDC provider-ийн (`usecases/oidc`) урд login/consent/logout
+challenge-уудыг зохицуулна:
 `/oauth/login` дээр иргэнийг eID-ээр нэвтрүүлээд `provider/login/accept`,
 `/oauth/consent` дээр scope зөвшөөрөөд `provider/consent/accept` хийж Hydra руу
 subject-ыг өгнө.

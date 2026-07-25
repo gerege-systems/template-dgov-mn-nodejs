@@ -38,7 +38,7 @@ load-bearing per-user isolation boundary — see
 │  src/http/{routes, dto, middlewares, cookies}                     │
 ├─────────────────────────────────────────────────────────────────┤
 │                       Usecase Layer                               │
-│  src/usecases/*  (25 bounded contexts)                            │
+│  src/usecases/*  (24 bounded contexts)                            │
 │  (Business logic, validation, orchestration)                      │
 ├─────────────────────────────────────────────────────────────────┤
 │                     Repository Layer                              │
@@ -100,7 +100,7 @@ backend/
 │   ├── config/                     # Env loader + guards + .env parser
 │   ├── constants/                  # Env, logger, error, endpoint constants
 │   ├── domain/                     # Enterprise entities (innermost circle)
-│   ├── usecases/                   # 25 bounded contexts (interface + impl)
+│   ├── usecases/                   # 24 bounded contexts (interface + impl)
 │   ├── datasources/
 │   │   ├── caches/                 # redis.ts + memory.ts (two-tier)
 │   │   ├── drivers/                # pg pool + `withRLS` + RLS-enforceability boot guard

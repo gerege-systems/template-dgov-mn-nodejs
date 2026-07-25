@@ -14,7 +14,7 @@ what remains for later phases. To report a vulnerability, see the repository
 > plus **Google OAuth** account-linking. There
 > is **no password / email-OTP login path wired** to any route; the legacy
 > `Login` / `Register` / OTP / password-reset usecases exist in the tree but are
-> not exposed by `route_auth.go` (which registers only eID / Google / refresh /
+> not exposed by `route_auth.ts` (which registers only eID / Google / refresh /
 > logout). Controls below reflect the live surface.
 
 ## Implemented controls (in code)
@@ -22,42 +22,42 @@ what remains for later phases. To report a vulnerability, see the repository
 | Area | Control | Where | Guide § |
 |------|---------|-------|---------|
 | Auth | JWT access+refresh, rotation, `kind`-claim guard | `pkg/jwt`, `usecases/auth` | §1.3–1.4 |
-| Auth | eID login (Mongolia RP) — device-link / QR + national-ID push, long-poll session; the **only** interactive login | `usecases/auth/auth_eid.go`, `pkg/eid`, `routes/route_auth.go` | §1 |
+| Auth | eID login (Mongolia RP) — device-link / QR + national-ID push, long-poll session; the **only** interactive login | `usecases/auth/auth_impl.ts`, `pkg/eid`, `routes/route_auth.ts` | §1 |
 | Auth | eID citizen certificate (PKI) — login COMPLETE returns the citizen cert (DER); parsed with `crypto/x509`, and serial / validity window / issuer / public-key type persisted | `pkg/eid`, `migrations/16_users_eid_certificate.up.sql` | §1 |
 | Auth | Federated identity — Google OAuth account-linking, keyed on a stable subject column | `usecases/auth`, `migrations/18_users_google_sub` | §1 |
 | Crypto | `crypto/rand` for token / session identifiers; rejection sampling avoids modulo bias | `pkg/helpers` | §13.2 |
-| Crypto | Integration tokens encrypted at rest — third-party OAuth tokens sealed with **AES-256-GCM** before storage; key from `INTEGRATION_ENC_KEY` | `usecases/integrations/integrations_crypto.go`, `migrations/21_user_integrations` | §7.3 |
-| Audit | Hash-chained, append-only audit log — `chain_hash = SHA-256(prev_hash ‖ canonical-json(entry))`, writers serialized by `pg_advisory_xact_lock`; tamper-evident `VerifyChain` | `pkg/audit/chain.go`, `usecases/audit`, `migrations/15_audit_log` | §9 |
-| AuthZ | Dynamic RBAC (roles + permissions), SuperAdmin/Admin/Manager/User; `RequirePermission` / `RequireAdmin` route middleware; admin auto-resolves the full permission catalogue | `middleware_rbac.go`, `domain_users.go`, `migrations/8_rbac_roles_permissions`, `migrations/23_superadmin_role` | §2 |
+| Crypto | Integration tokens encrypted at rest — third-party OAuth tokens sealed with **AES-256-GCM** before storage; key from `INTEGRATION_ENC_KEY` | `pkg/crypto/cipher.ts`, `usecases/integrations`, `migrations/21_user_integrations` | §7.3 |
+| Audit | Hash-chained, append-only audit log — `chain_hash = SHA-256(prev_hash ‖ canonical-json(entry))`, writers serialized by `pg_advisory_xact_lock`; tamper-evident `verifyChain` | `pkg/audit/chain.ts`, `usecases/audit`, `migrations/15_audit_log` | §9 |
+| AuthZ | Dynamic RBAC (roles + permissions), SuperAdmin/Admin/Manager/User; `requirePermission` / `requireAdmin` route middleware; admin auto-resolves the full permission catalogue | `http/middlewares/rbac.ts`, `domain/users.ts`, `migrations/8_rbac_roles_permissions`, `migrations/23_superadmin_role` | §2 |
 | AuthZ | OIDC **provider** surface — the platform is its own OIDC provider (login / consent / logout core, built-in Go provider); consent gates which citizen claims each scope releases; the `developer_apps` RP registry is the client-ownership authority | `usecases/provider`, `usecases/oidc`, `postgres/oauth`, `migrations/42_oauth_provider` | §2 |
-| DB | Parameterized queries only (pgx) | `datasources/repositories/postgres` | §3.1 |
-| DB | `INSERT … RETURNING` single round-trip; pgconn 23505 → Conflict | `repositories/postgres/users`, `driver_pgx.go` | §3 |
+| DB | Parameterized queries only (`pg`) | `datasources/repositories/postgres` | §3.1 |
+| DB | `INSERT … RETURNING` single round-trip; PostgreSQL 23505 → Conflict | `repositories/postgres/users`, `datasources/drivers/pg.ts` | §3 |
 | DB | Row-Level Security on every per-user table (ENABLE + **FORCE**): `users` plus `organizations` / `organization_memberships`, the `gov_*` citizen tables, and `user_integrations` — self/admin/service policies driven by `app.user_id`/`app.user_role` GUCs set per-transaction with `SET LOCAL` inside `withRLS`; no identity ⇒ zero rows (fail-closed) | `migrations/7_enable_rls_users`, `migrations/14`, `migrations/20`, `migrations/21`, `datasources/rls`, `repositories/postgres/*` | §2.4/§3.3 |
 | API | Mass-assignment safe (explicit request DTOs) | `http/datatransfers/requests` | API3 §5.1 |
 | API | Body size limit (global + 4 KiB on `/auth`) | `middleware.bodysizelimit`, `routes` | §5.3 |
-| Web | Security headers: CSP `default-src 'none'`, HSTS (prod), nosniff, X-Frame DENY, Referrer-Policy, Permissions-Policy, COOP/CORP/COEP | `middleware_security.go` | §4.7 |
-| Web | CORS strict origin list, never `*`+credentials | `middleware.cors.go` | §4.8 |
-| Ops | Operator endpoints (`/metrics`, `/swagger/doc.json`) gated in prod: bearer token (constant-time) + 404 on miss | `middleware_observability_gate.go`, `cmd/api/server` | §4.7/§9 |
-| Obs | Structured Zap logs w/ request-id; no secrets logged | `pkg/logger`, `handler_base_response.go` | §9.1–9.2 |
-| Obs | OpenTelemetry tracing + Prometheus metrics | `pkg/observability`, `driver_pgx.go` | §9.4 |
-| Ops | Graceful shutdown (drain HTTP, rate-limiters, pgx pool, Redis, tracer) | `cmd/api/server` | §7 |
+| Web | Security headers: CSP `default-src 'none'`, HSTS (prod), nosniff, X-Frame DENY, Referrer-Policy, Permissions-Policy, COOP/CORP/COEP | `http/middlewares/security.ts` (API), `frontend/nginx-security-headers.conf` (SPA) | §4.7 |
+| Web | CORS strict origin list, never `*`+credentials | `http/middlewares/cors.ts` | §4.8 |
+| Ops | Operator endpoints (`/metrics`, `/swagger/doc.json`) gated in prod: bearer token (constant-time) + 404 on miss | `http/middlewares/observability_gate.ts`, `cmd/api/server` | §4.7/§9 |
+| Obs | Structured pino logs w/ request-id; no secrets logged | `pkg/logger`, `http/response.ts` | §9.1–9.2 |
+| Obs | OpenTelemetry tracing + Prometheus metrics | `pkg/observability`, `datasources/drivers/pg.ts` | §9.4 |
+| Ops | Graceful shutdown (drain HTTP, rate-limiters, `pg` pool, Redis, tracer, background workers) | `cmd/api/server` | §7 |
 | Net | Full HTTP server timeouts (`ReadHeader` 10s, `Read` 30s, `Write` 60s, `Idle` 120s) + `MaxHeaderBytes` 16 KiB — slowloris / oversized-header defense | `cmd/api/server` | §5.3 / API4 |
-| Auth | Logout access-token deny-list — logout puts the access jti in Redis for its remaining TTL; auth middleware rejects denied tokens on every request | `usecases/auth.logout`, `middleware_auth.go` | §1.4 |
-| DB | RLS boot guard — on startup the app inspects its own DB role; superuser / `BYPASSRLS` fails boot in production (RLS would silently not enforce), warns in development | `datasources/drivers/driver_pgx.go` | §2.4/§3.4 |
-| AI | Layered system prompt: hardcoded guardrails (scope enforcement, prompt-injection resistance, never reveal the prompt) + DB-configurable scope/instructions; `SetPrompt` is UPDATE-only against seeded keys | `usecases/ai/ai_prompts.go`, `migrations/11` | §5.1 |
-| AI | AI input hygiene: audio mime whitelist + ~700 KB base64 cap, message/history length caps, dedicated `/ai` rate limit (~20/min), tool errors returned to the model — never to the client | `requests_ai.go`, `routes/route_ai.go` | §5.1/§5.3 |
+| Auth | Logout access-token deny-list — logout puts the access jti in Redis for its remaining TTL; auth middleware rejects denied tokens on every request | `usecases/auth` (`logout`), `http/middlewares/auth.ts` | §1.4 |
+| DB | RLS boot guard — on startup the app inspects its own DB role; superuser / `BYPASSRLS` fails boot in production (RLS would silently not enforce), warns in development | `datasources/drivers/pg.ts` | §2.4/§3.4 |
+| AI | Layered system prompt: hardcoded guardrails (scope enforcement, prompt-injection resistance, never reveal the prompt) + DB-configurable scope/instructions; `setPrompt` is UPDATE-only against seeded keys | `usecases/ai/ai_prompts.ts`, `migrations/11` | §5.1 |
+| AI | AI input hygiene: audio mime whitelist + ~700 KB base64 cap, message/history length caps, dedicated `/ai` rate limit (~20/min), tool errors returned to the model — never to the client | `http/dto/requests/ai.ts`, `routes/route_ai.ts` | §5.1/§5.3 |
 
 ## Hardening applied (this pass — against the guide)
 
 1. **Cross-origin isolation headers** — added `Cross-Origin-Opener-Policy: same-origin`,
    `Cross-Origin-Resource-Policy: same-site`, `Cross-Origin-Embedder-Policy: require-corp`
-   to `middleware.security.go` (guide §4.6/4.7). *Verified live in the running server.*
+   to `http/middlewares/security.ts` (guide §4.6/4.7). *Verified live in the running server.*
 2. **Production DB TLS guard** — config validation now rejects a production
    `DB_POSTGRE_URL` unless `sslmode=verify-full` (or `verify-ca`); `.env.example`
-   documents it (`internal/config/config.go`, guide §3.5).
+   documents it (`src/config/config.ts`, guide §3.5).
 3. **Per-request timeout** — `middleware.TimeoutMiddleware` sets a 30s context
-   deadline that propagates to pgx queries, bounding stuck handlers
-   (`middleware.timeout.go`, guide §5.3 / API4).
+   deadline that propagates to `pg` queries, bounding stuck handlers
+   (`http/middlewares/timeout.ts`, guide §5.3 / API4).
 4. **Swagger spec served from generated `docs` package** — the OpenAPI JSON is
    served at `/swagger/doc.json` from the generated `docs` package on the chi
    router (no Fiber involved); a static Swagger UI can be pointed at it.
@@ -73,7 +73,7 @@ what remains for later phases. To report a vulnerability, see the repository
    `api` connects as a non-superuser `APP_DB_USER` (created by
    `deploy/initdb/10-create-app-user.sh`) so the policies actually enforce;
    `migrate` keeps the superuser for DDL. Proven by an integration test that
-   connects as a non-superuser role (`users_rls_test.go`).
+   connects as a non-superuser role (`users_rls.integration.test.ts`).
 7. **HTTP server hardening** — beyond `ReadHeaderTimeout`, the server now sets
    `ReadTimeout`/`WriteTimeout`/`IdleTimeout` and caps headers at 16 KiB;
    `WriteTimeout` is derived from the request-level timeout budget (2×) so

@@ -6,412 +6,603 @@
 засаглалыг бүтээх суурь) кодын бааз — аливаа цахим засаглалын үйлчилгээг дээр нь
 босгох production-ready суурь — дээр тохиргоо хийж, ажиллахад туслана. Түүний
 жишиг лавлагаа deployment нь энэ стек дээр бүтээгдсэн eID-д суурилсан төрийн
-үйлчилгээний платформ буюу **Government Template Platform** (template.dgov.mn) юм.
+үйлчилгээний платформ буюу **Government Template Platform**
+(node.template.dgov.mn) юм.
 
 > **Эх сурвалж.** Najib Fikri-ийн нээлттэй эх
 > [snykk/go-rest-boilerplate](https://github.com/snykk/go-rest-boilerplate)
-> (MIT)-аас гаралтай бөгөөд HTTP давхаргыг **Gin → chi (net/http)**, өгөгдлийн
-> давхаргыг **sqlx → pgx (pgxpool)** болгож хөрвүүлсэн. Бүрэн зохиогчдын мэдээллийг
-> [ARCHITECTURE.md](./ARCHITECTURE.md#credits--license)-аас үз.
+> (MIT)-аас (Go хувилбараар дамжин) гаралтай. Бүрэн зохиогчдын мэдээллийг
+> [ARCHITECTURE_MN.md](./ARCHITECTURE_MN.md#credits--license)-аас үз.
 
 ## Шаардлага (Prerequisites)
 
-- Go 1.26+
-- Docker & Docker Compose (зөвхөн integration тест / локал стек-д)
-- PostgreSQL 15+ (эсвэл Docker ашиглах)
-- Make
+- **Node.js 22+** (багц нь `engines.node >= 22` тавьсан; CI болон хоёр Docker дүрс 22 ашиглана)
+- Docker + Docker Compose (зөвхөн integration тест / локал стекэд)
+- PostgreSQL 16+ ба Redis 7+ (эсвэл зүгээр Docker ашигла)
+
+Make ч, Go toolchain ч ХЭРЭГГҮЙ — бүгд npm script-ээр ажиллана.
 
 ## Түргэн эхлүүлэх (Quick Start)
 
 ```bash
-# 1. Copy environment file (note: it lives under internal/config/)
-cp internal/config/.env.example internal/config/.env
-# Edit .env — JWT_SECRET must be at least 32 characters
+cd backend
 
-# 2. Start the stack (Postgres + Redis + API)
+# 1. Орчны файлыг хуулна
+cp .env.example .env
+# .env засна — JWT_SECRET дор хаяж 32 тэмдэгт байх ёстой
 
-# 3. Or run locally: apply migrations, then serve
+# 2. Бүтэн стекийг repo-гийн үндсээс эхлүүлнэ (db + redis + migrate + api + web)
+docker compose up -d --build
+
+# 3. Эсвэл API-г локалд, compose-ийн db/redis-ийн эсрэг ажиллуулна
+npm install
+npm run dev            # tsx watch — халуун ачаалалт
 ```
 
-Сервер `http://localhost:8080` дээр ажиллана; Swagger UI нь
-`http://localhost:8080/swagger/` дээр байна.
+Сервер `http://localhost:8080` дээр; Swagger UI нь
+`http://localhost:8080/swagger/`.
 
 ## Хөгжүүлэлтийн командууд (Development Commands)
 
+`backend/`-ээс ажиллуулна:
+
 ```bash
-make build              # Build the API binary
-make tidy               # go mod tidy
-make lint               # golangci-lint
-make fmt                # gofmt all files
-make swag               # Regenerate OpenAPI spec (docs/) from godoc annotations
-make pre-push           # Mirror CI locally: lint + test + swag drift + build
+npm run dev             # tsx watch (халуун ачаалалт)
+npm run build           # tsc → dist/
+npm run fmt             # prettier --write
+npm run fmt:check       # prettier --check (CI-ийн gate)
+npm run lint            # eslint --max-warnings 0 (type-aware)
+npm run typecheck       # tsc --noEmit, тестүүдийг ч хамарна
+npm run openapi         # route/DTO-оос docs/openapi.json-ыг дахин үүсгэнэ
+npm run pre-push        # CI-г тольдоно: fmt + lint + typecheck + test + openapi drift + build + ESM smoke
 ```
+
+`frontend/`-ээс бол:
+
+```bash
+npm run dev             # Vite dev сервер
+npm run build           # build + lint + typecheck (CI-ийн ажиллуулдаг)
+npm test                # vitest
+```
+
+> **Тэмдэглэл.** `npm run openapi` нь **сонголт биш**. Route эсвэл DTO нэмж/өөрчилж
+> байгаад мартвал CI нь OpenAPI drift дээр унана.
 
 ## Тест (Testing)
 
 ```bash
-make test               # Unit tests (mocks only — fast, no Docker)
-make test-integration   # Integration tests (requires Docker: Postgres + Redis)
-make test-cover         # Tests with coverage report
+npm test                # Unit тест (зөвхөн mock — хурдан, Docker-гүй)
+npm run test:integration# Integration тест (Docker шаардана: Postgres + Redis)
+npm test -- --coverage  # Хамрагдалтын тайлан
+npm test -- users       # Зөвхөн "users"-тэй таарах файлууд
+npm run smoke:esm       # Build хийсэн модуль бүрийг импортлоно — ESM/CJS interop-ийн эвдрэлийг барина
 ```
+
+Одоогийн байдал: **45 файлд 775 unit тест**, дээр нь 219 модулийн ESM import
+smoke.
 
 ## Өгөгдлийн сан (Database)
 
 ### Migration-ууд
 
 ```bash
+# Compose стек `up` бүрд үүнийг өөрөө ажиллуулна (идемпотент, advisory lock-той)
+docker compose run --rm migrate
+
+# Эсвэл шууд
+cd backend && npx tsx src/cmd/migration/main.ts
 ```
 
-Migration-ууд нь `backend/migrations/` доторх түүхий SQL файлууд (`N_name.up.sql`
-+ `N_name.down.sql` хос). Go package `internal/datasources/migration/` нь зөвхөн
-**runner**-г (SQL байхгүй) агуулна; CLI entrypoint нь `cmd/migration/main.go`
-(`migrationsDir = "migrations"`). Schema-г өөрчлөхдөө `backend/migrations/`-д
-урагшлах (forward) SQL migration файл нэм; runner үүнийг idempotent байдлаар
-хэрэгжүүлнэ — файлуудыг эхний дугаараар нь эрэмбэлж, файл тус бүр өөрийн
-`schema_migrations` мөртэй хамт нэг transaction-д commit хийж, бүх ажил session
-advisory lock барьдаг тул зэрэгцээ runner-ууд дараалалд орно. **ORM AutoMigrate
-байхгүй** — `internal/datasources/records/` доторх record struct-ууд нь schema
-тодорхойлолт биш, харин pgx-ээр уншигддаг энгийн struct-ууд юм; schema нь зөвхөн
-`*.up.sql` файлуудаас гарна.
+Migration нь `backend/migrations/` доторх түүхий SQL файлууд (`N_name.up.sql` +
+`N_name.down.sql` хос) — **Go хувилбараас хэвээр**, тиймээс нэг өгөгдлийн сан
+хоёуланд үйлчилнэ. `src/datasources/migration/` нь зөвхөн **runner**-ыг агуулна
+(SQL байхгүй); CLI нэвтрэх цэг нь `src/cmd/migration/main.ts`.
+
+Схем өөрчлөхийн тулд урагшлах SQL migration файл нэмнэ. Runner нь идемпотентоор
+хэрэглэнэ: файлууд урд талын дугаараараа эрэмбэлэгдэнэ, файл бүр өөрийн
+`schema_migrations` мөрийн хамт НЭГ транзакцид commit болно, бүхэл ажиллагаа нь
+session advisory lock барих тул зэрэг ажиллагсад цуварна.
+
+**ORM AutoMigrate БАЙХГҮЙ** — `src/datasources/records/` доторх мөрийн interface
+нь **баганын нэртэй яг таарсан snake_case түлхүүртэй** энгийн TypeScript
+interface бөгөөс схемийн тодорхойлолт БИШ. Схем нь зөвхөн `*.up.sql` файлуудаас
+гарна.
+
+> ⚠️ **Дугаарлалтын давхцлыг анхаар.** Хоёр migration `17_` угтвар хуваалцана
+> (`17_least_privilege_config_grants` ба `17_org_rls_recursion_fix`). Тэдгээр нь
+> бие даасан бөгөөд хоёулаа хэрэглэгддэг; `18_`-аас дээш migration нэмэх эсвэл
+> хэрэглэх дарааллыг бодохдоо санаж бай.
 
 ## Кодын зохион байгуулалт (Code Organization)
 
 ### Шинэ фичер нэмэх (Adding a New Feature)
 
-Давхаргуудыг дотноос гадагшаа дагана. Лавлагаа болгож одоо байгаа `users` / `auth`
-модулиудыг ашигла — backend-д `internal/business/usecases/` дор ~18 usecase зүсэм
-(`ai`, `assets`, `audit`, `auth`, `core`, `gateway`, `gov`, `gspace`,
-`integrations`, `org`, `provider`, `rbac`, `security`, `sign`, `site`, `sso`,
-`superadmin`, `users`) аль хэдийн ирдэг бөгөөд бүгд яг энэ загварыг дагадаг.
-Жишээ: `Product` нөөц нэмэх.
+Давхаргуудыг дотогшоо чиглэлээр дага. Одоо байгаа `users` / `auth` модулиудыг
+лавлагаа болго — backend нь `src/usecases/` дор **24 usecase зүсэм** агуулах ба
+тус бүр нь яг энэ загварыг дагана. Жишээ: `Product` нөөц нэмэх.
 
-1. **Domain Entity** — `internal/business/domain/domain.products.go`
-   ```go
-   package domain
+1. **Домэйн entity** — `src/domain/product.ts`
 
-   type Product struct {
-       ID        string
-       Name      string
-       Price     int64
-       CreatedAt time.Time
+   Домэйн нь дотоод юуг ч import хийхгүй — зөвхөн `node:*` ба (users-д) `bcryptjs`.
+
+   ```ts
+   export interface Product {
+     id: string;
+     name: string;
+     price: number;
+     createdAt: Date;
    }
    ```
 
-2. **Repository Interface** — `internal/datasources/repositories/interface/interface.go` руу нэм
-   ```go
-   type ProductRepository interface {
-       Store(ctx context.Context, in *domain.Product) (domain.Product, error)
-       GetByID(ctx context.Context, id string) (domain.Product, error)
+2. **Repository interface** — `src/datasources/repositories/interface/product.ts`
+
+   Метод бүрийн **эхний параметр** нь `ctx: Ctx` гэдгийг анхаар. Энэ нь Go-гийн
+   `context.Context`-ийн Node эквивалент: requestId, RLS identity болон
+   `AbortSignal`-ыг зөөнө. Ambient хүсэлтийн төлөв БАЙХГҮЙ тул "identity
+   дамжуулахаа мартах" нь чимээгүй RLS тойролт биш compile алдаа болно.
+
+   ```ts
+   import type { Ctx } from '../../../pkg/ctx/ctx.js';
+   import type { Product } from '../../../domain/product.js';
+
+   export interface ProductRepository {
+     store(ctx: Ctx, input: Product): Promise<Product>;
+     getById(ctx: Ctx, id: string): Promise<Product>;
    }
    ```
 
-3. **Record struct + Repository Impl** — `internal/datasources/records/record_products.go`
-   болон `internal/datasources/repositories/postgres/products/`
+3. **Мөрийн interface + repository хэрэгжүүлэлт** — `src/datasources/records/product.ts` ба
+   `src/datasources/repositories/postgres/product/product_postgres.ts`
 
-   Record нь `db:"..."` tag-тай **энгийн Go struct** юм. `pgx.RowToStructByName`
-   нь үр дүнгийн баганануудыг нэрээр нь талбаруудтай тааруулдаг бөгөөд soft-delete
-   нь энгийн nullable `*time.Time DeletedAt` (NULL → nil) — **gorm tag, AutoMigrate
-   байхгүй**.
-   ```go
-   // internal/datasources/records/record_products.go
-   type Product struct {
-       ID        string     `db:"id"`
-       Name      string     `db:"name"`
-       Price     int64      `db:"price"`
-       CreatedAt time.Time  `db:"created_at"`
-       DeletedAt *time.Time `db:"deleted_at"`
-   }
-   ```
-   Repository нь `*pgxpool.Pool` авч, гараар бичсэн SQL ажиллуулдаг —
-   `INSERT ... RETURNING`-г `pgx.CollectExactlyOneRow` + `pgx.RowToStructByName`-ээр
-   цуглуулна. `23505` unique violation нь `apperror.Conflict` болж буудаг; уншихдаа
-   `deleted_at IS NULL` нөхцөлийг ИЛ-ээр нэмнэ.
-   ```go
-   func (r *productRepository) Create(ctx context.Context, p *records.Product) (records.Product, error) {
-       rows, _ := r.pool.Query(ctx, `INSERT INTO products (id, name, price) VALUES ($1,$2,$3)
-           RETURNING id, name, price, created_at, deleted_at`, p.ID, p.Name, p.Price)
-       out, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[records.Product])
-       if err != nil {
-           var pgErr *pgconn.PgError
-           if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-               return records.Product{}, apperror.Conflict("product exists")
-           }
-           return records.Product{}, err
-       }
-       return out, nil
+   Record нь **баганын нэртэй яг таарсан snake_case түлхүүртэй** энгийн interface
+   — decorator ч, схемийн тодорхойлолт ч, AutoMigrate ч байхгүй. Soft delete нь
+   nullable `deleted_at`.
+
+   ```ts
+   // records/product.ts
+   export interface ProductRecord {
+     id: string;
+     name: string;
+     price: number;
+     created_at: Date;
+     deleted_at: Date | null;
    }
    ```
 
-4. **Usecase Interface + Impl** — `internal/business/usecases/products/`
-   ```go
-   // products.usecase.go
-   type Usecase interface {
-       Create(ctx context.Context, in CreateRequest) (domain.Product, error)
-       GetByID(ctx context.Context, id string) (domain.Product, error)
+   Repository нь `pg` pool-оор гараар бичсэн SQL ажиллуулна. **ЗӨВХӨН
+   параметржүүлсэн query** (`$1, $2 …`) — мөр нийлүүлэлт ХЭЗЭЭ Ч биш. `23505`
+   давхардлын алдаа нь `apperror.conflict` болно; уншилтууд ил
+   `deleted_at IS NULL` предикат нэмнэ.
+
+   ```ts
+   async store(ctx: Ctx, input: Product): Promise<Product> {
+     try {
+       const { rows } = await this.db.query<ProductRecord>(
+         ctx,
+         `INSERT INTO products (id, name, price)
+          VALUES ($1, $2, $3)
+          RETURNING id, name, price, created_at, deleted_at`,
+         [input.id, input.name, input.price],
+       );
+       const row = rows[0];
+       if (!row) throw internalCause(new Error('insert returned no row'));
+       return toDomain(row);
+     } catch (err) {
+       if (isUniqueViolation(err)) throw conflict('product exists');
+       throw err;
+     }
    }
    ```
 
-5. **DTOs** — `internal/http/datatransfers/{requests,responses}/`
-   ```go
-   type CreateProductRequest struct {
-       Name  string `json:"name" validate:"required,min=1,max=255"`
-       Price int64  `json:"price" validate:"required,gt=0"`
+   > 💡 **`noUncheckedIndexedAccess` асаалттай.** `rows[0]` нь
+   > `ProductRecord | undefined` төрөлтэй тул дээрх ил шалгалт нь хэт болгоомжлол
+   > биш — compiler шаардаж байгаа юм.
+
+4. **Usecase interface + хэрэгжүүлэлт** — `src/usecases/product/`
+
+   Usecase нь **зөвхөн repository interface-ээс** хамаарна — postgres адаптераас
+   ХЭЗЭЭ Ч биш. `apperror.*` шид; library-ийн алдааг `internalCause`-ээр боож,
+   текст нь клиентэд хэзээ ч хүрэхгүй болго.
+
+   ```ts
+   // product_usecase.ts
+   export interface ProductUsecase {
+     create(ctx: Ctx, req: CreateProductRequest): Promise<Product>;
+     getById(ctx: Ctx, id: string): Promise<Product>;
    }
    ```
 
-6. **Handler** — `internal/http/handlers/v1/products/products_handler.go`
+5. **DTO-ууд** — `src/http/dto/requests/product.ts`
 
-   Handler-ууд нь `func(w http.ResponseWriter, r *http.Request) error` гарын
-   үсэгтэй бөгөөд route бүртгэх үед `v1.Wrap`-ээр ороогддог (буцаасан алдааг JSON
-   envelope болгон хувиргадаг). Body-г `v1.DecodeBody`-ээр унш, контекстийг
-   `r.Context()`-ээр унш, `v1.NewSuccessResponse` / `v1.RespondWithError`-ээр буцаа.
-   ```go
-   func (h Handler) Create(w http.ResponseWriter, r *http.Request) error {
-       var req requests.CreateProductRequest
-       if err := v1.DecodeBody(r, &req); err != nil {
-           return v1.NewErrorResponse(w, r, http.StatusBadRequest, "invalid request body")
-       }
-       if err := validators.ValidatePayloads(req); err != nil {
-           return v1.RespondWithError(w, r, err)
-       }
-       data, err := h.usecase.Create(r.Context(), products.CreateRequest{Name: req.Name, Price: req.Price})
-       if err != nil {
-           return v1.RespondWithError(w, r, err)
-       }
-       return v1.NewSuccessResponse(w, r, http.StatusCreated, "created", data)
+   Хүсэлтүүд нь zod **`strictObject`** — танихгүй талбар 422-оор татгалзагдана,
+   энэ нь Go-гийн `DisallowUnknownFields`-тэй дүйцнэ.
+
+   ```ts
+   export const createProductSchema = strictObject({
+     name: z.string().min(1).max(255),
+     price: z.number().int().positive(),
+   });
+   export type CreateProductBody = z.infer<typeof createProductSchema>;
+   ```
+
+6. **Handler** — `src/http/handlers/v1/product/product_handler.ts`
+
+   Handler нь `(req, res) => Promise<void>` бөгөөд route бүртгэх үед `wrap()`-аар
+   боогдоно (шидэгдсэн `apperror`-ыг JSON дугтуй болгоно). `decodeBody` нь НЭГ
+   алхамд задалж **бас** баталгаажуулна. Контекстийг `req.ctx`-ээс унш.
+
+   ```ts
+   create: AsyncHandler = async (req, res) => {
+     const body = decodeBody(req, createProductSchema);
+     const product = await this.usecase.create(req.ctx, body);
+     newSuccessResponse(req, res, 201, 'product created', productResponse(product));
+   };
+   ```
+
+7. **Route** — `src/http/routes/route_product.ts` (`route_users.ts`-ийг тольдоно)
+
+   > ⛔ **Middleware-ийг ROUTE ТУС БҮРД дамжуул — модуль дотор `use()` ХЭЗЭЭ Ч биш.**
+   > chi-д `r.Group(...)` нь middleware-ийг зөвхөн дотроо зарласан route-уудад
+   > хүрээлдэг. **Express-д эквивалент БАЙХГҮЙ**: `router.use(sub)` нь дэд
+   > router-ийн `use()`-г тэр цэгээс хойших *БҮХ* хүсэлтэд ажиллуулах тул
+   > middleware нь байх ёсгүй endpoint рүү гоожино. Go→Node портын үед энэ нь
+   > `authMiddleware`-ийг `/auth/eid/poll` руу гоожуулж нэвтрэлтийг 401 болгосон,
+   > мөн чанга rate limiter-ийг long-poll рүү гоожуулж байнга 429 үүсгэсэн.
+   >
+   > Middleware-ийг ҮРГЭЛЖ route дуудлага дотор нь хавсарга:
+
+   ```ts
+   export function registerProductRoutes(router: Router, deps: Deps): void {
+     const handler = newProductHandler(deps.productUC);
+     const auth = deps.authMiddleware;
+
+     const products = Router();
+     products.post('/', auth, wrap(handler.create));
+     products.get('/:id', auth, wrap(handler.getById));
+     router.use('/products', products);
    }
    ```
 
-7. **Route** — `internal/http/routes/route_products.go` (`route_users.go`-г дуурайлга)
+   `src/http/routes/index.ts`-д бүртгэж, `Deps`-д `productUC` нэмнэ.
 
-   Route-ууд нь chi router ашигладаг; handler бүрийг `v1.Wrap`-ээр оро. Path
-   параметрийг `chi.URLParam(r, "id")`-ээр унш.
-   ```go
-   func (rt *productsRoute) Routes() {
-       rt.router.Route("/v1/products", func(r chi.Router) {
-           r.Use(rt.authMiddleware)
-           r.Post("/", v1.Wrap(rt.handler.Create))
-           r.Get("/{id}", v1.Wrap(rt.handler.GetByID))
-       })
-   }
+8. **Холбох** — `src/cmd/api/server/server.ts` дотор одоо байгаагийн хажууд
+   repo → usecase → deps-ийг угсарна:
+
+   ```ts
+   const productRepo = newProductRepository(db);
+   const productUC = newProductUsecase(productRepo);
+   // … дараа нь registerRoutes()-д дамжуулах Deps объектод `productUC` нэмнэ
    ```
 
-8. **Wire Up** — `cmd/api/server/server.go` дотор одоо байгаагийнх нь хажууд
-   repo → usecase → route-ийг бүтээ:
-   ```go
-   productRepo := productspostgres.NewProductRepository(pool)
-   productsUC := products.NewUsecase(productRepo)
-   routes.NewProductsRoute(api, productsUC, authMiddleware).Routes()
+9. **OpenAPI spec-ийг дахин үүсгэх**
+
+   ```bash
+   npm run openapi   # дараа нь backend/docs/openapi.json-ыг commit хийнэ
    ```
 
-9. **Row-Level Security (хэрэглэгч-тус-бүрийн / tenant-тус-бүрийн хүснэгт)** —
-   хэрэв шинэ хүснэгт тодорхой иргэнд харьяалагдах өгөгдөл хадгалдаг бол (нийтийн
-   лавлах каталог биш) заавал RLS бодлоготой байх ёстой. Одоо байгаа загварыг дага:
-   `migrations/14_organizations.up.sql`, `migrations/20_gov_services.up.sql`,
-   `migrations/21_user_integrations.up.sql`: `ALTER TABLE … ENABLE ROW LEVEL
-   SECURITY` **БОЛОН** `FORCE ROW LEVEL SECURITY`, дараа нь `app.user_id` /
-   `app.user_role` session GUC-д түлхүүрлэсэн `service` / `admin` / `self`
-   бодлогын гурвал. Repository нь **RLS-мэдэгддэг** байх ёстой — хүсэлтийн
-   identity-ээс `SET LOCAL app.user_id` / `SET LOCAL app.user_role`-г ялгаруулдаг
-   `withRLS` transaction нээ (`internal/datasources/rls` нь үүнийг context-д
-   зөөвөрлөнө; жишээг `repositories/postgres/org` / `repositories/postgres/gov`-ээс
-   үз). Identity байхгүй хүсэлт хоосон GUC тавьдаг тул бодлого бүр мөр бүрийг хаана
-   (fail-closed). RLS нь api non-superuser DB role-оор холбогдох үед л хүчинтэй —
-   boot guard нь production-д superuser / `BYPASSRLS` холболтыг хаана (see
-   [SECURITY.md](SECURITY.md)). Нийтийн лавлах хүснэгтүүд (жишээ нь `gov_services`
-   каталог) RLS-гүй хэвээр үлдэж, оронд нь table-level grant-аар хамгаалагдана.
+   CI нь drift дээр унадаг тул энэ нь сонголт биш.
+
+10. **Row-Level Security (хэрэглэгч / түрээслэгч тус бүрийн хүснэгт)** — шинэ
+    хүснэгт нь тодорхой иргэнд хамаарах өгөгдөл агуулж байвал (нийтийн лавлах
+    каталог БИШ) RLS policy **ЗААВАЛ** байх ёстой.
+    `migrations/14_organizations.up.sql`, `migrations/20_gov_services.up.sql`,
+    `migrations/21_user_integrations.up.sql`-ийг дага:
+    `ALTER TABLE … ENABLE ROW LEVEL SECURITY` **БА** `FORCE ROW LEVEL SECURITY`,
+    дараа нь `app.user_id` / `app.user_role` session GUC дээр түлхүүрлэсэн
+    `service` / `admin` / `self` гурвал policy.
+
+    Дараа нь repository нь **RLS-мэдэгч** байх ёстой — query бүрийг
+    `db.withRLS(ctx, …)` дотор ажиллуул. Тэр нь транзакц нээж, хүсэлтийн
+    identity-г `set_config(..., true)`-оор нийтэлнэ (`SET LOCAL` семантик тул
+    identity нь холболтын сангаар дамжин гоожихгүй). Бодит жишээг
+    `repositories/postgres/org` / `repositories/postgres/gov`-оос үз.
+
+    Identity-гүй хүсэлт нь GUC-ийг хоосон тавих тул policy бүр мөр бүрийг
+    татгалзана (**fail-closed**). RLS нь API нь superuser БИШ DB role-оор
+    холбогдсон үед л мөрдөгдөнө — boot guard нь production-д superuser /
+    `BYPASSRLS` холболтыг хаана ([SECURITY.md](SECURITY.md)-ийг үз). Нийтийн
+    лавлах хүснэгтүүд (жишээ нь `gov_services` каталог) RLS-гүй хэвээр үлдэж,
+    хүснэгтийн түвшний grant-аар хамгаалагдана.
 
 ### Тест бичих (Writing Tests)
 
-#### Unit тестүүд (Usecase давхарга)
+Тестүүд кодынхоо **ХАЖУУД** `*.test.ts` нэрээр байрлаж, [vitest](https://vitest.dev/)
+дор ажиллана. Mock нь repository interface-д тааруулсан **гараар бичсэн объект** —
+mockery/codegen алхам БАЙХГҮЙ, мөн `typecheck` нь тестийн файлуудыг ч хамардаг тул
+interface-ээсээ хазайсан mock нь build-ыг унагана.
 
-```go
-// internal/business/usecases/products/products.create_test.go
-func TestUsecase_Create(t *testing.T) {
-    repo := mocks.NewProductRepository(t)
-    repo.On("Store", mock.Anything, mock.AnythingOfType("*domain.Product")).
-        Return(domain.Product{ID: "p1", Name: "X"}, nil)
+#### Unit тест (usecase давхарга)
 
-    uc := products.NewUsecase(repo)
-    got, err := uc.Create(context.Background(), products.CreateRequest{Name: "X", Price: 100})
+```ts
+// src/usecases/product/product_usecase.test.ts
+import { describe, expect, it, vi } from 'vitest';
 
-    assert.NoError(t, err)
-    assert.Equal(t, "p1", got.ID)
-    repo.AssertExpectations(t)
-}
+import { background } from '../../pkg/ctx/ctx.js';
+import { newProductUsecase } from './product_usecase.js';
+import type { ProductRepository } from '../../datasources/repositories/interface/product.js';
+
+const ctx = background();
+
+it('бүтээгдэхүүн үүсгэнэ', async () => {
+  const store = vi.fn(() => Promise.resolve({ id: 'p1', name: 'X', price: 100, createdAt: new Date() }));
+  const repo = { store, getById: vi.fn() } satisfies ProductRepository;
+
+  const got = await newProductUsecase(repo).create(ctx, { name: 'X', price: 100 });
+
+  expect(got.id).toBe('p1');
+  expect(store).toHaveBeenCalledOnce();
+});
 ```
 
-#### Handler тестүүд (net/http)
+Мессежээр биш **төрөлжсөн domain алдаагаар** батал — `apperror` нь `ErrorType`
+enum зөөнө:
 
-chi router-г (эсвэл `v1.Wrap`-ээр ороосон handler-г) `net/http/httptest`-ээр
-жолоодоно — `httptest.NewRequest` нь хүсэлтийг бүтээж, `httptest.NewRecorder`
-нь хариуг барьж авна. Fiber тест app байхгүй.
-
-```go
-func TestHandler_Create(t *testing.T) {
-    // ... mock usecase-тай router бүтээх ...
-    req := httptest.NewRequest(http.MethodPost, "/api/v1/products", strings.NewReader(body))
-    rec := httptest.NewRecorder()
-    router.ServeHTTP(rec, req)
-    require.Equal(t, http.StatusCreated, rec.Code)
-}
+```ts
+await expect(uc.create(ctx, { name: '', price: 1 }))
+  .rejects.toMatchObject({ type: ErrorType.BadRequest });
 ```
 
-#### Integration тестүүд (Repository давхарга)
+#### Route-ийн холболтын тест
 
-```go
-//go:build integration
+Express-ийн middleware хүрээ нь chi-ийн `Group`-оос ялгаатай тул **БОДИТ**
+router-ыг босгож, аль middleware үнэхээр ажилласныг батал. Энэ төрлийн алдаа
+unit тестэд огт харагдахгүй:
 
-func TestProductRepository_Store(t *testing.T) {
-    pool := testenv.SetupPostgres(t)    // testcontainers — бодит Postgres (pgxpool)
-    repo := postgres.NewProductRepository(pool)
-    got, err := repo.Store(context.Background(), &domain.Product{Name: "X", Price: 100})
-    assert.NoError(t, err)
-    assert.NotEmpty(t, got.ID)
-}
+```ts
+// src/http/routes/route_product.test.ts
+const app = express();
+app.use(express.json());
+app.use((req, _res, next) => { req.ctx = background(); next(); });
+
+const v1 = express.Router();
+registerProductRoutes(v1, deps);
+app.use('/api/v1', v1);
+
+const res = await fetch(`${base}/products/p1`);
+expect(res.status).toBe(401);          // auth хамгаалалт үнэхээр энэ route дээр байна
+expect(authMw.calls()).toBe(1);
 ```
 
-### Mock үүсгэх (Generating Mocks)
+#### Integration тест (repository давхарга)
 
-```bash
-# Generate a mock for one interface
-make mock interface=ProductRepository \
-          dir=internal/datasources/repositories/interface \
-          filename=mock.repository_products.go
+[testcontainers](https://testcontainers.com/)-оор жинхэнэ Postgres + Redis.
+Эдгээр нь unit тестийн чадахгүй **RLS policy**-г шалгана:
+
+```ts
+// *.integration.test.ts — `npm run test:integration`-ээр ажиллана (Docker шаардана)
+const db = await setupPostgres();
+const repo = newProductRepository(db);
+const got = await repo.store(withUser(background(), 'u-1'), { …product });
+expect(got.id).not.toBe('');
 ```
+
+### Mock-ууд
+
+Mock үүсгэгч БАЙХГҮЙ. Объектыг шууд бичээд compiler-ээр шалгуул:
+
+```ts
+const repo = {
+  store: vi.fn(),
+  getById: vi.fn(),
+} satisfies ProductRepository;
+```
+
+`satisfies` нь зориудынх — mock-ийн төрлийг **өргөсгөлгүйгээр** хэлбэрийг
+interface-тэй тулгана, тиймээс `expect(repo.store).toHaveBeenCalledWith(…)` нь
+төрлийн бүрэн мэдээллээ хадгална. Interface шинэ метод авбал ажиллах үед биш,
+ЭНД `npm run typecheck` унана.
 
 ## Кодын хэв маяг (Code Style)
 
+Формат нь **prettier** (`npm run fmt`), lint нь **төрөл мэдэгч eslint**
+(`recommendedTypeChecked`) бөгөөд `--max-warnings 0`. Хоёулаа CI-ийн gate тул
+push хийхээс өмнө `npm run pre-push` ажиллуул.
+
+### Хэлний бодлого
+
+Кодын танигч ба commit мессеж **англиар**; тайлбар ба UI-ийн мөрүүд **монголоор**.
+Эх файл бүр хоёр мөрийн `Government Template Platform V3.0` толгойгоор эхэлнэ —
+байгаа аль ч файлаас хуулж ав.
+
 ### Нэрлэх дүрэм (Naming Conventions)
 
-| Type        | Convention   | Example            |
-|-------------|--------------|--------------------|
-| Package     | lowercase    | `repository`       |
-| Interface   | CamelCase    | `UserRepository`   |
-| Struct      | CamelCase    | `Handler`          |
-| Function    | CamelCase    | `GetByID`          |
-| Variable    | camelCase    | `userCount`        |
-| Constant    | CamelCase / sentinel | `RoleAdmin`, `ErrEmptyEmail` |
-| JSON field  | snake_case   | `request_id`       |
+| Төрөл           | Дүрэм       | Жишээ |
+|-----------------|-------------|---------|
+| Файл            | snake_case  | `product_usecase.ts`, `route_product.ts` |
+| Interface / төрөл| PascalCase | `ProductRepository`, `Ctx` |
+| Class           | PascalCase  | `AuthHandler` |
+| Функц / метод   | camelCase   | `getById` |
+| Хувьсагч        | camelCase   | `userCount` |
+| Тогтмол         | PascalCase (экспортлосон) / camelCase (модуль дотор) | `RoleAdmin`, `tokenCutoffTTLSeconds` |
+| Factory         | `new<Thing>` | `newProductUsecase`, `newProductRepository` |
+| DB мөрийн талбар| snake_case  | `request_id`, `created_at` — багантай яг таарна |
+| JSON талбар     | snake_case  | `request_id` |
+
+### ESM: харьцангуй import нь `.js` зөөнө
+
+Багц нь `"type": "module"` тул дискэн дээрх файл `.ts` байсан ч **харьцангуй
+import бүр `.js`-ээр төгсөх ЁСТОЙ**. Node ажиллах үед яг тэр замыг шийддэг;
+орхивол compile үед биш, import үед унана — яг үүний учир `npm run smoke:esm`
+тусдаа CI gate болж байгаа юм.
+
+```ts
+import { newProductUsecase } from '../../usecases/product/product_usecase.js'; // ✅
+import { newProductUsecase } from '../../usecases/product/product_usecase';    // ❌
+```
+
+### TypeScript-ийн хатуу горим
+
+`strict` **БА** `noUncheckedIndexedAccess` асаалттай. Сүүлийнх нь `arr[0]`-ыг
+`T | undefined` болгодог тул индексээр хандахад ил шалгалт хэрэгтэй. Үүнийг
+давуу тал гэж үз: "cannot read property of undefined" төрлийн ихэнх уналт
+compile алдаа болж хувирна.
 
 ### Алдаа боловсруулалт (Error Handling)
 
-Typed domain алдаануудыг (`internal/apperror`) буцаа — хэзээ ч panic болгож,
-санах сангийн алдааг client руу алдуулж болохгүй:
+Төрөлжсөн domain алдаа шид (`src/apperror`) — library-ийн түүхий алдааг клиент рүү
+ХЭЗЭЭ Ч бүү шид:
 
-```go
-user, err := s.repo.GetByID(ctx, id)
-if err != nil {
-    return domain.User{}, err   // apperror.NotFound surfaces as 404
+```ts
+const user = await this.repo.getById(ctx, id);  // apperror.notFound нь 404 болж гарна
+```
+
+Дотоод шалтгааныг боож, текстийг нь логдох ч буцаахгүй бол:
+
+```ts
+try {
+  await this.cipher.decrypt(row.access_token);
+} catch (err) {
+  throw internalCause(err);   // клиент ерөнхий 500 харна; шалтгаан логдоно
 }
 ```
 
-`RespondWithError` (`handler_base_response.go` дотор) нь алдааны төрлийг статус
-кодод буулгаж, 5xx-ийн шалтгаанг log-д бичиж, цэвэр envelope-ийг render хийнэ.
-Envelope туслахууд бүгд тэр файлд байрлана: `v1.DecodeBody` (хэмжээ хязгаарласан,
-танихгүй талбарыг татгалздаг JSON decode), `validators.ValidatePayloads`
-(struct-tag баталгаажуулалт → талбар тус бүрийн дэлгэрэнгүйтэй 422),
-`v1.NewSuccessResponse`, `v1.NewErrorResponse`, `v1.RespondWithError`.
+`respondWithError` (`src/http/response.ts` дотор) нь алдааны төрлийг статус код руу
+буулгаж, 5xx шалтгааныг логдож, дугтуйг үзүүлнэ. Дугтуйн туслахууд бүгд тэр
+файлд: `decodeBody` (хэмжээ хязгаартай, танихгүй талбарыг татгалздаг задлалт
+**БА** zod шалгалт → талбар тус бүрийн дэлгэрэнгүйтэй 422),
+`newSuccessResponse`, `newErrorResponse`, `respondWithError`, `wrap`.
 
 ### Контекст ашиглах (Context Usage)
 
-`context.Context`-ийг үргэлж эхэнд нь дамжуул; handler дотор үүнийг
-`r.Context()`-ээр унш, pgx дуудлага бүрд дамжуул:
+`ctx: Ctx`-ийг ҮРГЭЛЖ **эхэнд** дамжуул; handler дотор `req.ctx`-ээс уншиж,
+repository дуудлага бүрээр дамжуул:
 
-```go
-func (r *postgreUserRepository) GetByID(ctx context.Context, id string) (domain.User, error) {
-    rows, err := r.pool.Query(ctx,
-        `SELECT `+records.UserColumns+` FROM users WHERE id = $1 AND deleted_at IS NULL`, id)
-    if err != nil {
-        return domain.User{}, err
-    }
-    rec, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[records.Users])
-    // ...
+```ts
+async getById(ctx: Ctx, id: string): Promise<User> {
+  const { rows } = await this.db.query<UserRecord>(
+    ctx,
+    `SELECT ${userColumns} FROM users WHERE id = $1 AND deleted_at IS NULL`,
+    [id],
+  );
+  const row = rows[0];
+  if (!row) throw notFound('user not found');
+  return toDomain(row);
 }
 ```
+
+`users` хүснэгт рүү хандахдаа нүцгэн query биш `db.withRLS(ctx, …)`-ээр яв —
+[Шинэ фичер нэмэх](#шинэ-фичер-нэмэх-adding-a-new-feature)-ийн 10-р алхмыг үз.
 
 ## AI туслахыг өргөтгөх
 
 > Гүн тайлбар: [AI_PIPELINE_MN.md](AI_PIPELINE_MN.md) — урсгал, prompt давхарга, voice, troubleshooting.
 
-Gemini pipeline (`internal/business/usecases/ai`) нь проект бүрд өргөтгөгдөхөөр
+Gemini pipeline (`src/usecases/ai`) нь проект бүрд өргөтгөгдөхөөр
 зохиогдсон:
 
 - **Tool нэмэх** — `ai.ToolDef` (Gemini function declaration + Go `Execute`
-  функц) бичээд `cmd/api/server/server.go`-ийн tool жагсаалтад нэмнэ. Model
+  функц) бичээд `src/cmd/api/server/server.ts`-ийн tool жагсаалтад нэмнэ. Model
   хэзээ дуудахаа өөрөө шийднэ; backend хүсэлтийн context-оор гүйцэтгэдэг тул
   DB хандалтад RLS үйлчилнэ. Жишээ: `KnowledgeSearchTool` (`ai_knowledge`-ээс
   хайдаг), `get_server_time`.
 - **Туслахын чиглэлийг өөрчлөх** — `scope` давхаргыг ажиллаж байх үед нь
   засна (Админ → Тохиргоо, эсвэл `PUT /admin/ai/prompts/scope`). Suurь
   хамгаалалтын давхарга (хэл, хүрээний сахилт, prompt-injection эсэргүүцэл)
-  `ai_prompts.go`-д хатуу бичигдсэн — тэр хэвээрээ байх ёстой.
+  `ai_prompts.ts`-д хатуу бичигдсэн — тэр хэвээрээ байх ёстой; guardrail давхаргыг
+  **ХЭЗЭЭ Ч** DB-ээс тохируулдаг болгож болохгүй.
 - **Мэдлэгийн санг өргөтгөх** — `ai_knowledge`-д мөр нэмнэ
-  (title/content/tags). `repositories/postgres/ai`-ийн ILIKE хайлт нэг query —
+  (title/content/tags). `datasources/repositories/postgres/ai`-ийн ILIKE хайлт нэг query —
   сан томрох үед tsvector эсвэл pgvector-оор солино.
 - **Model-ууд** — чат/STT/орчуулга `GEMINI_MODEL`, TTS `GEMINI_TTS_MODEL`
   (audio гаргадаг тусдаа model) хэрэглэнэ; хоёулаа зөвхөн env тохиргоо.
 
 ## API баримтжуулалт (API Documentation)
 
-### Swagger annotation-ууд
+### Spec хэрхэн үүсдэг вэ
 
-Handler-ууд нь `swag`-ийн ашигладаг godoc annotation-уудыг агуулна:
+Go хувилбар нь spec-ээ handler бүр дээрх **godoc annotation**-аас үүсгэдэг байв.
+Энэ хэвлэлд annotation уншигч БАЙХГҮЙ: OpenAPI баримтыг
+`src/cmd/openapi/document.ts` дотор **ИЛ** бичиж, `src/cmd/openapi/main.ts`
+гаргана.
 
-```go
-// @Summary      Start eID login
-// @Description  Begin an eID login session (returns a QR / deep-link challenge to poll)
-// @Tags         auth
-// @Accept       json
-// @Produce      json
-// @Success      200 {object} v1.BaseResponse{data=responses.EIDStartResponse}
-// @Failure      500 {object} v1.BaseResponse
-// @Router       /auth/eid/start [post]
-func (h Handler) EIDStart(w http.ResponseWriter, r *http.Request) error { /* ... */ }
+Энэ солилцоо нь зориудынх. Handler өөрчлөгдөхөд annotation чимээгүй хазайдаг;
+ил бичсэн баримт дээр **CI-ийн drift шалгалт** нэмэгдэхэд spec нь хянагддаг
+бүтээгдэхүүн болно — гэрээний өөрчлөлт diff дээр харагдана.
+
+```ts
+// src/cmd/openapi/document.ts
+'/auth/eid/start': {
+  post: {
+    summary: 'Start eID login',
+    description: 'Begin an eID login session (returns a QR / deep-link challenge to poll).',
+    tags: ['auth'],
+    requestBody: { … },
+    responses: {
+      '200': { $ref: '#/components/responses/Ok' },
+      '422': { $ref: '#/components/responses/Error' },
+    },
+  },
+},
 ```
 
-### Баримтжуулалтыг дахин үүсгэх (Regenerate Docs)
+Handler-ууд метод бүрийнхээ дээр нэг мөрийн гэрээний тайлбар агуулсаар байна
+(`/** POST /auth/eid/start · 200 · 422 */`) тул route, method, статус кодууд
+кодтойгоо нэг дор харагдана.
+
+### Дахин үүсгэх (Regenerate)
 
 ```bash
-make swag
+npm run openapi              # backend/docs/openapi.json бичнэ
+npm run openapi -- --check   # CI-ийн ажиллуулдаг — drift дээр унана
 ```
 
-Swagger UI: `http://localhost:8080/swagger/`. Хэрэв `docs/` нь annotation-аас
-зөрвөл CI алдаа гаргана (`make ci-swag-check`).
+Swagger UI: `http://localhost:8080/swagger/` (production-д `OBSERVABILITY_TOKEN`-оор
+хамгаалагдана — 401 биш **404** буцаадаг тул оршин байгаа нь ч нууцлагдана).
+
+> ⚠️ **Route бүр spec-д байх ёстой.** Route нэмэх эсвэл DTO өөрчлөх →
+> `document.ts`-ийг шинэчлэх → `npm run openapi` ажиллуулах →
+> `backend/docs/openapi.json`-ыг commit хийх. Эс бөгөөс CI унана.
 
 ## Алдаа засах (Troubleshooting)
 
-**Database connection failed**
+**Өгөгдлийн сангийн холболт амжилтгүй**
 ```bash
-docker-compose ps                 # is Postgres up?
-# check DB_POSTGRE_DSN in internal/config/.env
+docker compose ps                 # Postgres асаалттай юу?
+# backend/.env доторх DB_POSTGRE_URL / DB_POSTGRE_DSN-ийг шалга
 ```
 
-**Migration failed** — `migrations/` дараалал болон `schema_migrations`
-хүснэгтийг шалга; runner нь advisory lock + файл тус бүрийн transaction ашигладаг.
+**Ажиллах үед `ERR_MODULE_NOT_FOUND`, гэтэл `tsc` дуугүй байсан** — бараг
+гарцаагүй харьцангуй import дээр `.js` өргөтгөлийг орхисон байна.
+`npm run smoke:esm` үүнийг тогтмол давтана.
 
-**Tests failing**
+**Migration амжилтгүй** — `migrations/`-ийн эрэмбэ болон `schema_migrations`
+хүснэгтийг шалга; runner нь advisory lock + файл тус бүрийн транзакц ашиглана.
+Хоёр `17_` файлыг санаарай ([Migration-ууд](#migration-ууд)-ыг үз).
+
+**Кодын өөрчлөлтийн дараа бүх зүйл 401 буцааж байна** — route модуль дотор
+`router.use(middleware)` нэмсэн эсэхээ шалга. Express-д тэр нь дараагийн БҮХ
+хүсэлт рүү гоожино; оронд нь middleware-ийг **route тус бүрд** дамжуул.
+
+**Тест унаж байна**
 ```bash
-go test -v ./...                  # verbose
-go test -v -run TestUsecase_Create ./internal/business/usecases/products/...
+npm test -- --reporter=verbose
+npm test -- product              # зөвхөн "product"-той таарах файлууд
+npm test -- -t "creates a product"   # зөвхөн нэрээр таарах тестүүд
 ```
 
-**Lint errors**
+**Lint / формат алдаа**
 ```bash
-golangci-lint run --fix
+npm run fmt                       # prettier --write
+npm run lint -- --fix
 ```
+
+**CI нь OpenAPI drift дээр унаж байна** — `npm run openapi` ажиллуулж
+`backend/docs/openapi.json`-ыг commit хий.
 
 ## Аюулгүй байдлын шалгах жагсаалт (Security Checklist)
 
-Deploy хийхээс өмнө дараахыг баталгаажуул:
+Deploy хийхээс өмнө дараахыг хангасан эсэхийг шалга:
 
-- [ ] Бүх хамгаалагдсан endpoint auth middleware-тэй
-- [ ] Нэргүй endpoint-ууд (`/auth/*`) rate limiter + body cap-аа хадгалсан
-- [ ] `JWT_SECRET` нь ≥ 32 санамсаргүй тэмдэгт бөгөөд жишээ утга биш
-- [ ] Input validation (`validate:` tag-ууд) нь хүсэлтийн DTO бүрийг хамарсан
-- [ ] Нууц утгууд environment-ээс ирдэг, хэзээ ч commit хийгддэггүй
-- [ ] Production-д `ALLOWED_ORIGINS` тохируулагдсан (wildcard байхгүй)
-- [ ] Edge / load balancer дээр HTTPS албадан хэрэгжсэн
+- [ ] Хамгаалагдсан endpoint бүр auth middleware-тэй — `use()`-ээр биш, **route тус бүрд дамжуулсан**
+- [ ] Нэргүй endpoint-ууд (`/auth/*`) rate limiter + биеийн хязгаараа хадгалсан
+- [ ] `JWT_SECRET` нь ≥ 32 санамсаргүй тэмдэгт бөгөөд жишээний утга БИШ
+- [ ] Хүсэлтийн DTO бүр zod `strictObject` (танихгүй талбар татгалзагдана)
+- [ ] Хэрэглэгч тус бүрийн шинэ хүснэгтүүд RLS policy-тэй **БА** repository нь `withRLS` ашигладаг
+- [ ] API нь **superuser БИШ** DB role-оор холбогддог (production-д boot guard мөрдүүлнэ)
+- [ ] `INTEGRATION_ENC_KEY` тохируулагдсан (production үүнгүйгээр асахаас татгалзана)
+- [ ] Нууцууд орчноос ирдэг, commit хийгддэггүй
+- [ ] Production-д `ALLOWED_ORIGINS` тохируулагдсан (wildcard-гүй)
+- [ ] HTTPS нь edge / load balancer дээр мөрдөгддөг
 
 ---
 

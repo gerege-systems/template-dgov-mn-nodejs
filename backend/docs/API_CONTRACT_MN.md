@@ -288,11 +288,10 @@ Upstream **service** бүртгэл + телеметр. Бүх endpoint 🔒 + �
 ## Applications (`/api/v1/applications`) 🛡️ `gateway.manage`
 
 Нэгдсэн OAuth2 **client бүртгэл** — хуучин gateway "consumers + API keys" болон
-тусдаа SSO RP бүртгэлийг нэгтгэн орлуулсан. Application бүр нь **Ory Hydra OAuth2
-client**; service тус бүрийн хандалтыг OAuth **scope**-оор илэрхийлнэ
-(`application_services` → `gateway_services.scope`). Бүх endpoint 🔒 + 🛡️
-`gateway.manage` шаардах ба энэ бүлэг нь **зөвхөн Hydra тохируулагдсан үед**
-(`ProviderConfigured()`) бүртгэгдэнэ.
+тусдаа SSO RP бүртгэлийг нэгтгэн орлуулсан. Application бүр нь платформын
+**ӨӨРИЙН** `oauth_clients` бүртгэл дэх OAuth2 client (Ory Hydra ХЭРЭГГҮЙ); service
+тус бүрийн хандалтыг OAuth **scope**-оор илэрхийлнэ (`application_services` →
+`gateway_services.scope`). Бүх endpoint 🔒 + 🛡️ `gateway.manage` шаардана.
 
 `app_type` нь grant + auth-method-ыг сонгоно:
 
@@ -480,6 +479,20 @@ chunk хоосон талбар буцаана — амьд орчуулгын U
 
 ## Non-`/api` mounts
 
+> ⚠️ **Node.js хэвлэлд БАЙХГҮЙ.** Доорх хоёр гадаргуу (`/admin` операторын API ба
+> `/rp/sign/*` relay) нь **Go хувилбарт** байдаг ч портын 25 домэйнд ороогүй тул
+> энэ build тэдгээрийг бүртгэдэггүй. Go deployment (`template.dgov.mn`,
+> `sso.dgov.mn`) тэдгээрийг үйлчилсээр байгаа ба клиентүүд хамааралтай байж
+> болзошгүй тул энд баримтжуулав.
+>
+> Энэ хэвлэлд `/api/v1`-ээс ГАДНА mount хийгддэг зүйл нь **OIDC issuer**:
+> `/oauth2/auth`, `/oauth2/token`, `/oauth2/introspect`, `/oauth2/revoke`,
+> `/oauth2/sessions/logout`, `/userinfo`, `/.well-known/openid-configuration`,
+> `/.well-known/jwks.json` — дээрх OIDC хэсгийг үз.
+>
+> Мөн `/api/v1/admin/*` (хэрэглэгчийн удирдлага, AI prompt) нь доор тайлбарласан
+> `/admin` операторын гадаргуугаас **ӨӨР зүйл** гэдгийг анхаар.
+
 ### OIDC provider админ гадаргуу — `/admin` (оператор)
 
 Зөвхөн **Hydra тохируулагдсан үед** (`ProviderConfigured()`) идэвхжинэ. `/admin`-д
@@ -521,7 +534,7 @@ eID RP secret-ээр солиод eID Mongolia руу дамжуулна. `/rp/s
 | Method | Path | Gate | Тайлбар |
 |--------|------|------|-------------|
 | GET | `/health` | нээлттэй | Liveness — процесс амьд бол үргэлж 200. |
-| GET | `/ready` | нээлттэй | Readiness — Postgres (pgx pool) + Redis ping хийнэ. |
+| GET | `/ready` | нээлттэй | Readiness — Postgres (`pg` pool) + Redis ping хийнэ. |
 | GET | `/metrics` | ObservabilityGate | Prometheus exposition (production-д bearer-gated + 404-hidden). |
 | GET | `/swagger/*` · `/swagger/doc.json` | ObservabilityGate | Swagger UI + spec (production-д gated). |
 | GET | `/api/` | нээлттэй | Root "alive" JSON. |
@@ -535,7 +548,7 @@ eID RP secret-ээр солиод eID Mongolia руу дамжуулна. `/rp/s
 permission шаардана. Swagger spec-ийг handler annotation-аас `make swag`-аар
 дахин үүсгэ. (Долоон хуучирсан `auth_*` handler нь бүртгэгдээгүй password/OTP
 endpoint-уудад `@Router` annotation-той хэвээр байгаа — дээрх auth гадаргуу нь
-`route_auth.go`-г тусгасан бөгөөс энэ нь эрх мэдэлтэй.)
+`route_auth.ts`-г тусгасан бөгөөс энэ нь эрх мэдэлтэй.)
 
 ---
 

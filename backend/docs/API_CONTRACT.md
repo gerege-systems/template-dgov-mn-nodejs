@@ -291,7 +291,7 @@ is now real: a middleware records every actual `/api` request
 
 Unified OAuth2 **client registry** — the merged replacement for the old gateway
 "consumers + API keys" and the separate SSO RP registration. Each application is
-an **Ory Hydra OAuth2 client**; its per-service access is expressed as OAuth
+an OAuth2 client in the platform's **own** `oauth_clients` registry; its per-service access is expressed as OAuth
 **scopes** (`application_services` → `gateway_services.scope`). Every endpoint
 requires 🔒 + 🛡️ `gateway.manage`, and the group is **registered only when Hydra
 is configured** (`ProviderConfigured()`).
@@ -484,6 +484,21 @@ recorded segments here.
 
 ## Non-`/api` mounts
 
+!!! warning "Not present in the Node.js edition"
+    The two surfaces below (`/admin` operator API and the `/rp/sign/*` relay)
+    exist in the **Go edition** but were **not part of the 25 ported domains**, so
+    this build does not register them. They are documented here because the Go
+    deployment (`template.dgov.mn`, and `sso.dgov.mn`) still serves them and
+    clients may depend on them.
+
+    What this edition **does** mount outside `/api/v1` is the **OIDC issuer**:
+    `/oauth2/auth`, `/oauth2/token`, `/oauth2/introspect`, `/oauth2/revoke`,
+    `/oauth2/sessions/logout`, `/userinfo`, `/.well-known/openid-configuration`
+    and `/.well-known/jwks.json` — see the OIDC section above.
+
+    Note also that `/api/v1/admin/*` (user management, AI prompts) is a
+    **different thing** from the `/admin` operator surface described below.
+
 ### OIDC provider admin surface — `/admin` (operator)
 
 Active **only when Hydra is configured** (`ProviderConfigured()`). A plain
@@ -525,7 +540,7 @@ Both `/rp/sign` and `/rp/sign/*` are handled.
 | Method | Path | Gate | Description |
 |--------|------|------|-------------|
 | GET | `/health` | open | Liveness — always 200 if the process is up. |
-| GET | `/ready` | open | Readiness — pings Postgres (pgx pool) + Redis. |
+| GET | `/ready` | open | Readiness — pings Postgres (`pg` pool) + Redis. |
 | GET | `/metrics` | ObservabilityGate | Prometheus exposition (bearer-gated + 404-hidden in production). |
 | GET | `/swagger/*` · `/swagger/doc.json` | ObservabilityGate | Swagger UI + spec (gated in production). |
 | GET | `/api/` | open | Root "alive" JSON. |
@@ -539,7 +554,7 @@ Both `/rp/sign` and `/rp/sign/*` are handled.
 the named RBAC permission. Regenerate the swagger spec from handler annotations
 with `make swag`. (Seven legacy `auth_*` handlers still carry `@Router`
 annotations for password/OTP endpoints that are **not** registered — the auth
-surface above reflects `route_auth.go`, which is authoritative.)
+surface above reflects `route_auth.ts`, which is authoritative.)
 
 ---
 

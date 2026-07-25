@@ -10,25 +10,28 @@ Thanks for your interest in improving **Government Template Platform V3.0**! / *
 
 ## Before opening a PR · PR нээхээс өмнө
 
-**Backend (Go):**
+**Backend (Node.js · TypeScript):**
 ```bash
 cd backend
-make fmt          # gofmt
-make lint         # golangci-lint
-make test         # unit tests
-make pre-push     # mirror CI (lint + test + swag drift + build)
+npm run fmt       # prettier --write
+npm run lint      # eslint --max-warnings 0 (type-aware)
+npm test          # unit tests (vitest)
+npm run pre-push  # mirror CI: fmt + lint + typecheck + test + openapi drift + build + ESM smoke
 ```
 
-**Frontend (Next.js):**
+**Frontend (Vite · React):**
 ```bash
 cd frontend
 npm run lint
-npm run build
+npm test
+npm run build     # build + lint + typecheck (what CI runs)
 ```
 
 - Keep the **Clean Architecture** boundaries: the business/domain layers must not import the web framework.
 - Add tests for new behavior. Update the relevant docs in `backend/docs/` (and the `_MN` counterpart).
-- If you change HTTP handler annotations, run `make swag` so `docs/` stays in sync.
+- If you add or change a route or DTO, run `npm run openapi` and commit
+  `backend/docs/openapi.json` — CI fails on drift.
+- Relative imports must carry the `.js` extension (the package is ESM).
 - Follow the existing code style and the bilingual comment/doc convention.
 
 ## Commit messages · Commit мессеж
