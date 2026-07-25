@@ -8,9 +8,14 @@ Docs index is in [README.md](README.md#documentation); deep dives in
 
 > This repo is the Node.js/React port of the Go/Next.js original
 > ([gerege-systems/template-dgov-mn](https://github.com/gerege-systems/template-dgov-mn)).
-> The port is **in progress** — see [ROADMAP.md](ROADMAP.md) for what has landed.
-> The HTTP contract (routes, `BaseResponse` envelope, error semantics, SQL
-> migrations) is preserved 1:1, so clients and the database carry over unchanged.
+> **The port is complete** (25/25 domains) — see [ROADMAP.md](ROADMAP.md). The HTTP
+> contract (routes, `BaseResponse` envelope, error semantics, SQL migrations) is
+> preserved 1:1, so clients and the database carry over unchanged. Treat that
+> contract as frozen: adding an endpoint is fine, changing an existing one is not.
+>
+> One deliberate superset: the Next.js BFF is gone (the frontend is a static SPA),
+> so operations that need a `client_secret` or the user's OAuth token now live in
+> the API under `/integrations/*`. See ROADMAP for the list.
 
 ## Commands
 
@@ -119,8 +124,10 @@ docker compose up -d --build   # db + redis + migrate (one-off) + api + web
 
 - `backend/.env` and root `.env`/`backend.env` are gitignored secrets — never
   commit; document new env vars in `backend/.env.example` **and** the READMEs.
-- `.go-reference/` (gitignored) holds the original Go sources as the porting
-  reference. Read it when porting a domain; delete it when the port is done.
+- The `.go-reference/` Go source tree is **gone** (the port is done). If you ever
+  need to compare against the original, clone
+  [gerege-systems/template-dgov-mn](https://github.com/gerege-systems/template-dgov-mn)
+  outside this repo — do not re-add it here.
 - `/ai/*` rate limit is ~20 req/min per IP (live translation streams ~8
   chunks/min); auth endpoints ~5/min with a 4 KiB body cap.
 - The compose stack runs `ENVIRONMENT=development` on purpose (internal DB

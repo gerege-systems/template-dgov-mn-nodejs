@@ -35,9 +35,11 @@ Node.js/React порт юм. **HTTP гэрээ (route, `BaseResponse` дугту
 
 | Давхарга | Төлөв |
 |---|---|
-| Платформ давхарга — config · logger · ctx/RLS · apperror · pg (`withRLS`) · Redis · JWT · validators · 13 middleware · migration runner · health · server wiring | ✅ Бэлэн (67 unit тест) |
-| Домэйн давхарга — auth/eID · users · rbac · ai · gov · oidc · relay · registry · gateway · sign · sso … (25 домэйн) | 🚧 Порт хийгдэж байна |
+| Платформ давхарга — config · logger · ctx/RLS · apperror · pg (`withRLS`) · Redis · JWT · validators · 13 middleware · migration runner · health · server wiring | ✅ Бэлэн |
+| Домэйн давхарга — auth/eID · users · rbac · ai · gov · oidc · relay · registry · gateway · sign · sso … | ✅ **25/25 домэйн** (199 route · 165 OpenAPI зам) |
 | Frontend — Vite + React SPA | ✅ Хийгдсэн (BFF устаж, статик SPA + httpOnly cookie) |
+
+**Порт ДУУССАН** — 775 unit тест / 45 файл, ESM smoke 219 модуль, frontend 25 тест.
 
 Дэлгэрэнгүйг [ROADMAP.md](ROADMAP.md)-д үз.
 

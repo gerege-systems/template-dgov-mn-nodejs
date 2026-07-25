@@ -7,6 +7,18 @@
 > энэ хувилбарын deployment нь [node.template.dgov.mn](https://node.template.dgov.mn).
 > Дэлгэрэнгүй баримт: [README.md](README.md#баримтжуулалт).
 
+## Төлөв — 2026-07-26
+
+**Порт ДУУССАН.** Backend 25/25 домэйн, frontend Vite + React SPA, production-д
+[node.template.dgov.mn](https://node.template.dgov.mn) дээр ажиллаж байна.
+
+| | |
+|---|---|
+| Backend | 199 route · 165 OpenAPI зам (зөрүүгүй) · **775 unit тест / 45 файл** · ESM smoke 219 модуль |
+| Frontend | 57 маршрут · **25 тест** · статик build (nginx) |
+| CI gate | prettier · eslint (`--max-warnings 0`) · tsc · vitest · OpenAPI drift · build · ESM smoke · gitleaks |
+| Лавлагааны Go код | `.go-reference/` **устгагдсан** — энэ repo одооноос өөрөө эх сурвалж |
+
 ## Портын гэрээ (заавал хадгална)
 
 Порт хийхдээ дараах гурван зүйл **1:1 хадгалагдана** — эс бөгөөс энэ нь порт биш
@@ -45,7 +57,7 @@ hash-ууд шалгагдсаар байна.
 | Infra | `backend/deploy/Dockerfile`, `docker-compose.yml` | distroless nodejs runtime, node healthcheck binary |
 | CI/CD | `.github/workflows/` | fmt · lint · typecheck · vitest · openapi drift · build · gitleaks → Deploy |
 
-**Тест:** 500 unit тест (apperror · config · jwt · validators · domain/users · migration · users usecase · eID client · auth usecase · auth DTO · route wiring · rbac usecase · audit hash-chain · audit usecase · site/theme usecase · core клиент · security usecase · eID байгууллага/PKI · assets usecase · eID профайл · org usecase · gspace usecase · gateway usecase · secrethash · applications usecase · integrations usecase · ssotoken/crypto · sso usecase · registry usecase · gov usecase).
+**Тест:** **775 unit тест / 45 файл** (apperror · config · jwt · validators · domain/users · migration · users usecase · eID client · auth usecase · auth DTO · route wiring · rbac usecase · audit hash-chain · audit usecase · site/theme usecase · core клиент · security usecase · eID байгууллага/PKI · assets usecase · eID профайл · org usecase · gspace usecase · gateway usecase · secrethash · applications usecase · integrations usecase + provider ops · ssotoken/crypto · sso usecase · registry usecase · gov usecase · ai pipeline · relay · oidc provider · sign/PAdES · superadmin · onboarding). Нэмээд **ESM import smoke** (219 модуль) — CommonJS/ESM interop-ийн эвдрэлийг build дараа барина.
 
 ## ✅ Хийгдсэн — домэйн давхарга
 
@@ -63,7 +75,7 @@ hash-ууд шалгагдсаар байна.
 | `gspace` | `pkg/gspace` SFTP client (ssh2-sftp-client, host-key баталгаажуулалт) · usecase (квот) · handler · 4 route | 13 unit тест. Файлын нэр замын НЭГ сегмент болж ариутгагдана — `../`, backslash-тай Windows зам ч хаагдана. Ижил нэртэй файл ОРЛУУЛАГДАХ тул хуучин хэмжээ квотоос хасагдана; жагсаалт уншиж чадахгүй бол хасалт хийхгүй (квотыг хатуу талд). Татаж чадаагүй БҮХ шалтгаан 404. Upload-ийн зам 4 MiB body хязгаартай (глобал 1 MiB биш). |
 | `gateway` | domain · repository interface + postgres (percentile_cont p95) · usecase · response DTO · 6 route · хүсэлтийн лог middleware | 10 unit тест. Дутуу форм ажиллах чадвартай мөр болж **хэвийшинэ** (протокол→https, порт→80/443, зам→"/"). Лог нь ЗӨВХӨН гуравдагч талын RP-ийн зам (`/rp/sign`, `/api/v1/provider`)-ыг барина — өөрийн дотоод API трафик телеметрийг бохирдуулахгүй. Лог бичилт `res.on('finish')` дээр, алдаа залгигдана — хүсэлт хэзээ ч блоклогдохгүй. |
 | `applications` | `pkg/secrethash` (Argon2id + Hydra PBKDF2 шалгалт) · oauth_clients repository · service↔scope хөрвүүлэгч · usecase · 8 route | 41 unit тест, **Go-гоос гаргасан Argon2id эталон вектор** + Ory Hydra-гийн PBKDF2 вектороор байт-нийцлийг баталсан (шилжилтийн үед одоо байгаа client-ууд secret-ээ солилгүй нэвтэрнэ). redirect_uri нь RFC 6749 §3.1.2-оор шалгагдана (https / зөвхөн loopback дээр http / fragment хориотой; native-д RFC 8252 private scheme). Public (spa/native) апп-д secret **огт үүсэхгүй**; `update` нь secret-д хүрэхгүй; түүхий secret зөвхөн create/rotate/set хариунд НЭГ удаа. |
-| `integrations` | domain · repository interface + postgres (RLS) · usecase (AES-256-GCM) · handler · 4 route | 12 unit тест. OAuth токен DB-д **ил текстээр хэзээ ч очихгүй** — `base64(nonce‖ciphertext‖tag)` нь Go-ийн `gcm.Seal`-тэй байт-нийцтэй. Production-д `INTEGRATION_ENC_KEY` **заавал** (хоосон бол түлхүүр нь `sha256("")` — нийтэд мэдэгдэх тогтмол болж токен бодитоор ил хэвтэнэ). `GET /:provider/token` нь шифргүй токен буцаадаг тул зөвхөн server-тал дуудна. |
+| `integrations` | domain · repository interface + postgres (RLS) · usecase (AES-256-GCM) · handler · 4 route. **SPA хөрвүүлэлтийн дараа нэмэгдсэн:** `pkg/oauthproviders` (authorize/token/refresh) · `pkg/cloudfiles` (Drive · Dropbox · Meet REST) · provider ops usecase · **13 нэмэлт route** | 12 unit тест. OAuth токен DB-д **ил текстээр хэзээ ч очихгүй** — `base64(nonce‖ciphertext‖tag)` нь Go-ийн `gcm.Seal`-тэй байт-нийцтэй. Production-д `INTEGRATION_ENC_KEY` **заавал** (хоосон бол түлхүүр нь `sha256("")` — нийтэд мэдэгдэх тогтмол болж токен бодитоор ил хэвтэнэ). `GET /:provider/token` нь шифргүй токен буцаадаг тул зөвхөн server-тал дуудна. |
 | `ssotoken` | `pkg/crypto` (AES-256-GCM, Go-ийн `gcm.Seal`-тэй байт-нийцтэй) · `pkg/oidc` (RP client: code/refresh/PKCE/userinfo/logout) · sso_tokens repository · usecase | 10 unit тест. Токен хугацаа дуусахаас **60с өмнө** урьдчилан refresh хийнэ; provider refresh token эргүүлэхгүй бол хуучныг хадгална. refresh_token-гүй нэвтрэлтийг хадгалахгүй. Хадгалалт унасан ч дуудлага нэг удаа гүйцэднэ. Энэ нь `eidprofile`-ийн SSO proxy замыг **бүрэн ажиллагаатай** болгов (өмнө `ssoTokens: null` байсан). |
 | `sso` | domain/platform · ssouser repository (3 шатлалт upsert) · platform_settings repository · usecase · handler · 4 route | 17 unit тест. State нь Redis-д **нэг удаагийн** (replay/CSRF хаалттай). Иргэний дугаартай бол eID дансанд **нэгтгэнэ** — 3 шатлалт upsert: ① админаас урьдчилан бүртгэсэн мөр → ② пайрвайз мөрийг дэвшүүлэх → ③ civil_id-ээр merge. Private платформд бүртгээгүй иргэн **403, данс ч үүсэхгүй**; горим уншиж чадаагүй бол нэвтрэлт зогсоно (**fail-open биш**). id_token нь cookie-д ордоггүй — 32 hex ref-ээр Redis-д. |
 | `registry` + `catalog` | domain (CPSV-AP паспорт) · repository interface + postgres (679 мөр SQL) · usecase · response DTO · **21 route** | 24 unit тест. **Германы VwVfG §35a-ийн загвар**: үнэлэх эрх (Ermessen) эсвэл үнэлгээний зайтай (Beurteilungsspielraum) үйлчилгээг `auto` болгохыг татгалзана — хүний оролцоо шаардах шийдвэр чимээгүйхэн машинд шилжихээс сэргийлнэ. Нийтлэхэд зарласан проактив шатыг **бодит once-only байдалтай тулгана** (зөрчилтэй бол 409) — регистр өөрөө худал мэдээлэл агуулахгүй. Нийтлэгдсэн паспорт устгагдахгүй (архивлана); архивлахад иргэний каталогоос ч гарна. `/catalog/*` нь эрхгүй ч зөвхөн нийтлэгдсэнийг эргүүлнэ. |
@@ -82,28 +94,33 @@ hash-ууд шалгагдсаар байна.
 ## ✅ Порт ДУУССАН — домэйн давхарга
 
 Домэйн бүр `records → repository (interface + postgres) → usecase → DTO → handler
-→ route` дарааллаар порт хийгдэнэ, дараа нь `backend/docs/` дахь EN/MN хос
-шинэчлэгдэнэ.
+→ route` дарааллаар порт хийгдэж, `backend/docs/` дахь EN/MN хос шинэчлэгдсэн.
 
 > **Хамрах хүрээний тэмдэглэл:** Go repo-д `register` / `login` / OTP /
 > `forgot-password` / `reset-password` файлууд байгаа ч route-д ХОЛБОГДООГҮЙ
 > (үхмэл код) — "Login with eID" нь цорын ганц интерактив нэвтрэх арга. Тэднийг
-> порт хийгээгүй. Мөн `auth` usecase-ийн байгууллагын төлөөлөл (representations /
-> signers) болон иргэний PKI самбарын method-ууд нь `route_org.go` /
-> `route_eidprofile.go`-д холбогддог тул тэр домэйнуудтай хамт нэмэгдэнэ.
+> порт хийгээгүй.
+>
+> Үл хамаарах ЗӨВХӨН нэг зүйл: `auth_change_password.go` нь мөн route-гүй
+> үлдсэн боловч frontend-ийн "Нууц үг солих" маягт түүнийг дуудаж 404 авдаг
+> байсан тул энд **порт хийгдэж холбогдсон** (`PUT /auth/password/change`).
+> Энэ нь HTTP гэрээг өргөтгөсөн — хуучин ямар ч клиент хөндөгдөөгүй.
 
 **Дараалал** (хамаарлын дарааллаар):
 
-1. `users` · `auth` (eID · Google · SSO consumer · refresh/logout) · `rbac`
-3. ~~`site`~~ ✅ · ~~`theme`~~ ✅ · ~~`core`~~ ✅ · ~~`security`~~ ✅
-4. ~~`ai`~~ ✅ (Gemini pipeline) · ~~`assets`~~ ✅
-5. ~~`eidprofile`~~ ✅ · ~~`org`~~ ✅ · ~~`applications`~~ ✅ · ~~`integrations`~~ ✅ · ~~`gspace`~~ ✅
-6. ~~`gov`~~ ✅ · ~~`registry`~~ ✅ · ~~`catalog`~~ ✅ · ~~`relay`~~ ✅ · ~~`gateway`~~ ✅
-7. ~~`oidc`~~ ✅ (provider тал) · ~~`sso`~~ ✅ · ~~`ssotoken`~~ ✅ · ~~`sign`~~ ✅ · ~~`provider`~~ ✅
-8. ~~`superadmin`~~ ✅ · ~~`superadmin_onboarding`~~ ✅
+1. ~~`users`~~ ✅ · ~~`auth`~~ ✅ (eID · Google · SSO consumer · refresh/logout) · ~~`rbac`~~ ✅
+2. ~~`site`~~ ✅ · ~~`theme`~~ ✅ · ~~`core`~~ ✅ · ~~`security`~~ ✅
+3. ~~`ai`~~ ✅ (Gemini pipeline) · ~~`assets`~~ ✅
+4. ~~`eidprofile`~~ ✅ · ~~`org`~~ ✅ · ~~`applications`~~ ✅ · ~~`integrations`~~ ✅ · ~~`gspace`~~ ✅
+5. ~~`gov`~~ ✅ · ~~`registry`~~ ✅ · ~~`catalog`~~ ✅ · ~~`relay`~~ ✅ · ~~`gateway`~~ ✅
+6. ~~`oidc`~~ ✅ (provider тал) · ~~`sso`~~ ✅ · ~~`ssotoken`~~ ✅ · ~~`sign`~~ ✅ · ~~`provider`~~ ✅
+7. ~~`superadmin`~~ ✅ · ~~`superadmin_onboarding`~~ ✅ · ~~`admin`~~ ✅
 
-Эх Go код нь `.go-reference/` дор (gitignored) порт хийх лавлагаа болж байрлана;
-порт дуусмагц устгагдана.
+**25/25 домэйн** — 199 route, 165 баримтжуулсан OpenAPI зам (route ⇄ spec зөрүүгүй).
+
+Порт дууссан тул лавлагаа болж байсан Go эх код (`.go-reference/`) **устгагдлаа**.
+Эх хувилбарыг [gerege-systems/template-dgov-mn](https://github.com/gerege-systems/template-dgov-mn)-ээс
+үргэлж авах боломжтой; энэ repo одооноос ӨӨРӨӨ эх сурвалж.
 
 ## ✅ Frontend — Vite + React SPA (хийгдсэн)
 
@@ -156,11 +173,16 @@ CSRF шалгалт, алдааны нэгдсэн дугтуй гурвуула
 "Нууц үг солих" маягт өмнө нь 404 авдаг байв). Амжилтын дараа цуцлалтын
 тасалбар тэмдэглэгдэж session cookie цэвэрлэгдэнэ — хэрэглэгч дахин нэвтэрнэ.
 
-## Дараа нь (порт дууссаны дараа)
+## Дараа нь
 
-- `.go-reference/` устгах, ROADMAP-ийн портын хэсгийг архивлах
-- Go хувилбартай гэрээний зэрэгцүүлсэн тест (contract parity suite)
-- Performance baseline: Node vs Go (p50/p99, memory) — эталон deployment-үүд хажуу хажууд
+- Go хувилбартай гэрээний зэрэгцүүлсэн тест (contract parity suite) — хоёр
+  хувилбар руу ижил хүсэлт явуулж дугтуй/статус/талбар бүрийг тулгана
+- Performance baseline: Node vs Go (p50/p99, memory) — эталон deployment-үүд
+  хажуу хажууд ([template.dgov.mn](https://template.dgov.mn) ⇄
+  [node.template.dgov.mn](https://node.template.dgov.mn))
+- Frontend bundle-ийг code-split хийх (одоо нэг chunk ~700 KB / gzip 180 KB)
+- Drive · Dropbox · Meet-ийн OAuth эрхийн мэдээллийг production-д тохируулах
+  (одоо хоосон тул UI дээр "Удахгүй" төлөвтэй inert)
 
 ---
 
