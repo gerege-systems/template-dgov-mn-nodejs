@@ -12,7 +12,10 @@
 // гарын үсэг зурагчид · PKI самбар) хариуцна — эдгээр нь eID client болон
 // users-ийн хосолсон урсгал тул тусдаа usecase болгож салгаагүй (Go-той ижил).
 
+import { ErrSSOTokenNotFound } from '../../domain/sso_token.js';
 import type { User } from '../../domain/users.js';
+
+export { ErrSSOTokenNotFound };
 import type { Ctx } from '../../pkg/ctx/ctx.js';
 import type { Representation, Signer, SignersResult } from '../../pkg/eid/eid_org.js';
 import type {
@@ -104,14 +107,6 @@ export interface LogoutRequest {
  */
 export interface SSOTokenService {
   validAccessToken(ctx: Ctx, userId: string): Promise<string>;
-}
-
-/** ErrSSOTokenNotFound нь хэрэглэгчид хадгалагдсан SSO токен байхгүйг илэрхийлнэ. */
-export class ErrSSOTokenNotFound extends Error {
-  constructor() {
-    super('sso token not found');
-    this.name = 'ErrSSOTokenNotFound';
-  }
 }
 
 export interface AuthUsecase {

@@ -19,6 +19,7 @@ import { newGatewayRepository } from '../../../datasources/repositories/postgres
 import { newOAuthClientRepository } from '../../../datasources/repositories/postgres/oauth/oauth_clients_postgres.js';
 import { newServiceScopeResolver } from '../../../datasources/repositories/postgres/oauth/service_scope_postgres.js';
 import { newOrgRepository } from '../../../datasources/repositories/postgres/org/org_postgres.js';
+import { newSSOTokenRepository } from '../../../datasources/repositories/postgres/ssotoken/ssotoken_postgres.js';
 import { newUserIntegrationsRepository } from '../../../datasources/repositories/postgres/userintegrations/userintegrations_postgres.js';
 import { newOrgStampRepository } from '../../../datasources/repositories/postgres/orgstamp/orgstamp_postgres.js';
 import { newRBACRepository } from '../../../datasources/repositories/postgres/rbac/rbac_postgres.js';
@@ -57,6 +58,8 @@ import { newEidClient } from '../../../pkg/eid/eid.js';
 import { newGoogleClient } from '../../../pkg/google/google.js';
 import { newGSpaceClient } from '../../../pkg/gspace/gspace.js';
 import { newJWTServiceWithRefresh } from '../../../pkg/jwt/jwt.js';
+import { newCipher } from '../../../pkg/crypto/cipher.js';
+import { newOIDCClient } from '../../../pkg/oidc/oidc.js';
 import { newSSOEidProxy } from '../../../pkg/ssoeidproxy/ssoeidproxy.js';
 import { newXypClient } from '../../../pkg/xyp/xyp.js';
 import { newAuditUsecase } from '../../../usecases/audit/audit_usecase.js';
@@ -66,6 +69,7 @@ import { newAssetsUsecase } from '../../../usecases/assets/assets_usecase.js';
 import { newCoreUsecase } from '../../../usecases/core/core_impl.js';
 import { newGatewayUsecase } from '../../../usecases/gateway/gateway_usecase.js';
 import { newGSpaceUsecase } from '../../../usecases/gspace/gspace_usecase.js';
+import { newSSOTokenUsecase } from '../../../usecases/ssotoken/ssotoken_usecase.js';
 import { newIntegrationsUsecase } from '../../../usecases/integrations/integrations_usecase.js';
 import { newOrgUsecase } from '../../../usecases/org/org_usecase.js';
 import { newRBACUsecase } from '../../../usecases/rbac/rbac_impl.js';
@@ -268,8 +272,24 @@ export async function newApp(): Promise<App> {
     AppConfig.XYP_CLIENT_ID,
     AppConfig.XYP_CLIENT_SECRET,
   );
+  // SSO (гадаад OIDC provider) руу RP-ийн үүргээр холбогдох client + иргэний
+  // токеныг шифрлэн хадгалах үйлчилгээ.
+  const ssoOidc = newOIDCClient(
+    AppConfig.SSO_ISSUER,
+    AppConfig.SSO_CLIENT_ID,
+    AppConfig.SSO_CLIENT_SECRET,
+    AppConfig.SSO_REDIRECT_URI,
+    AppConfig.SSO_SCOPE,
+  );
+  // sso_tokens нь INTEGRATION_ENC_KEY-ээс гарсан шифрлэгчээр хадгалагдана —
+  // интеграцийн токентой ижил түлхүүр (нэг л нууц удирдана).
+  const ssoTokenUC = newSSOTokenUsecase(
+    newSSOTokenRepository(db, newCipher(AppConfig.INTEGRATION_ENC_KEY)),
+    ssoOidc,
+  );
+
   // SSO eID proxy — тохируулагдсан бол PKI самбар SSO-гоор дамжина (энэ RP-д
-  // PKI_READ эрх шаардахгүй). ssoTokens нь `ssotoken` домэйнтэй хамт залгагдана.
+  // PKI_READ эрх шаардахгүй). Proxy + токен үйлчилгээ ХОЁУЛАА байж л идэвхжинэ.
   const ssoEidProxy =
     AppConfig.SSO_EID_PROXY_BASE_URL === ''
       ? null
@@ -284,7 +304,7 @@ export async function newApp(): Promise<App> {
     {
       eidDisplayText: AppConfig.EID_DISPLAY_TEXT,
       ssoEidProxy,
-      ssoTokens: null,
+      ssoTokens: ssoEidProxy === null ? null : ssoTokenUC,
     },
   );
 
