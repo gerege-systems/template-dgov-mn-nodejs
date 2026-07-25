@@ -1,9 +1,23 @@
-# Government Template Platform V3.0
+# Government Template Platform V3.0 — Node.js edition
 # gitleaks тохиргоо — default дүрмүүд дээр нэмэлт allowlist. Энд зөвхөн жинхэнэ
 # нууц БИШ, тестийн жишээ (dummy) утгуудыг зөвшөөрнө.
+#
+# ЭНД `[allowlist]` (нэгтгэл) хэлбэрийг хэрэглэв — CI-д тогтоосон gitleaks
+# хувилбар (8.21.x) нь `[[allowlists]]` (олон тоо) хэлбэрийг ХҮЛЭЭН АВДАГГҮЙ
+# бөгөөд түүнийг чимээгүй үл хэрэгсдэг тул allowlist ажиллахгүй байв.
 [extend]
 useDefault = true
 
-[[allowlists]]
-description = "Логгер unit тестийн жишээ trace ID (\"trace-123-456\") — жинхэнэ API key биш"
-paths = ['''backend/pkg/logger/logger_test\.go''']
+[allowlist]
+description = """
+Unit тестийн жишээ (dummy) утгууд. jwt.test.ts дахь secret нь HS256-ийн 32
+тэмдэгтийн шалгалтыг давахын тулд урт байх ЁСТОЙ тул generic-api-key дүрэмд
+өртдөг; config.test.ts дахь dummy DSN/secret ч мөн адил. Аль нь ч жинхэнэ нууц биш.
+"""
+regexes = [
+  '''test-secret-that-is-at-least-32-characters-long''',
+]
+paths = [
+  '''backend/src/pkg/jwt/jwt\.test\.ts''',
+  '''backend/src/config/config\.test\.ts''',
+]
