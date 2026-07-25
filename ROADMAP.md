@@ -45,7 +45,13 @@ hash-ууд шалгагдсаар байна.
 | Infra | `backend/deploy/Dockerfile`, `docker-compose.yml` | distroless nodejs runtime, node healthcheck binary |
 | CI/CD | `.github/workflows/` | fmt · lint · typecheck · vitest · openapi drift · build · gitleaks → Deploy |
 
-**Тест:** 67 unit тест (apperror · config · jwt · validators · domain/users · migration).
+**Тест:** 93 unit тест (apperror · config · jwt · validators · domain/users · migration · users usecase).
+
+## ✅ Хийгдсэн — домэйн давхарга
+
+| Домэйн | Юу орсон | Тэмдэглэл |
+|---|---|---|
+| `users` | record + mapper · repository interface · postgres адаптер (19 method, бүх SQL 1:1) · usecase (кэш + single-flight) · UserResponse DTO · `GET /users/me` | 26 unit тест. Эрх нэмэгдүүлэхээс хамгаалах бүх дүрэм (super admin оноож/өөрчилж болохгүй; ADMIN эрхийг зөвхөн super admin) тесттэй. |
 
 ---
 

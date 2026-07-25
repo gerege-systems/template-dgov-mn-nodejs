@@ -25,6 +25,69 @@ const baseResponseSchema = {
   required: ['status'],
 };
 
+/**
+ * userResponseSchema нь /users/me болон auth урсгалуудын буцаадаг хэрэглэгчийн
+ * DTO. `password` талбар ХЭЗЭЭ Ч байхгүй — DTO давхарга нь илэрхий allow-list.
+ */
+const userResponseSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    username: { type: 'string' },
+    first_name: { type: 'string' },
+    last_name: { type: 'string' },
+    full_name: { type: 'string', description: 'Монгол хэлбэр: "Овог Нэр"' },
+    first_name_en: { type: 'string' },
+    last_name_en: { type: 'string' },
+    full_name_en: { type: 'string' },
+    email: { type: 'string', description: 'eID хэрэглэгчид хоосон байж болно' },
+    role_id: {
+      type: 'integer',
+      description: '1=superadmin · 2=admin · 3=manager · 4=user',
+    },
+    token: { type: 'string', description: 'Зөвхөн /login · /refresh хариунд' },
+    refresh_token: { type: 'string', description: 'Зөвхөн /login · /refresh хариунд' },
+    created_at: { type: 'string', format: 'date-time' },
+    updated_at: { type: ['string', 'null'], format: 'date-time' },
+    eid: {
+      type: 'object',
+      description: 'eID linkage байгаа үед л орно',
+      properties: {
+        civil_id: { type: 'string' },
+        national_id: { type: 'string', description: 'регистрийн дугаар' },
+        kyc_level: { type: 'string', description: 'сертификатын түвшин' },
+        document_number: { type: 'string' },
+        certificate: {
+          type: 'object',
+          properties: {
+            serial: { type: 'string' },
+            not_before: { type: 'string', format: 'date-time' },
+            not_after: { type: 'string', format: 'date-time' },
+            issuer: { type: 'string' },
+            key_type: { type: 'string' },
+          },
+        },
+      },
+    },
+    eid_proxy: {
+      type: 'boolean',
+      description: 'SSO eID proxy идэвхтэй — frontend eID хуудсуудыг нээнэ',
+    },
+    google: {
+      type: 'object',
+      description: 'Google account холбогдсон үед л орно',
+      properties: {
+        email: { type: 'string' },
+        email_verified: { type: 'boolean' },
+        name: { type: 'string' },
+        picture: { type: 'string' },
+        linked_at: { type: 'string', format: 'date-time' },
+      },
+    },
+  },
+  required: ['id', 'username', 'role_id', 'created_at'],
+};
+
 /** openapiDocument нь одоогийн route гадаргуугийн OpenAPI 3.1 тодорхойлолт. */
 export function openapiDocument(): OpenApiDocument {
   return {
@@ -43,7 +106,7 @@ export function openapiDocument(): OpenApiDocument {
       securitySchemes: {
         bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
       },
-      schemas: { BaseResponse: baseResponseSchema },
+      schemas: { BaseResponse: baseResponseSchema, UserResponse: userResponseSchema },
     },
     paths: {
       '/': {
@@ -53,6 +116,50 @@ export function openapiDocument(): OpenApiDocument {
           responses: {
             '200': {
               description: 'OK',
+              content: {
+                'application/json': { schema: { $ref: '#/components/schemas/BaseResponse' } },
+              },
+            },
+          },
+        },
+      },
+      '/users/me': {
+        get: {
+          summary: 'Одоогийн хэрэглэгчийн профайлыг буцаах',
+          description:
+            'Authorization header дахь JWT-ээс баталгаажуулагдсан хэрэглэгчийг уншиж, тохирох бичлэгийг буцаана. Хэрэглэгчийг тогтвортой primary key-ээр (email-ээр БИШ) хайна — eID хэрэглэгчид email-гүй байдаг.',
+          tags: ['users'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            '200': {
+              description: 'User profile',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/BaseResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: { user: { $ref: '#/components/schemas/UserResponse' } },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': {
+              description: 'Missing or invalid token',
+              content: {
+                'application/json': { schema: { $ref: '#/components/schemas/BaseResponse' } },
+              },
+            },
+            '404': {
+              description: 'User no longer exists',
               content: {
                 'application/json': { schema: { $ref: '#/components/schemas/BaseResponse' } },
               },

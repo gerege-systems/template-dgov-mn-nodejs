@@ -12,7 +12,9 @@ import {
   LoggerCategory,
   LoggerCategoryServer,
 } from '../../../constants/index.js';
+import { newMemoryCache } from '../../../datasources/caches/memory.js';
 import { newRedisCache, type RedisCache } from '../../../datasources/caches/redis.js';
+import { newUserRepository } from '../../../datasources/repositories/postgres/users/users_postgres.js';
 import { setupPostgres, type Db } from '../../../datasources/drivers/pg.js';
 import { newHealthHandler } from '../../../http/handlers/v1/health.js';
 import { accessLogMiddleware } from '../../../http/middlewares/access_log.js';
@@ -36,6 +38,7 @@ import { securityHeadersMiddleware } from '../../../http/middlewares/security.js
 import { DefaultRequestTimeoutMs, timeoutMiddleware } from '../../../http/middlewares/timeout.js';
 import { registerRoutes, type Deps } from '../../../http/routes/index.js';
 import { newJWTServiceWithRefresh } from '../../../pkg/jwt/jwt.js';
+import { newUsersUsecase } from '../../../usecases/users/users_impl.js';
 import * as logger from '../../../pkg/logger/logger.js';
 import { setupTracing, type Shutdown } from '../../../pkg/observability/tracing.js';
 import { openapiDocument } from '../../openapi/document.js';
@@ -181,10 +184,23 @@ export async function newApp(): Promise<App> {
 
   const authMiddleware = newAuthMiddleware(jwtService, redisCache, false);
 
+  // ── Хязгаарлагдсан контекстуудыг угсарна (manual DI: repo → usecase → route) ──
+  // Процессийн дотоод кэш — уншилтын халуун замд (хэрэглэгчийг email-ээр хайх)
+  // зориулагдсан. Токен хүчингүй болгох шийдвэр ХЭЗЭЭ Ч энд биш, Redis-д байна.
+  const memoryCache = newMemoryCache();
+
+  const userRepo = newUserRepository(db);
+  const usersUC = newUsersUsecase(userRepo, memoryCache, {
+    bcryptCost: AppConfig.BCRYPT_COST,
+  });
+
   const deps: Deps = {
     db,
     redisCache,
     jwtService,
+    usersUC,
+    // SSO eID proxy нь SSO_EID_PROXY_BASE_URL тохируулагдсан үед идэвхжинэ.
+    eidProxyEnabled: AppConfig.SSO_EID_PROXY_BASE_URL !== '',
     authMiddleware,
     authRateLimiter,
     aiRateLimiter,
