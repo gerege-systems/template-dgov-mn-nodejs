@@ -427,6 +427,19 @@
       }
     },
     "parameters": {
+      "IntegrationProvider": {
+        "name": "provider",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "google-drive",
+            "dropbox",
+            "google-meet"
+          ]
+        }
+      },
       "AppId": {
         "name": "id",
         "in": "path",
@@ -3129,6 +3142,149 @@
                 }
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/integrations": {
+      "get": {
+        "summary": "Холбосон интеграцууд",
+        "description": "Хэрэглэгчийн холбосон гуравдагч талын үйлчилгээнүүд. Хариунд ТОКЕН ОРОХГҮЙ — зөвхөн provider + хугацаа.",
+        "tags": [
+          "integrations"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "summary": "Интеграцийн токеныг хадгалах",
+        "description": "OAuth token exchange хийсний дараа токеныг backend-д AES-256-GCM-ээр ШИФРЛҮҮЛЖ хадгална. Ижил provider давхцвал шинэчилнэ. Танигдсан provider-ууд: google-drive · dropbox · google-meet.",
+        "tags": [
+          "integrations"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "type": "string",
+                    "maxLength": 32
+                  },
+                  "access_token": {
+                    "type": "string",
+                    "maxLength": 4096
+                  },
+                  "refresh_token": {
+                    "type": "string",
+                    "maxLength": 4096
+                  },
+                  "expires_at_ms": {
+                    "type": "integer",
+                    "description": "epoch мс (0 бол хугацаагүй)"
+                  }
+                },
+                "required": [
+                  "provider",
+                  "access_token"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/integrations/{provider}": {
+      "delete": {
+        "summary": "Интеграцийг салгах",
+        "description": "ИДЕМПОТЕНТ — холбоогүй байсан ч 200.",
+        "tags": [
+          "integrations"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IntegrationProvider"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/integrations/{provider}/token": {
+      "get": {
+        "summary": "Провайдерын токеныг авах (ЗӨВХӨН server-тал)",
+        "description": "⚠️ Шифргүй токен буцаана — зөвхөн серверийн талаас (BFF) провайдерын API руу хандахад ашиглана, browser руу ХЭЗЭЭ Ч гаргаж болохгүй. Холбоогүй бол 404.",
+        "tags": [
+          "integrations"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IntegrationProvider"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
           },
           "400": {
             "$ref": "#/components/responses/Error"

@@ -45,7 +45,7 @@ hash-ууд шалгагдсаар байна.
 | Infra | `backend/deploy/Dockerfile`, `docker-compose.yml` | distroless nodejs runtime, node healthcheck binary |
 | CI/CD | `.github/workflows/` | fmt · lint · typecheck · vitest · openapi drift · build · gitleaks → Deploy |
 
-**Тест:** 416 unit тест (apperror · config · jwt · validators · domain/users · migration · users usecase · eID client · auth usecase · auth DTO · route wiring · rbac usecase · audit hash-chain · audit usecase · site/theme usecase · core клиент · security usecase · eID байгууллага/PKI · assets usecase · eID профайл · org usecase · gspace usecase · gateway usecase · secrethash · applications usecase).
+**Тест:** 428 unit тест (apperror · config · jwt · validators · domain/users · migration · users usecase · eID client · auth usecase · auth DTO · route wiring · rbac usecase · audit hash-chain · audit usecase · site/theme usecase · core клиент · security usecase · eID байгууллага/PKI · assets usecase · eID профайл · org usecase · gspace usecase · gateway usecase · secrethash · applications usecase · integrations usecase).
 
 ## ✅ Хийгдсэн — домэйн давхарга
 
@@ -63,6 +63,7 @@ hash-ууд шалгагдсаар байна.
 | `gspace` | `pkg/gspace` SFTP client (ssh2-sftp-client, host-key баталгаажуулалт) · usecase (квот) · handler · 4 route | 13 unit тест. Файлын нэр замын НЭГ сегмент болж ариутгагдана — `../`, backslash-тай Windows зам ч хаагдана. Ижил нэртэй файл ОРЛУУЛАГДАХ тул хуучин хэмжээ квотоос хасагдана; жагсаалт уншиж чадахгүй бол хасалт хийхгүй (квотыг хатуу талд). Татаж чадаагүй БҮХ шалтгаан 404. Upload-ийн зам 4 MiB body хязгаартай (глобал 1 MiB биш). |
 | `gateway` | domain · repository interface + postgres (percentile_cont p95) · usecase · response DTO · 6 route · хүсэлтийн лог middleware | 10 unit тест. Дутуу форм ажиллах чадвартай мөр болж **хэвийшинэ** (протокол→https, порт→80/443, зам→"/"). Лог нь ЗӨВХӨН гуравдагч талын RP-ийн зам (`/rp/sign`, `/api/v1/provider`)-ыг барина — өөрийн дотоод API трафик телеметрийг бохирдуулахгүй. Лог бичилт `res.on('finish')` дээр, алдаа залгигдана — хүсэлт хэзээ ч блоклогдохгүй. |
 | `applications` | `pkg/secrethash` (Argon2id + Hydra PBKDF2 шалгалт) · oauth_clients repository · service↔scope хөрвүүлэгч · usecase · 8 route | 41 unit тест, **Go-гоос гаргасан Argon2id эталон вектор** + Ory Hydra-гийн PBKDF2 вектороор байт-нийцлийг баталсан (шилжилтийн үед одоо байгаа client-ууд secret-ээ солилгүй нэвтэрнэ). redirect_uri нь RFC 6749 §3.1.2-оор шалгагдана (https / зөвхөн loopback дээр http / fragment хориотой; native-д RFC 8252 private scheme). Public (spa/native) апп-д secret **огт үүсэхгүй**; `update` нь secret-д хүрэхгүй; түүхий secret зөвхөн create/rotate/set хариунд НЭГ удаа. |
+| `integrations` | domain · repository interface + postgres (RLS) · usecase (AES-256-GCM) · handler · 4 route | 12 unit тест. OAuth токен DB-д **ил текстээр хэзээ ч очихгүй** — `base64(nonce‖ciphertext‖tag)` нь Go-ийн `gcm.Seal`-тэй байт-нийцтэй. Production-д `INTEGRATION_ENC_KEY` **заавал** (хоосон бол түлхүүр нь `sha256("")` — нийтэд мэдэгдэх тогтмол болж токен бодитоор ил хэвтэнэ). `GET /:provider/token` нь шифргүй токен буцаадаг тул зөвхөн server-тал дуудна. |
 | `auth` / eID | `pkg/eid` RP client (ACSP_V2 QR/push initiate + long-poll session, X.509 задлалт) · `pkg/google` OAuth · usecase (session mint/rotate, MFA gate, Google link) · request/response DTO · 7 route | 76 unit тест. Токен зөвхөн COMPLETE үед, refresh нэг л удаа (атом GetDel), super admin MFA-гүйгээр session авахгүй. **Route-ийн middleware хүрээг** тусад нь тесттэй (Express-ийн `router.use(subRouter)` нь chi-ийн `Group`-той адилгүй — middleware гоождог). |
 
 ---
@@ -85,7 +86,7 @@ hash-ууд шалгагдсаар байна.
 1. `users` · `auth` (eID · Google · SSO consumer · refresh/logout) · `rbac`
 3. ~~`site`~~ ✅ · ~~`theme`~~ ✅ · ~~`core`~~ ✅ · ~~`security`~~ ✅
 4. `ai` (Gemini pipeline) · ~~`assets`~~ ✅
-5. ~~`eidprofile`~~ ✅ · ~~`org`~~ ✅ · ~~`applications`~~ ✅ · `integrations` · ~~`gspace`~~ ✅
+5. ~~`eidprofile`~~ ✅ · ~~`org`~~ ✅ · ~~`applications`~~ ✅ · ~~`integrations`~~ ✅ · ~~`gspace`~~ ✅
 6. `gov` · `registry` · `relay` · ~~`gateway`~~ ✅
 7. `oidc` (provider тал) · `sso` · `ssotoken` · `sign` · `provider`
 8. `superadmin` · `superadmin_onboarding`

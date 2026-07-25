@@ -19,6 +19,7 @@ import { newGatewayRepository } from '../../../datasources/repositories/postgres
 import { newOAuthClientRepository } from '../../../datasources/repositories/postgres/oauth/oauth_clients_postgres.js';
 import { newServiceScopeResolver } from '../../../datasources/repositories/postgres/oauth/service_scope_postgres.js';
 import { newOrgRepository } from '../../../datasources/repositories/postgres/org/org_postgres.js';
+import { newUserIntegrationsRepository } from '../../../datasources/repositories/postgres/userintegrations/userintegrations_postgres.js';
 import { newOrgStampRepository } from '../../../datasources/repositories/postgres/orgstamp/orgstamp_postgres.js';
 import { newRBACRepository } from '../../../datasources/repositories/postgres/rbac/rbac_postgres.js';
 import { newSecurityEventRepository } from '../../../datasources/repositories/postgres/security/security_postgres.js';
@@ -65,6 +66,7 @@ import { newAssetsUsecase } from '../../../usecases/assets/assets_usecase.js';
 import { newCoreUsecase } from '../../../usecases/core/core_impl.js';
 import { newGatewayUsecase } from '../../../usecases/gateway/gateway_usecase.js';
 import { newGSpaceUsecase } from '../../../usecases/gspace/gspace_usecase.js';
+import { newIntegrationsUsecase } from '../../../usecases/integrations/integrations_usecase.js';
 import { newOrgUsecase } from '../../../usecases/org/org_usecase.js';
 import { newRBACUsecase } from '../../../usecases/rbac/rbac_impl.js';
 import { newSecurityUsecase } from '../../../usecases/security/security_usecase.js';
@@ -306,6 +308,15 @@ export async function newApp(): Promise<App> {
   // Security event — RASP-style ингест (хэрэглэгчийн RLS дор) + admin жагсаалт.
   const securityUC = newSecurityUsecase(newSecurityEventRepository(db));
 
+  // Интеграци — гуравдагч талын OAuth токен (AES-256-GCM-ээр шифрлэнэ).
+  // Production-д INTEGRATION_ENC_KEY ЗААВАЛ — эс бөгөөс токенууд нийтэд
+  // мэдэгдэх default түлхүүрээр "шифрлэгдэж" бодитоор ил хэвтэнэ.
+  const integrationsUC = newIntegrationsUsecase(
+    newUserIntegrationsRepository(db),
+    AppConfig.INTEGRATION_ENC_KEY,
+    AppConfig.ENVIRONMENT === 'production',
+  );
+
   // Applications — gateway consumer + SSO RP. OAuth2 client бүртгэл дээр
   // суурилдаг тул oauth_clients repo + service↔scope хөрвүүлэгчээс хамаарна.
   const applicationsUC = newApplicationsUsecase(
@@ -353,6 +364,7 @@ export async function newApp(): Promise<App> {
     gspaceUC,
     gatewayUC,
     applicationsUC,
+    integrationsUC,
     // SSO eID proxy нь SSO_EID_PROXY_BASE_URL тохируулагдсан үед идэвхжинэ.
     eidProxyEnabled: AppConfig.SSO_EID_PROXY_BASE_URL !== '',
     authMiddleware,

@@ -18,6 +18,7 @@ import type { AuthUsecase } from '../../usecases/auth/auth_usecase.js';
 import type { CoreUsecase } from '../../usecases/core/core_usecase.js';
 import type { GatewayUsecase } from '../../usecases/gateway/gateway_usecase.js';
 import type { GSpaceUsecase } from '../../usecases/gspace/gspace_usecase.js';
+import type { IntegrationsUsecase } from '../../usecases/integrations/integrations_usecase.js';
 import type { OrgUsecase } from '../../usecases/org/org_usecase.js';
 import type { RBACUsecase } from '../../usecases/rbac/rbac_usecase.js';
 import type { SecurityUsecase } from '../../usecases/security/security_usecase.js';
@@ -34,6 +35,7 @@ import { registerEidProfileRoutes } from './route_eidprofile.js';
 import { registerMetaRoutes } from './route_meta.js';
 import { registerGatewayRoutes } from './route_gateway.js';
 import { registerGSpaceRoutes } from './route_gspace.js';
+import { registerIntegrationsRoutes } from './route_integrations.js';
 import { registerOrgRoutes } from './route_org.js';
 import { registerRBACRoutes } from './route_rbac.js';
 import { registerSecurityRoutes } from './route_security.js';
@@ -82,6 +84,8 @@ export interface Deps {
    * давхаргад тул route-д нэмэлт gate байхгүй.
    */
   orgUC: OrgUsecase;
+  /** integrationsUC нь хэрэглэгчийн гуравдагч талын OAuth токен (шифрлэгдсэн). */
+  integrationsUC: IntegrationsUsecase;
   /** gspaceUC нь хэрэглэгчийн өөрийн файлын SFTP хадгалалт (квоттой). */
   gspaceUC: GSpaceUsecase;
   /** gatewayUC нь API Gateway-ийн admin гадаргуу (service CRUD + телеметр). */
@@ -116,6 +120,7 @@ export function registerRoutes(router: Router, deps: Deps): void {
   registerEidProfileRoutes(router, deps);
   registerGatewayRoutes(router, deps);
   registerGSpaceRoutes(router, deps);
+  registerIntegrationsRoutes(router, deps);
   registerOrgRoutes(router, deps);
   registerRBACRoutes(router, deps);
   registerSecurityRoutes(router, deps);
