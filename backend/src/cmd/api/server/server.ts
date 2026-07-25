@@ -16,6 +16,8 @@ import { newMemoryCache } from '../../../datasources/caches/memory.js';
 import { newRedisCache, type RedisCache } from '../../../datasources/caches/redis.js';
 import { newAuditRepository } from '../../../datasources/repositories/postgres/audit/audit_postgres.js';
 import { newGatewayRepository } from '../../../datasources/repositories/postgres/gateway/gateway_postgres.js';
+import { newOAuthClientRepository } from '../../../datasources/repositories/postgres/oauth/oauth_clients_postgres.js';
+import { newServiceScopeResolver } from '../../../datasources/repositories/postgres/oauth/service_scope_postgres.js';
 import { newOrgRepository } from '../../../datasources/repositories/postgres/org/org_postgres.js';
 import { newOrgStampRepository } from '../../../datasources/repositories/postgres/orgstamp/orgstamp_postgres.js';
 import { newRBACRepository } from '../../../datasources/repositories/postgres/rbac/rbac_postgres.js';
@@ -58,6 +60,7 @@ import { newSSOEidProxy } from '../../../pkg/ssoeidproxy/ssoeidproxy.js';
 import { newXypClient } from '../../../pkg/xyp/xyp.js';
 import { newAuditUsecase } from '../../../usecases/audit/audit_usecase.js';
 import { newAuthUsecase } from '../../../usecases/auth/auth_impl.js';
+import { newApplicationsUsecase } from '../../../usecases/applications/applications_usecase.js';
 import { newAssetsUsecase } from '../../../usecases/assets/assets_usecase.js';
 import { newCoreUsecase } from '../../../usecases/core/core_impl.js';
 import { newGatewayUsecase } from '../../../usecases/gateway/gateway_usecase.js';
@@ -303,6 +306,13 @@ export async function newApp(): Promise<App> {
   // Security event — RASP-style ингест (хэрэглэгчийн RLS дор) + admin жагсаалт.
   const securityUC = newSecurityUsecase(newSecurityEventRepository(db));
 
+  // Applications — gateway consumer + SSO RP. OAuth2 client бүртгэл дээр
+  // суурилдаг тул oauth_clients repo + service↔scope хөрвүүлэгчээс хамаарна.
+  const applicationsUC = newApplicationsUsecase(
+    newServiceScopeResolver(db),
+    newOAuthClientRepository(db),
+  );
+
   // Gerege Space — хэрэглэгчийн өөрийн файлын SFTP хадгалалт. Креденшлгүй бол
   // домэйн инерт (endpoint бүр "тохируулаагүй" гэсэн алдаа өгнө), boot зогсохгүй.
   const gspaceUC = newGSpaceUsecase(
@@ -342,6 +352,7 @@ export async function newApp(): Promise<App> {
     orgUC,
     gspaceUC,
     gatewayUC,
+    applicationsUC,
     // SSO eID proxy нь SSO_EID_PROXY_BASE_URL тохируулагдсан үед идэвхжинэ.
     eidProxyEnabled: AppConfig.SSO_EID_PROXY_BASE_URL !== '',
     authMiddleware,
