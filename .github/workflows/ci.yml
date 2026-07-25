@@ -54,6 +54,14 @@ jobs:
       - name: Build
         run: npm run build
 
+      # ESM smoke — build хийсэн модуль БҮРИЙГ жинхэнэ Node ESM loader-ээр
+      # импортолж үзнэ. tsc болон vitest хоёулаа CommonJS хамаарлыг өөрсдийн
+      # interop-оор шийддэг тул `import { x } from '<cjs-pkg>'` тэдгээрт
+      # амжилттай хэвээр, гэтэл production-д АЖИЛЛАХ ҮЕД унадаг (ssh2 яг ингэж
+      # deploy унагасан). Энэ алхам тэр ангиллын алдааг CI-д барина.
+      - name: ESM import smoke
+        run: npm run smoke:esm
+
   frontend:
     name: Frontend
     runs-on: ubuntu-latest

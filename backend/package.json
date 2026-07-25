@@ -21,8 +21,9 @@
     "test": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "openapi": "tsx src/cmd/openapi/main.ts",
-    "pre-push": "npm run fmt:check && npm run lint && npm run typecheck && npm test && npm run openapi -- --check && npm run build",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "pre-push": "npm run fmt:check && npm run lint && npm run typecheck && npm test && npm run openapi -- --check && npm run build && npm run smoke:esm",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "smoke:esm": "node scripts/smoke-esm.mjs"
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",

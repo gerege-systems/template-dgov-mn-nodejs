@@ -12,7 +12,12 @@
 
 import SftpClient from 'ssh2-sftp-client';
 import { basename } from 'node:path/posix';
-import { utils as sshUtils } from 'ssh2';
+// ⚠️ ssh2 нь CommonJS модуль тул ESM-ээс НЭРЛЭСЭН импорт (`import { utils }`)
+// ажиллах үед унана — TypeScript үүнийг барьдаггүй (тэр зөвхөн .d.ts-ийг хардаг).
+// Default импортоор аваад задлах нь ганц найдвартай зам.
+import ssh2 from 'ssh2';
+
+const { utils: sshUtils } = ssh2;
 
 /** ErrGSpaceNotConfigured нь SFTP host/user/password тохируулаагүй үед буцна. */
 export class ErrGSpaceNotConfigured extends Error {
