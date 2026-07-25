@@ -2,18 +2,43 @@
 
 > **Цахим засаглалыг бүтээх суурь** — _Нэг суурь — бүх төрийн үйлчилгээ._
 
-**Government Template Platform V3.0**-ийн Next.js 15 frontend — аль ч цахим төрийн
-үйлчилгээг дээр нь босгож болох, үйлдвэрлэлд бэлэн суурь. Backend нь Go (chi · pgx ·
-PostgreSQL · Redis) — энэ frontend түүн рүү **BFF (Backend-for-Frontend)** загвараар
-найдвартай прокси хийж, токеныг browser-т хэзээ ч гаргалгүй, Clean-Architecture Go
-backend + Next.js BFF + Gemini AI стекийг нэг цул туршлага болгон нэгтгэдэг.
+**Government Template Platform V3.0**-ийн **Vite + React SPA** — аль ч цахим төрийн
+үйлчилгээг дээр нь босгож болох, үйлдвэрлэлд бэлэн суурь. Гаралт нь ЦЭВЭР СТАТИК
+файлууд: nginx үйлчилж, `/api/*`-ыг ИЖИЛ origin дээрх api контейнер руу проксилно.
 
-- Хэл: Next.js App Router (React 19, server components), TypeScript.
-- Токен browser-т хэзээ ч ил гарахгүй — httpOnly cookie + server прокси.
+- Хэл: React 19 + React Router 7, TypeScript, Vite.
+- **BFF БАЙХГҮЙ**: browser нь `/api/v1/*` рүү шууд ханддаг. Токенууд нь API-ийн
+  тавьсан **httpOnly cookie**-д (`dgov_access` / `dgov_refresh`) — ЖС хэзээ ч
+  уншихгүй; мутаци бүр `x-dgov-csrf` толгойг ЖС-д уншигддаг `dgov_csrf`
+  cookie-оос хуулж зөөнө (double-submit).
+- **Нууц агуулдаггүй**: статик багц тул client secret энд ОРОХГҮЙ. Нууц БИШ
+  тохиргоо (`google_client_id`, боломжуудын төлөв) нь ажиллах үед `GET /config`-оос
+  уншигдана.
+- Хамгаалалт нэг дор: `RequireAuth` / `RequirePermission` нь маршрутын хүснэгтэд
+  (`src/App.tsx`). Жинхэнэ шийдвэр ямагт backend талд — энэ нь UI-ийн чиглүүлэлт.
 - Нэвтрэлт: **eID Mongolia** (QR / mobile deep-link / РД push + long-poll),
-  **Google OAuth** (eID-ээр эхлээд холбоно), **dgov SSO** (OIDC consumer). Мөн энэ
-  апп нь **OIDC provider (RP-facing)** хуудсуудыг хангадаг (Ory Hydra урдаа).
-- Хэмжээ: ~48 хуудас route, ~100 route handler (`/api/*` + `/sso/callback`).
+  **Google OAuth** (eID-ээр эхлээд холбоно), **Government SSO** (OIDC consumer).
+  Мөн энэ апп нь **OIDC provider**-ийн (RP-facing) зөвшөөрлийн хуудсуудыг хангана.
+- Хэмжээ: 57 маршрут, ~80 компонент.
+
+## Хөгжүүлэлт
+
+```bash
+npm install
+npm run dev        # http://localhost:3000 — /api нь BACKEND_URL руу проксилно
+npm run build      # tsc --noEmit && vite build → dist/
+npm run lint
+npm test
+```
+
+`BACKEND_URL` (өгөгдмөл `http://localhost:8080`) нь dev proxy-ийн зорилтот хаяг.
+
+## Мэдэгдэж буй цоорхой
+
+Гуравдагч талын интеграцийн (Google Drive · Dropbox · Meet) **холбох** урсгал нь
+client_secret-тэй token exchange шаарддаг байсныг өмнө BFF гүйцэтгэдэг байв. SPA
+статик тул нууц агуулж болохгүй — API талд `/integrations/:provider/connect|callback`
+нэмэгдэх хүртэл "холбох" товч харагдахгүй (жагсаах/салгах нь ажиллана).
 
 > **Жишиг deployment:** **DAN-Government SSO** ([sso.dgov.mn](https://sso.dgov.mn))
 > — eID-д суурилсан үндэсний нэгдсэн нэвтрэлт (Single Sign-On) — нь энэ суурин дээр

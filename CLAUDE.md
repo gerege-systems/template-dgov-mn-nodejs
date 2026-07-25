@@ -97,15 +97,20 @@ docker compose up -d --build   # db + redis + migrate (one-off) + api + web
 
 ## Frontend rules
 
-- **Target: Vite + React SPA** served as static files, with nginx proxying
-  `/api/*` to the api container (same-origin). Auth tokens stay in **httpOnly
-  cookies set by the API itself** — they never reach client JS — and mutating
-  requests carry the `x-dgov-csrf` double-submit header.
-- **Transitional state:** the tree still contains the Next.js 15 BFF app while
-  the SPA conversion lands. Until then the BFF rules apply: browser → same-origin
-  `/api/*` route handlers only; backend errors proxied via
-  `proxyResult`/`toClientResponse`; mutating calls go through `lib/client.ts`
-  `sendJSON`/`postJSON`; new mutating BFF routes must call `checkOrigin` first.
+- **Vite + React SPA** served as static files, with nginx proxying `/api/*` to
+  the api container (same-origin). Auth tokens stay in **httpOnly cookies set by
+  the API itself** (`dgov_access` / `dgov_refresh`) — they never reach client JS
+  — and mutating requests carry the `x-dgov-csrf` double-submit header.
+- **No BFF.** The browser calls `/api/v1/*` directly (same origin, proxied by
+  nginx). `lib/client.ts` is the only place that talks to the API: it sends
+  `credentials: 'same-origin'` and attaches `x-dgov-csrf` (read from the
+  JS-readable `dgov_csrf` cookie) to every mutating request. Never call `fetch`
+  against the API from a component — go through `getJSON`/`sendJSON`.
+- **Auth guards live in the route table** (`src/App.tsx`): `RequireAuth` and
+  `RequirePermission`. Pages must not re-implement them. The real decision is
+  always server-side; these only route the UI.
+- **Never put a secret in the frontend** — it ships as static files. Non-secret
+  runtime config comes from `GET /config`.
 - Server data fetching uses TanStack Query (`getJSON` + `useQuery`, invalidate
   on mutations); provider is in `components/Providers.tsx`.
 - UI strings via `useT()` + `lib/i18n.ts` keys (mn + en).

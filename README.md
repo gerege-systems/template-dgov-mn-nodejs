@@ -37,7 +37,7 @@ Node.js/React порт юм. **HTTP гэрээ (route, `BaseResponse` дугту
 |---|---|
 | Платформ давхарга — config · logger · ctx/RLS · apperror · pg (`withRLS`) · Redis · JWT · validators · 13 middleware · migration runner · health · server wiring | ✅ Бэлэн (67 unit тест) |
 | Домэйн давхарга — auth/eID · users · rbac · ai · gov · oidc · relay · registry · gateway · sign · sso … (25 домэйн) | 🚧 Порт хийгдэж байна |
-| Frontend — Vite + React SPA | 🚧 Одоогоор Next.js 15 BFF хувилбар (шилжилтийн төлөв) |
+| Frontend — Vite + React SPA | ✅ Хийгдсэн (BFF устаж, статик SPA + httpOnly cookie) |
 
 Дэлгэрэнгүйг [ROADMAP.md](ROADMAP.md)-д үз.
 
@@ -64,7 +64,7 @@ template-dgov-mn-nodejs/
 │   │   └── cmd/           # api · migration · healthcheck · openapi CLI
 │   ├── migrations/        # numbered SQL (Go хувилбартай ижил, хөндөөгүй)
 │   └── docs/              # ARCHITECTURE · DEVELOPMENT · API_CONTRACT · SECURITY (EN/MN)
-└── frontend/              # React (шилжилтийн үед Next.js BFF)
+└── frontend/              # Vite + React SPA (статик, BFF-гүй)
 ```
 
 - **[backend/README_MN.md](backend/README_MN.md)** — Clean Architecture Node.js API.
