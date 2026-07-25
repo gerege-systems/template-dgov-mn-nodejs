@@ -1,0 +1,66 @@
+# Government Template Platform V3.0 — Node.js edition
+# Баримт бичгийн сайтыг (MkDocs Material, mn + en) build хийж GitHub Pages руу
+# нийтэлнэ: https://gerege-systems.github.io/template-dgov-mn-nodejs/
+#
+# ⚠️ Эхний удаад репод Pages-ийг АСААХ шаардлагатай:
+#   Settings → Pages → Build and deployment → Source: **GitHub Actions**
+# (Тэрийг асаагаагүй бол deploy алхам "Pages is not enabled" гэж унана.)
+name: Docs
+
+on:
+  push:
+    branches: [main]
+    # Зөвхөн баримт хөндөгдсөн үед л ажиллана — код өөрчлөх бүрд Pages
+    # дахин байршуулах шаардлагагүй.
+    paths:
+      - 'docs-site/**'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Нэг л deploy зэрэг явна. cancel-in-progress: false — дундуур тасалдсан
+# байршуулалт Pages-ийг тодорхойгүй төлөвт үлдээх эрсдэлтэй.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build (MkDocs Material · mn + en)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: docs-site/requirements.txt
+
+      - name: Install
+        run: pip install -r docs-site/requirements.txt
+
+      # --strict: эвдэрсэн дотоод холбоос, танихгүй тохиргоо зэргийг АНХААРУУЛГА
+      # биш АЛДАА болгоно. Баримтын эвдрэл чимээгүй нийтлэгдэхээс сэргийлнэ.
+      - name: Build
+        working-directory: docs-site
+        run: mkdocs build --strict
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs-site/site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,47 +1,60 @@
-/* Government Template Platform V3.0 — брэнд өнгө (navy + gold) */
+/* ============================================================================
+   Government Template Platform V3.0 · Node.js edition — брэнд өнгө.
+
+   ҮҮЛЭН ЦЭНХЭР (cloud blue). Go/Next.js эх хувилбарын баримт нь navy + gold
+   өнгөтэй; энэ хэвлэлийг өнгөөр нь ялгаж, хоёр багц баримтыг андуурахгүй болгов.
+
+   Суурь өнгө нь апп-ын DAN цэнхэртэй (#1767E7) ойролцоо гэр бүлээс — гэхдээ
+   илүү цайвар, "үүлэн" аястай. Апп-ын accent-ыг ЭНД ХӨНДӨӨГҮЙ: тэр нь үндэсний
+   стандарт өнгө тул хэвээр.
+   ============================================================================ */
 :root {
-  --gtp-navy: #111f3e;
-  --gtp-navy-2: #1b2f5a;
-  --gtp-navy-deep: #0b1730;
-  --gtp-gold: #e4b24a;
-  --gtp-gold-2: #cf9c34;
+  --gtp-sky:       #2f7fe8; /* гол — үүлэн цэнхэр */
+  --gtp-sky-light: #6aa9f4;
+  --gtp-sky-deep:  #14539f;
+  --gtp-sky-ink:   #0b3268; /* хамгийн гүн — header gradient-ийн эхлэл */
+  --gtp-cloud:     #cfe4ff; /* цайвар үүл — доод зураас / товч */
+  --gtp-cyan:      #17b6d4; /* accent (эх хувилбарын gold-ийн байрлалд) */
 }
 
 /* Гэрэл горим */
 [data-md-color-scheme="default"] {
-  --md-primary-fg-color: var(--gtp-navy);
-  --md-primary-fg-color--light: var(--gtp-navy-2);
-  --md-primary-fg-color--dark: var(--gtp-navy-deep);
-  --md-primary-bg-color: #ffffff;
-  --md-accent-fg-color: var(--gtp-gold-2);
-  --md-typeset-a-color: #1c3a72;
+  --md-primary-fg-color:        var(--gtp-sky-deep);
+  --md-primary-fg-color--light: var(--gtp-sky);
+  --md-primary-fg-color--dark:  var(--gtp-sky-ink);
+  --md-primary-bg-color:        #ffffff;
+  --md-accent-fg-color:         var(--gtp-sky);
+  --md-typeset-a-color:         #1a5fc0;
 }
 
 /* Харанхуй горим */
 [data-md-color-scheme="slate"] {
-  --md-primary-fg-color: var(--gtp-navy-deep);
-  --md-primary-fg-color--light: var(--gtp-navy-2);
-  --md-primary-fg-color--dark: #070f22;
-  --md-accent-fg-color: var(--gtp-gold);
-  --md-typeset-a-color: #8fb2f4;
-  --md-default-bg-color: #0d1730;
+  --md-primary-fg-color:        var(--gtp-sky-ink);
+  --md-primary-fg-color--light: var(--gtp-sky);
+  --md-primary-fg-color--dark:  #071f42;
+  --md-accent-fg-color:         var(--gtp-sky-light);
+  --md-typeset-a-color:         #8fc0ff;
+  --md-default-bg-color:        #0a1a33;
 }
 
-/* Header — navy gradient + gold доод зураас */
+/* Header — үүлэн цэнхэр gradient + цайвар үүлэн доод зураас */
 .md-header {
-  background: linear-gradient(90deg, var(--gtp-navy-deep), var(--gtp-navy));
-  box-shadow: 0 2px 0 var(--gtp-gold), 0 4px 18px rgba(6, 12, 28, 0.35);
+  background: linear-gradient(90deg, var(--gtp-sky-ink), var(--gtp-sky));
+  box-shadow: 0 2px 0 var(--gtp-cloud), 0 4px 18px rgba(8, 30, 66, 0.28);
 }
 .md-tabs { background: transparent; }
 
-/* Идэвхтэй nav / accent-ууд gold-оор */
+/* Идэвхтэй nav / accent-ууд цэнхрээр */
 .md-nav__link--active,
-.md-nav__item .md-nav__link--active { color: var(--gtp-gold-2); font-weight: 600; }
+.md-nav__item .md-nav__link--active { color: var(--gtp-sky-deep); font-weight: 600; }
+[data-md-color-scheme="slate"] .md-nav__link--active,
+[data-md-color-scheme="slate"] .md-nav__item .md-nav__link--active { color: var(--gtp-sky-light); }
+
 .md-typeset .md-button--primary {
-  background: var(--gtp-gold); border-color: var(--gtp-gold); color: var(--gtp-navy-deep);
+  background: var(--gtp-sky); border-color: var(--gtp-sky); color: #fff;
 }
 .md-typeset h1, .md-typeset h2 { letter-spacing: -0.01em; }
-.md-typeset h2 { border-bottom: 1px solid rgba(128,128,128,0.18); padding-bottom: 0.3rem; }
+.md-typeset h2 { border-bottom: 1px solid rgba(128, 128, 128, 0.18); padding-bottom: 0.3rem; }
 
 /* Код блок — брэнд accent */
 .md-typeset .highlight span.filename,
@@ -49,19 +62,19 @@
 .md-typeset a:hover { text-decoration: underline; }
 
 /* Search accent */
-.md-search__input:focus { box-shadow: 0 0 0 2px var(--gtp-gold); }
+.md-search__input:focus { box-shadow: 0 0 0 2px var(--gtp-sky-light); }
 
 /* Table толгой */
 .md-typeset table:not([class]) th {
-  background: var(--gtp-navy); color: #fff;
+  background: var(--gtp-sky-deep); color: #fff;
 }
-[data-md-color-scheme="slate"] .md-typeset table:not([class]) th { background: var(--gtp-navy-2); }
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) th { background: var(--gtp-sky-ink); }
 
-/* Admonition (note/tip) accent-ийг gold-оор */
-.md-typeset .admonition.tip, .md-typeset details.tip { border-color: var(--gtp-gold); }
+/* Admonition (tip) accent-ийг цэнхрээр */
+.md-typeset .admonition.tip, .md-typeset details.tip { border-color: var(--gtp-cyan); }
 .md-typeset .tip > .admonition-title, .md-typeset .tip > summary {
-  background-color: rgba(228, 178, 74, 0.12);
+  background-color: rgba(23, 182, 212, 0.12);
 }
 
 /* Footer */
-.md-footer-meta { background: var(--gtp-navy-deep); }
+.md-footer-meta { background: var(--gtp-sky-ink); }

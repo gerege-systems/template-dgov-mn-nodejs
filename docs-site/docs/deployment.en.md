@@ -1,7 +1,8 @@
 # Deployment
 
 Deploy the platform to a single VPS with **Docker Compose + nginx**. The stack is
-PostgreSQL + Redis + Go API (also the OIDC issuer) + Next.js BFF.
+PostgreSQL + Redis + a Node.js API (also the OIDC issuer) + a static React SPA
+(nginx).
 
 ## Prerequisites
 
@@ -16,7 +17,8 @@ Internet ──► nginx (80/443, Let's Encrypt)
    ├─ /oauth2/*, /.well-known/*, /userinfo ─► api (OIDC issuer)
    ├─ /rp/sign/*      ─► api relay
    ├─ /rp/eid/*, /rp/eid-org/* ─► api (eID proxy)
-   └─ everything else  ─► web (Next.js BFF) ──► api
+   ├─ /api/v1/*        ─► api
+   └─ everything else  ─► web (static React SPA — nginx)
    internal: db (Postgres 16) · redis (7)
 ```
 
@@ -76,3 +78,4 @@ volumes collide.
 |---|---|---|
 | `sso-dgov-mn` | sso.dgov.mn | web 3008 |
 | `template-dgov-mn` | template.dgov.mn | web 3009 |
+| `template-dgov-mn-nodejs` | node.template.dgov.mn | web 3012 |

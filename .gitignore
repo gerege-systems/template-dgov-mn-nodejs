@@ -10,6 +10,11 @@ backend.env
 # commit болохгүй. Эх хувилбар: gerege-systems/template-dgov-mn.
 .go-reference/
 
+# MkDocs-ийн build гаралт + виртуал орчин — үүсгэгддэг тул repo-д хадгалахгүй
+# (GitHub Pages workflow нь CI дээр шинээр build хийнэ).
+docs-site/site/
+docs-site/.venv/
+
 # Node
 node_modules/
 dist/

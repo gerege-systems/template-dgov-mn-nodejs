@@ -5,7 +5,8 @@
 > [gerege-systems/template-dgov-mn](https://github.com/gerege-systems/template-dgov-mn)-д
 > production-д ажиллаж байгаа ([template.dgov.mn](https://template.dgov.mn));
 > энэ хувилбарын deployment нь [node.template.dgov.mn](https://node.template.dgov.mn).
-> Дэлгэрэнгүй баримт: [README.md](README.md#баримтжуулалт).
+> Дэлгэрэнгүй баримт: [README.md](README.md#баримтжуулалт) ·
+> нийтлэгдсэн сайт: [gerege-systems.github.io/template-dgov-mn-nodejs](https://gerege-systems.github.io/template-dgov-mn-nodejs/)
 
 ## Төлөв — 2026-07-26
 

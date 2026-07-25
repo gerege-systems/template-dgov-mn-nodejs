@@ -18,7 +18,8 @@ Session нь JWT access + refresh (rotation); logout хоёуланг хүчин
 
 ## Government SSO (OIDC провайдер)
 
-Платформ нь **өөрийн Go код** дээр суурилсан OpenID Connect провайдер. Relying party
+Платформ нь **өөрийн код** (`usecases/oidc`) дээр суурилсан OpenID Connect
+провайдер — Ory Hydra зэрэг гуравдагч талын провайдер ХЭРЭГГҮЙ. Relying party
 (RP) апп-ууд нэвтрэлтээ платформд даатган, хэрэглэгчийн баталгаажсан мэдээллийг
 стандарт claim-аар авна.
 

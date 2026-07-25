@@ -131,6 +131,15 @@ cd backend && npm run pre-push   # fmt + lint + typecheck + test + openapi drift
 
 ## Баримтжуулалт
 
+📘 **Нийтлэгдсэн баримтын сайт (mn + en):**
+[gerege-systems.github.io/template-dgov-mn-nodejs](https://gerege-systems.github.io/template-dgov-mn-nodejs/)
+
+Платформын тойм, архитектур, нэвтрэлт, апп холбох, eID proxy, API Gateway,
+байршуулалт — MkDocs Material дээр, хоёр хэлээр. Эх сурвалж нь `docs-site/`;
+`main` руу push хийхэд GitHub Actions өөрөө build/deploy хийнэ.
+
+Гүн нарийвчилсан (repo доторх) баримтууд:
+
 | Doc | Юу |
 |-----|------|
 | [backend/docs/ARCHITECTURE_MN.md](backend/docs/ARCHITECTURE_MN.md) | Давхаргууд, dependency flow |

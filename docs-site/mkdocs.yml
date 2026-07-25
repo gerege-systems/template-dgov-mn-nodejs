@@ -1,7 +1,13 @@
-site_name: Government Template Platform V3.0
-site_description: Цахим засаглалыг бүтээх суурь — Government Template Platform V3.0 documentation
-site_url: https://template.dgov.mn/docs/
-copyright: © 2026 Gerege Systems · Government Template Platform V3.0
+site_name: Government Template Platform V3.0 · Node.js
+site_description: >-
+  Цахим засаглалыг бүтээх суурь — Government Template Platform V3.0-ийн
+  Node.js + React хэвлэлийн баримт бичиг.
+site_url: https://gerege-systems.github.io/template-dgov-mn-nodejs/
+copyright: © 2026 Gerege Systems · Government Template Platform V3.0 · Node.js edition
+
+repo_url: https://github.com/gerege-systems/template-dgov-mn-nodejs
+repo_name: gerege-systems/template-dgov-mn-nodejs
+edit_uri: edit/main/docs-site/docs/
 docs_dir: docs
 site_dir: site
 use_directory_urls: true
@@ -58,7 +64,7 @@ plugins:
         - locale: en
           name: English
           build: true
-          site_name: Government Template Platform V3.0
+          site_name: Government Template Platform V3.0 · Node.js
           nav_translations:
             Танилцуулга: Overview
             Архитектур: Architecture
@@ -94,7 +100,11 @@ markdown_extensions:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/gerege-systems
+      link: https://github.com/gerege-systems/template-dgov-mn-nodejs
+      name: GitHub — Node.js хэвлэл
+    - icon: material/web
+      link: https://node.template.dgov.mn
+      name: node.template.dgov.mn (амьд deployment)
 
 nav:
   - Танилцуулга: index.md

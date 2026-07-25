@@ -4,7 +4,9 @@ Government Template Platform V3.0 — **Node.js edition** (eID based, AI enabled
 Production-ready full-stack template: **Node.js backend** (Express 5 · TypeScript
 · node-postgres + PostgreSQL + Redis) + **React** frontend + Gemini AI pipeline.
 Docs index is in [README.md](README.md#documentation); deep dives in
-`backend/docs/` (EN/MN pairs) and `docs/DEPLOYMENT.md`.
+`backend/docs/` (EN/MN pairs) and `docs/DEPLOYMENT.md`. The **published docs
+site** (MkDocs Material, mn + en) lives in `docs-site/` and ships to GitHub Pages
+on every push that touches it: https://gerege-systems.github.io/template-dgov-mn-nodejs/
 
 > This repo is the Node.js/React port of the Go/Next.js original
 > ([gerege-systems/template-dgov-mn](https://github.com/gerege-systems/template-dgov-mn)).

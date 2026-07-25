@@ -2,8 +2,17 @@
 # Government Template Platform V3.0
 # Gerege Systems Development Team & Claude AI, 2026
 #
-# Build the MkDocs documentation site and deploy it to the server (one command).
-# Хостлогддог: https://template.dgov.mn/docs/  (nginx → /var/www/template-docs)
+# Build the MkDocs documentation site and deploy it to a server (one command).
+#
+# ⚠️ ЭНЭ НЬ НЭМЭЛТ ЗАМ. Node.js хэвлэлийн баримтын ҮНДСЭН нийтлэл нь GitHub
+# Pages — `.github/workflows/docs.yml` нь push бүр дээр өөрөө build/deploy хийнэ:
+#   https://gerege-systems.github.io/template-dgov-mn-nodejs/
+# Энэ скриптийг зөвхөн ӨӨРИЙН сервер дээр хостлох шаардлагатай үед хэрэглэнэ.
+#
+# ⚠️ АНХААР: скрипт нь зорилтот хавтсыг `rm -rf`-ээр УСТГААД дахин бичдэг.
+# DOCS_TARGET-ийн анхдагч нь ЭНЭ хэвлэлд зориулсан ТУСДАА зам
+# (`/var/www/template-docs-nodejs`) — Go хувилбарын `/var/www/template-docs`-ыг
+# ХЭЗЭЭ Ч дарж бичихгүй. Хоёуланг нэг сервер дээр зэрэг хостлож болно.
 #
 # Ашиглах:
 #   ./docs-site/deploy-docs.sh
@@ -14,7 +23,8 @@
 #
 # Тохиргоог env-ээр дарж болно:
 #   DOCS_SERVER   (default root@38.180.243.138)
-#   DOCS_TARGET   (default /var/www/template-docs)
+#   DOCS_TARGET   (default /var/www/template-docs-nodejs)
+#   DOCS_URL      (амжилтын мессежэд хэвлэх хаяг)
 #   DOCS_VENV     (default <энэ хавтас>/.venv)
 set -euo pipefail
 
@@ -22,7 +32,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$HERE"
 
 DOCS_SERVER="${DOCS_SERVER:-root@38.180.243.138}"
-DOCS_TARGET="${DOCS_TARGET:-/var/www/template-docs}"
+DOCS_TARGET="${DOCS_TARGET:-/var/www/template-docs-nodejs}"
 VENV="${DOCS_VENV:-$HERE/.venv}"
 
 # ssh/scp wrapper: SSHPASS тохируулагдсан БА sshpass байвал нууц үгээр, эс бөгөөс key-ээр.
@@ -49,9 +59,9 @@ echo "▶ Docs build хийж байна…"
 echo "▶ Deploy → $DOCS_SERVER:$DOCS_TARGET …"
 TGZ="$(mktemp)"
 tar czf "$TGZ" -C site .
-"${SCP[@]}" "$TGZ" "$DOCS_SERVER:/tmp/template-docs.tgz"
+"${SCP[@]}" "$TGZ" "$DOCS_SERVER:/tmp/template-docs-nodejs.tgz"
 "${SSH[@]}" "$DOCS_SERVER" \
-  "rm -rf '$DOCS_TARGET' && mkdir -p '$DOCS_TARGET' && tar xzf /tmp/template-docs.tgz -C '$DOCS_TARGET' && rm -f /tmp/template-docs.tgz"
+  "rm -rf '$DOCS_TARGET' && mkdir -p '$DOCS_TARGET' && tar xzf /tmp/template-docs-nodejs.tgz -C '$DOCS_TARGET' && rm -f /tmp/template-docs-nodejs.tgz"
 rm -f "$TGZ"
 
-echo "✅ Docs deployed → https://template.dgov.mn/docs/"
+echo "✅ Docs deployed → ${DOCS_URL:-https://node.template.dgov.mn/docs/}"

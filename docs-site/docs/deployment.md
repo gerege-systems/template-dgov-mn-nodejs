@@ -1,7 +1,8 @@
 # Байршуулалт (Deployment)
 
 Платформыг ганц VPS дээр **Docker Compose + nginx**-ээр байршуулна. Stack:
-PostgreSQL + Redis + Go API (өөрийн OIDC issuer-ийг мөн хангадаг) + Next.js BFF.
+PostgreSQL + Redis + Node.js API (өөрийн OIDC issuer-ийг мөн хангадаг) + статик
+React SPA (nginx).
 
 ## Шаардлага
 
@@ -16,7 +17,8 @@ Internet ──► nginx (80/443, Let's Encrypt)
    ├─ /oauth2/*, /.well-known/*, /userinfo ─► api (OIDC issuer)
    ├─ /rp/sign/*      ─► api relay
    ├─ /rp/eid/*, /rp/eid-org/* ─► api (eID proxy)
-   └─ бусад бүх         ─► web (Next.js BFF) ──► api
+   ├─ /api/v1/*       ─► api
+   └─ бусад бүх       ─► web (статик React SPA — nginx)
    internal: db (Postgres 16) · redis (7)
 ```
 
@@ -76,3 +78,4 @@ tag / volume мөргөлдөнө.
 |---|---|---|
 | `sso-dgov-mn` | sso.dgov.mn | web 3008 |
 | `template-dgov-mn` | template.dgov.mn | web 3009 |
+| `template-dgov-mn-nodejs` | node.template.dgov.mn | web 3012 |

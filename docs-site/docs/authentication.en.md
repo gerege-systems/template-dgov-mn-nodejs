@@ -18,7 +18,8 @@ The `sub` (subject) is the platform's **stable, opaque per-citizen identifier**
 
 ## Government SSO (OIDC provider)
 
-The platform is an OpenID Connect provider built on its **own Go code**. Relying-party
+The platform is an OpenID Connect provider built on its **own code**
+(`usecases/oidc`) — no third-party provider such as Ory Hydra is required. Relying-party
 (RP) apps delegate sign-in to the platform and receive verified user data as
 standard claims.
 
