@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Government Template Platform V3.0
+# Government Template Platform V3.0 — Node.js edition
 # Gerege Systems Development Team & Claude AI, 2026
 #
 # Remote deploy step, run ON the server by the CD workflow (.github/workflows/deploy.yml)
@@ -11,7 +11,16 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_DIR"
 
+# DEPLOY_SERVICES — deploy хийж, health хүлээх compose үйлчилгээнүүд.
+#
+# Одоогоор `api` Л — Next.js `web` контейнер нь шинэ Node API-гийн ХАРААХАН порт
+# хийгдээгүй route-уудыг дуудах тул эвдэрсэн UI үйлчлэх байсан (nginx нь `/`-ыг
+# статик төлөвийн хуудсанд үйлчилдэг). Vite + React SPA гармагц үүнийг
+# "api web" болго. Хэрэгтэй бол орчноос дарж бичиж болно.
+SERVICES="${DEPLOY_SERVICES:-api}"
+
 echo "▶ Deploy commit: $(git rev-parse --short HEAD) — $(git log -1 --pretty=%s)"
+echo "▶ Services: ${SERVICES}"
 
 # INTEGRATION_ENC_KEY — superadmin MFA-ийн TOTP secret болон integrations OAuth
 # token-ийг AES-GCM-ээр шифрлэх түлхүүр. CD workflow нь GitHub secret-ээс энэ
@@ -23,16 +32,26 @@ if [ -n "${INTEGRATION_ENC_KEY:-}" ] && ! grep -q '^INTEGRATION_ENC_KEY=' backen
   echo "▶ INTEGRATION_ENC_KEY-г backend.env-д бичлээ (superadmin MFA идэвхжинэ)"
 fi
 
-echo "▶ Building images (api · web · migrate)…"
-docker compose build
+# backend.env нь api контейнерийн distroless nonroot хэрэглэгчид (uid 65532)
+# уншигдахуйц байх ёстой — эс бөгөөс config loader EACCES-ээр унана. Хувийн
+# хэвээр (600) үлдэнэ.
+if [ -f backend.env ]; then
+  chown 65532:65532 backend.env 2>/dev/null || true
+  chmod 600 backend.env 2>/dev/null || true
+fi
+
+echo "▶ Building images…"
+# shellcheck disable=SC2086 — SERVICES нь зориудаар зайгаар салгасан жагсаалт.
+docker compose build ${SERVICES}
 
 echo "▶ Starting stack (migrate re-runs; applied migrations are skipped)…"
-docker compose up -d --remove-orphans
+# shellcheck disable=SC2086
+docker compose up -d ${SERVICES}
 
-# Wait until api + web report healthy (compose healthchecks). ~120s budget.
+# Wait until the deployed services report healthy (compose healthchecks). ~150s budget.
 echo "▶ Waiting for containers to become healthy…"
 deadline=$(( $(date +%s) + 150 ))
-for svc in api web; do
+for svc in ${SERVICES}; do
   cid="$(docker compose ps -q "$svc")"
   if [ -z "$cid" ]; then echo "✖ service '$svc' has no container" >&2; exit 1; fi
   while true; do
