@@ -48,7 +48,21 @@
   --danger-hover: oklch(48% 0.20 25);
   --danger-soft:  oklch(96% 0.03 25);
 
-  /* Фонт — layout.tsx доторх next/font хувьсагчдаас тэжээгдэнэ */
+  /* ==========================================================================
+     Фонт. Гэр бүлүүд нь ӨӨРӨӨ HOST хийгддэг variable woff2 (main.tsx дахь
+     fontsource import) — Google Fonts CDN руу хүсэлт ЯВУУЛАХГҮЙ тул CSP-ийн
+     `font-src 'self'` чанд хэвээр. Кирилл subset багтсан.
+
+     `*-stack` хувьсагчдыг ЭНД тодорхойлно. Next.js хувилбарт тэдгээрийг
+     `next/font` <html>-ийн class-аар тэжээдэг байсан; SPA-д тийм давхарга
+     байхгүй тул шууд бичив. Тодорхойлохоо мартвал `var()` нь тодорхойлогдоогүй
+     утга болж БҮХ фонт систем fallback руу чимээгүй унана.
+     ========================================================================== */
+  --font-display-stack: 'Inter Variable';
+  --font-body-stack:    'Inter Variable';
+  --font-mono-stack:    'JetBrains Mono Variable';
+  --font-serif-stack:   'Source Serif 4 Variable';
+
   --font-display: var(--font-display-stack), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font-body:    var(--font-body-stack),    -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font-mono:    var(--font-mono-stack),    ui-monospace, Menlo, monospace;

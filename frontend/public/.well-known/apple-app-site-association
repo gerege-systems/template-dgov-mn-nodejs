@@ -1,0 +1,17 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "CQTHTD6YJQ.mn.gerege.temp",
+        "appIDs": ["CQTHTD6YJQ.mn.gerege.temp"],
+        "paths": ["/auth/eid/callback", "/auth/eid/callback?*", "/app/eid/callback*"],
+        "components": [
+          { "/": "/auth/eid/callback", "comment": "eID App2App return" },
+          { "/": "/auth/eid/callback", "?": { "sessionId": "*" }, "comment": "eID return with session" },
+          { "/": "/app/eid/callback*", "comment": "app callback bridge" }
+        ]
+      }
+    ]
+  }
+}
