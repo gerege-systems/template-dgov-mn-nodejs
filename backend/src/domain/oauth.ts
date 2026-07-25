@@ -63,3 +63,118 @@ export function filterAllowedScopes(c: OAuthClient, requested: string[]): string
   }
   return out;
 }
+
+/**
+ * matchRedirectUri нь redirect_uri-г бүртгэгдсэн жагсаалттай ЯГ (тэмдэгт
+ * бүрээр) тулгана.
+ *
+ * АЮУЛГҮЙ БАЙДАЛ: энд prefix/substring/wildcard тулгалт ХЭЗЭЭ Ч хийж болохгүй.
+ * Сул тулгалт нь authorization code-ыг халдагчийн хаяг руу дамжуулах сонгодог
+ * эмзэг байдал (open redirect → code хулгай). RFC 6749 §3.1.2.3, RFC 9700 §2.1.
+ */
+export const matchRedirectUri = (c: OAuthClient, uri: string): boolean =>
+  c.redirectUris.includes(uri);
+
+/**
+ * matchPostLogoutRedirectUri нь logout-ийн дараах буцах хаягийг ЯГ тулгана
+ * (OIDC RP-Initiated Logout §3). Шалтгаан нь matchRedirectUri-тай ижил.
+ */
+export const matchPostLogoutRedirectUri = (c: OAuthClient, uri: string): boolean =>
+  c.postLogoutRedirectUris.includes(uri);
+
+/**
+ * SigningKey нь id_token-д гарын үсэг зурах түлхүүр. privateKeyEnc нь
+ * AES-256-GCM-ээр шифрлэгдсэн PKCS#8 (pkg/crypto); publicJwk нь JWKS-д
+ * нийтлэгдэх нийтийн хэсэг.
+ *
+ * Идэвхтэй нь ЯГ нэг байна, харин JWKS нь тэтгэвэрт гарсныг ч нийтэлнэ — эс
+ * бөгөөс тэдгээрээр зурсан, хараахан хүчинтэй id_token-ууд шалгагдахгүй болно.
+ */
+export interface SigningKey {
+  kid: string;
+  alg: string;
+  privateKeyEnc: string;
+  /** publicJwk нь jsonb хэлбэрээр хадгалагдсан JWK. */
+  publicJwk: Record<string, unknown>;
+  active: boolean;
+  createdAt: Date;
+  retiredAt: Date | null;
+}
+
+/** Challenge-ийн төрлүүд. */
+export const ChallengeLogin = 'login';
+export const ChallengeConsent = 'consent';
+export const ChallengeLogout = 'logout';
+
+/**
+ * OAuthChallenge нь authorize урсгалын түр төлөв: RP-ийн анхны хүсэлтийн
+ * параметрүүдийг хадгалж, нэвтрэх/зөвшөөрөх UI-аас буцаж ирэхэд сэргээнэ.
+ *
+ * Нэг удаагийн: шийдэгдмэгц (decidedAt) дахин ашиглагдахгүй.
+ */
+export interface OAuthChallenge {
+  challenge: string;
+  /** kind: login | consent | logout */
+  kind: string;
+  clientId: string;
+  subject: string;
+  requestedScopes: string[];
+  grantedScopes: string[];
+  redirectUri: string;
+  state: string;
+  nonce: string;
+  responseType: string;
+  codeChallenge: string;
+  codeChallengeMethod: string;
+  prompt: string;
+  postLogoutRedirectUri: string;
+  skip: boolean;
+  decidedAt: Date | null;
+  expiresAt: Date;
+  createdAt: Date;
+}
+
+/**
+ * OAuthAuthCode нь authorization code-ийн хадгалагдсан хэлбэр. codeHash нь
+ * sha256(code) — ТҮҮХИЙ code хэзээ ч хадгалагдахгүй.
+ */
+export interface OAuthAuthCode {
+  codeHash: Buffer;
+  clientId: string;
+  subject: string;
+  scopes: string[];
+  redirectUri: string;
+  nonce: string;
+  codeChallenge: string;
+  codeChallengeMethod: string;
+  authTime: Date;
+  expiresAt: Date;
+}
+
+/**
+ * OAuthAccessToken нь гаргасан access token (opaque). tokenHash нь sha256.
+ * subject нь client_credentials grant-д хоосон (хэрэглэгчгүй).
+ */
+export interface OAuthAccessToken {
+  tokenHash: Buffer;
+  clientId: string;
+  subject: string;
+  scopes: string[];
+  refreshFamily: string;
+  expiresAt: Date;
+}
+
+/**
+ * OAuthRefreshToken нь эргэлттэй refresh token. familyId нь эргэлтийн бүх үеийг
+ * нэгтгэдэг тул хулгайлагдсаныг илрүүлэхэд бүлгээр нь цуцлах боломж өгнө.
+ */
+export interface OAuthRefreshToken {
+  tokenHash: Buffer;
+  familyId: string;
+  clientId: string;
+  subject: string;
+  scopes: string[];
+  nonce: string;
+  authTime: Date;
+  expiresAt: Date;
+}

@@ -4638,6 +4638,896 @@
         }
       }
     },
+    "/.well-known/openid-configuration": {
+      "get": {
+        "summary": "OpenID Connect discovery баримт",
+        "description": "⚠️ Энэ зам нь `/api/v1`-ээс ГАДУУР, ҮНДЭС дээр сууна (OIDC стандартаар тогтоогдсон). Хариу нь платформын `BaseResponse` дугтуйг ХЭРЭГЛЭХГҮЙ — RP-ийн сангууд стандарт JSON хүлээдэг.",
+        "tags": [
+          "oidc"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Discovery баримт",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/.well-known/jwks.json": {
+      "get": {
+        "summary": "id_token шалгах нийтийн түлхүүрүүд (JWK Set)",
+        "description": "Тэтгэвэрт гарсан түлхүүрүүд ч ЭНД ҮЛДЭНЭ — тэдгээрээр зурсан, хараахан хүчинтэй id_token-ууд шалгагдсаар байх ёстой. `/api/v1`-ээс гадуур.",
+        "tags": [
+          "oidc"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "JWK Set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/oauth2/auth": {
+      "get": {
+        "summary": "OAuth2 authorization endpoint",
+        "description": "`redirect_uri` нь бүртгэлтэйтэй ЯГ (тэмдэгт бүрээр) тулгагдана — prefix/wildcard ХЭЗЭЭ Ч биш. Client эсвэл redirect_uri буруу бол алдааг RP руу ЧИГЛҮҮЛЭХГҮЙ, шууд харуулна (баталгаажаагүй хаяг руу чиглүүлэх боломжгүй). Public client-д PKCE (`S256`) ЗААВАЛ. Амжилттай бол нэвтрэх хуудас руу 302. `/api/v1`-ээс гадуур.",
+        "tags": [
+          "oidc"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "client_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Client ID"
+          },
+          {
+            "name": "redirect_uri",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Бүртгэгдсэн redirect URI"
+          },
+          {
+            "name": "response_type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "code (өөр утга дэмжигдэхгүй)"
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Зайгаар тусгаарласан scope-ууд"
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "RP-ийн opaque төлөв"
+          },
+          {
+            "name": "nonce",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "id_token-д давтагдана"
+          },
+          {
+            "name": "code_challenge",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "PKCE challenge (base64url)"
+          },
+          {
+            "name": "code_challenge_method",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Зөвхөн S256"
+          },
+          {
+            "name": "prompt",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "OIDC prompt"
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Нэвтрэх хуудас эсвэл RP руу (алдааны үед)"
+          },
+          "400": {
+            "description": "RFC 6749 §5.2 алдаа",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "error_description": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/oauth2/token": {
+      "post": {
+        "summary": "OAuth2 token endpoint",
+        "description": "`authorization_code` (PKCE-тэй), `refresh_token` (эргэлттэй) болон `client_credentials` grant-уудыг үйлчилнэ. Authorization code НЭГ УДААГИЙН — дахин ирвэл тухайн иргэн+апп-ийн БҮХ token цуцлагдана. Хэрэглэгдсэн refresh token дахин ирвэл ГЭР БҮЛ бүхэлдээ цуцлагдана (RFC 9700 §4.14.2). Client-ийн зарласан auth method ХАТУУ (downgrade боломжгүй). `offline_access` scope-гүй бол refresh token ГАРАХГҮЙ. `/api/v1`-ээс гадуур.",
+        "tags": [
+          "oidc"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "grant_type": {
+                    "type": "string",
+                    "enum": [
+                      "authorization_code",
+                      "refresh_token",
+                      "client_credentials"
+                    ]
+                  },
+                  "code": {
+                    "type": "string"
+                  },
+                  "redirect_uri": {
+                    "type": "string"
+                  },
+                  "code_verifier": {
+                    "type": "string"
+                  },
+                  "refresh_token": {
+                    "type": "string"
+                  },
+                  "scope": {
+                    "type": "string"
+                  },
+                  "client_id": {
+                    "type": "string"
+                  },
+                  "client_secret": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "grant_type"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token хариу (RFC 6749 §5.1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "RFC 6749 §5.2 алдаа",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "error_description": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "RFC 6749 §5.2 алдаа",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "error_description": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/oauth2/introspect": {
+      "post": {
+        "summary": "OAuth2 token introspection (RFC 7662)",
+        "description": "Дуудагч client-ийг ЗААВАЛ баталгаажуулна; ӨӨР client-ийн token нь `{\"active\": false}` (эзэн иргэн/RP-ийн мэдээлэл алдагдахгүй). Public client (auth method = none) энэ endpoint-ыг ашиглаж БОЛОХГҮЙ. `/api/v1`-ээс гадуур.",
+        "tags": [
+          "oidc"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  },
+                  "client_id": {
+                    "type": "string"
+                  },
+                  "client_secret": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "token"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token-ий төлөв",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "RFC 6749 §5.2 алдаа",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "error_description": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/oauth2/revoke": {
+      "post": {
+        "summary": "OAuth2 token revocation (RFC 7009)",
+        "description": "Танигдаагүй token ч АМЖИЛТТАЙ хариулна (RFC 7009 §2.2) — client нь token хүчинтэй байсан эсэхийг мэдэх ёсгүй. ӨӨР client-ийн token-ыг цуцлах боломжгүй. Refresh token цуцлах нь тухайн session-ий БҮХ эргэлтийг цуцална. `/api/v1`-ээс гадуур.",
+        "tags": [
+          "oidc"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  },
+                  "token_type_hint": {
+                    "type": "string",
+                    "enum": [
+                      "access_token",
+                      "refresh_token"
+                    ]
+                  },
+                  "client_id": {
+                    "type": "string"
+                  },
+                  "client_secret": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "token"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Хоосон 200"
+          },
+          "401": {
+            "description": "RFC 6749 §5.2 алдаа",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "error_description": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/oauth2/sessions/logout": {
+      "get": {
+        "summary": "RP-initiated logout",
+        "description": "`post_logout_redirect_uri` нь тухайн client-д БҮРТГЭГДСЭН байх ёстой (open redirect хаалт). `id_token_hint`-ийн ГАРЫН ҮСЭГ шалгагдана — өөр апп-ийн нэрийн өмнөөс logout эхлүүлэх боломжгүй; хугацаа дууссан hint зөвшөөрөгдөнө (өнгөрсөн session-ий тухай сануулга). `/api/v1`-ээс гадуур.",
+        "tags": [
+          "oidc"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "client_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Client ID"
+          },
+          {
+            "name": "id_token_hint",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Өмнө гаргасан id_token"
+          },
+          {
+            "name": "post_logout_redirect_uri",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Бүртгэгдсэн буцах хаяг"
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "RP-ийн opaque төлөв"
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Гарах хуудас руу"
+          },
+          "400": {
+            "description": "RFC 6749 §5.2 алдаа",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "error_description": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/userinfo": {
+      "get": {
+        "summary": "OIDC userinfo",
+        "description": "Bearer access token-оор эрхшээгдэнэ. `openid` scope-гүй token эсвэл хэрэглэгчгүй (client_credentials) token нь ТАТГАЛЗАНА. Claims нь token гаргах мөчийн БИШ, дуудлагын мөчийн бодит өгөгдлөөр угсрагдана. `/api/v1`-ээс гадуур.",
+        "tags": [
+          "oidc"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Claims",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "RFC 6749 §5.2 алдаа",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "error_description": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "OIDC userinfo (POST)",
+        "tags": [
+          "oidc"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Claims",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "RFC 6749 §5.2 алдаа",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "error_description": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/provider/login": {
+      "get": {
+        "summary": "Login challenge-ийн товч мэдээлэл",
+        "description": "⚠️ `data` талбарууд нь Go хувилбартай ЯГ ижил PascalCase (`Challenge`, `ClientID`, `ClientName`, `RequestedScope`, `Subject`, `Skip`) — frontend түүгээр уншдаг тул нэр өөрчлөх нь эвдрэл болно.",
+        "tags": [
+          "provider"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "login_challenge",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "authorize-аас ирсэн challenge"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/provider/consent": {
+      "get": {
+        "summary": "Consent challenge-ийн товч мэдээлэл",
+        "description": "`Skip` нь first-party апп эсвэл өмнө нь санагдсан зөвшөөрөл хүссэн БҮХ scope-ыг хамарсан үед true.",
+        "tags": [
+          "provider"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "consent_challenge",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Challenge"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/provider/login/accept": {
+      "post": {
+        "summary": "Нэвтрэлтийг баталгаажуулах",
+        "description": "НЭВТЭРСЭН иргэнийг шаардана — subject нь платформын user UUID (тогтвортой, opaque). Хариунд consent хуудасны `redirect_to`.",
+        "tags": [
+          "provider"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "login_challenge": {
+                    "type": "string"
+                  },
+                  "consent_challenge": {
+                    "type": "string"
+                  },
+                  "logout_challenge": {
+                    "type": "string"
+                  },
+                  "grant_scope": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/provider/consent/accept": {
+      "post": {
+        "summary": "Зөвшөөрлийг баталгаажуулах",
+        "description": "Challenge дээрх subject нь нэвтэрсэн иргэнтэй ТААРАХ ёстой (өөр хүний нээлттэй challenge-ыг дуусгах боломжгүй → 403). Олгох scope нь хүссэнээс ХЭТРЭХГҮЙ; иргэний бүртгэл олдохгүй бол code огт олгогдохгүй (fail-closed).",
+        "tags": [
+          "provider"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "login_challenge": {
+                    "type": "string"
+                  },
+                  "consent_challenge": {
+                    "type": "string"
+                  },
+                  "logout_challenge": {
+                    "type": "string"
+                  },
+                  "grant_scope": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/provider/login/reject": {
+      "post": {
+        "summary": "Нэвтрэлтийг цуцлах",
+        "tags": [
+          "provider"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "login_challenge": {
+                    "type": "string"
+                  },
+                  "consent_challenge": {
+                    "type": "string"
+                  },
+                  "logout_challenge": {
+                    "type": "string"
+                  },
+                  "grant_scope": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/provider/consent/reject": {
+      "post": {
+        "summary": "Зөвшөөрлийг цуцлах",
+        "tags": [
+          "provider"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "login_challenge": {
+                    "type": "string"
+                  },
+                  "consent_challenge": {
+                    "type": "string"
+                  },
+                  "logout_challenge": {
+                    "type": "string"
+                  },
+                  "grant_scope": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/provider/logout/accept": {
+      "post": {
+        "summary": "RP-initiated logout-ыг баталгаажуулах",
+        "description": "Бүртгэгдсэн `post_logout_redirect_uri` байхгүй бол issuer-ийн нүүр рүү буцаана.",
+        "tags": [
+          "provider"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "login_challenge": {
+                    "type": "string"
+                  },
+                  "consent_challenge": {
+                    "type": "string"
+                  },
+                  "logout_challenge": {
+                    "type": "string"
+                  },
+                  "grant_scope": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/relay/webhook": {
       "post": {
         "summary": "Peer platform-оос webhook хүлээж авах (HMAC гарын үсэгтэй)",

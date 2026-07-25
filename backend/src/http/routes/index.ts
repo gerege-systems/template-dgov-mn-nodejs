@@ -22,6 +22,7 @@ import type { GovUsecase } from '../../usecases/gov/gov_usecase.js';
 import type { GSpaceUsecase } from '../../usecases/gspace/gspace_usecase.js';
 import type { IntegrationsUsecase } from '../../usecases/integrations/integrations_usecase.js';
 import type { OrgUsecase } from '../../usecases/org/org_usecase.js';
+import type { ProviderUsecase } from '../../usecases/provider/provider_usecase.js';
 import type { RBACUsecase } from '../../usecases/rbac/rbac_usecase.js';
 import type { RegistryUsecase } from '../../usecases/registry/registry_usecase.js';
 import type { RelayUsecase } from '../../usecases/relay/relay_usecase.js';
@@ -44,6 +45,7 @@ import { registerGovRoutes } from './route_gov.js';
 import { registerGSpaceRoutes } from './route_gspace.js';
 import { registerIntegrationsRoutes } from './route_integrations.js';
 import { registerOrgRoutes } from './route_org.js';
+import { registerProviderRoutes } from './route_provider.js';
 import { registerRBACRoutes } from './route_rbac.js';
 import { registerRegistryRoutes } from './route_registry.js';
 import { registerRelayRoutes } from './route_relay.js';
@@ -96,6 +98,11 @@ export interface Deps {
    * once-only · нийтийн каталог).
    */
   registryUC: RegistryUsecase;
+  /**
+   * providerUC нь платформыг OIDC provider болгосон login/consent/logout цөм
+   * (`/oauth2/auth` challenge-ыг frontend-ийн зөвшөөрлийн хуудастай холбоно).
+   */
+  providerUC: ProviderUsecase;
   /**
    * relayUC нь platform-хоорондын хүсэлт дамжуулах + SLA хяналт (peer webhook,
    * reminder/overdue/escalate sweep).
@@ -153,6 +160,7 @@ export function registerRoutes(router: Router, deps: Deps): void {
   registerGSpaceRoutes(router, deps);
   registerIntegrationsRoutes(router, deps);
   registerOrgRoutes(router, deps);
+  registerProviderRoutes(router, deps);
   registerRBACRoutes(router, deps);
   registerRegistryRoutes(router, deps);
   registerRelayRoutes(router, deps);

@@ -5,7 +5,7 @@ import type { Server } from 'node:http';
 
 import express, { type Express } from 'express';
 
-import { AppConfig } from '../../../config/config.js';
+import { AppConfig, issuer, ssoFirstPartyClientsList } from '../../../config/config.js';
 import {
   EndpointV1,
   EnvironmentProduction,
@@ -18,6 +18,8 @@ import { newAIRepository } from '../../../datasources/repositories/postgres/ai/a
 import { newAuditRepository } from '../../../datasources/repositories/postgres/audit/audit_postgres.js';
 import { newGatewayRepository } from '../../../datasources/repositories/postgres/gateway/gateway_postgres.js';
 import { newOAuthClientRepository } from '../../../datasources/repositories/postgres/oauth/oauth_clients_postgres.js';
+import { newOAuthFlowRepository } from '../../../datasources/repositories/postgres/oauth/oauth_flow_postgres.js';
+import { newOAuthKeyRepository } from '../../../datasources/repositories/postgres/oauth/oauth_keys_postgres.js';
 import { newServiceScopeResolver } from '../../../datasources/repositories/postgres/oauth/service_scope_postgres.js';
 import { newOrgRepository } from '../../../datasources/repositories/postgres/org/org_postgres.js';
 import { newPlatformSettingsRepository } from '../../../datasources/repositories/postgres/platformsettings/platformsettings_postgres.js';
@@ -61,6 +63,7 @@ import { requestIDMiddleware } from '../../../http/middlewares/requestid.js';
 import { securityHeadersMiddleware } from '../../../http/middlewares/security.js';
 import { DefaultRequestTimeoutMs, timeoutMiddleware } from '../../../http/middlewares/timeout.js';
 import { registerRoutes, type Deps } from '../../../http/routes/index.js';
+import { registerOIDCRoutes } from '../../../http/routes/route_oidc.js';
 import { newEidClient } from '../../../pkg/eid/eid.js';
 import { newGoogleClient } from '../../../pkg/google/google.js';
 import { newGSpaceClient } from '../../../pkg/gspace/gspace.js';
@@ -86,6 +89,9 @@ import { newSSOUsecase } from '../../../usecases/sso/sso_usecase.js';
 import { newIntegrationsUsecase } from '../../../usecases/integrations/integrations_usecase.js';
 import { newOrgUsecase } from '../../../usecases/org/org_usecase.js';
 import { newRBACUsecase } from '../../../usecases/rbac/rbac_impl.js';
+import { newKeyManager } from '../../../usecases/oidc/keys.js';
+import { newOIDCService } from '../../../usecases/oidc/oidc_service.js';
+import { newProviderUsecase } from '../../../usecases/provider/provider_usecase.js';
 import { newRelayUsecase } from '../../../usecases/relay/relay_impl.js';
 import type { RelayUsecase } from '../../../usecases/relay/relay_usecase.js';
 import { newSecurityUsecase } from '../../../usecases/security/security_usecase.js';
@@ -287,6 +293,9 @@ export async function newApp(): Promise<App> {
   // (express.json нь аль хэдийн задлагдсан body-г алгасдаг).
   app.use(`${EndpointV1}/relay/webhook`, express.raw({ type: '*/*', limit: DefaultBodyMaxBytes }));
   app.use(express.json({ limit: DefaultBodyMaxBytes, strict: true }));
+  // OAuth2 token/introspect/revoke нь x-www-form-urlencoded (RFC 6749 §4.1.3) —
+  // JSON parser эдгээрийг задлахгүй тул form parser-ийг дараа нь суулгана.
+  app.use(express.urlencoded({ extended: false, limit: DefaultBodyMaxBytes }));
   app.use(accessLogMiddleware());
   // API Gateway-ийн телеметр — ЗӨВХӨН гуравдагч талын RP-ийн зам (/rp/sign,
   // /api/v1/provider) бичигдэнэ. Хариу бүрэн илгээгдсэний дараа бичдэг тул
@@ -470,6 +479,27 @@ export async function newApp(): Promise<App> {
   // Гарын үсэг / байгууллагын тамга — байгууллагын эрхийг eID-ээр шалгана.
   const assetsUC = newAssetsUsecase(usersUC, userRepo, newOrgStampRepository(db), eidClient);
 
+  // ── ӨӨРИЙН OAuth2/OIDC provider ─────────────────────────────────────
+  // Протоколын service (authorize/consent/token) + гарын үсгийн түлхүүрийн
+  // менежер. Түлхүүр нь INTEGRATION_ENC_KEY-ээр шифрлэгдэж DB-д хадгалагдана.
+  const oauthClientsRepo = newOAuthClientRepository(db);
+  const oidcSvc = newOIDCService(oauthClientsRepo, newOAuthFlowRepository(db), issuer());
+  const oidcKeys = newKeyManager(newOAuthKeyRepository(db), AppConfig.INTEGRATION_ENC_KEY);
+  // Эхний ажиллагаанд RSA түлхүүр үүсгэж, шифрлэн хадгална. Түлхүүр бэлэн биш
+  // бол id_token гаргах боломжгүй тул boot ЗОГСОНО (fail-closed).
+  await oidcKeys.ensureKey(background());
+  // id_token гаргах чадвар (гарын үсэг + иргэний бүртгэл) — authorize урсгал
+  // эдгээргүйгээр ч ажиллана.
+  oidcSvc.withTokenIssuing(oidcKeys, usersUC);
+  // Provider нь challenge-ыг frontend-ийн нэвтрэх/зөвшөөрөх хуудастай холбоно.
+  const providerUC = newProviderUsecase(
+    oidcSvc,
+    oauthClientsRepo,
+    usersUC,
+    ssoFirstPartyClientsList(),
+    issuer(),
+  );
+
   // Platform-хоорондын хүсэлт дамжуулах + SLA хяналт (relay). Peer webhook нь
   // HMAC-аар баталгаажна; SLA sweep болон demo simulator нь background worker.
   const relayUC = newRelayUsecase(newRelayRepository(db));
@@ -507,6 +537,7 @@ export async function newApp(): Promise<App> {
     securityUC,
     ssoUC,
     registryUC,
+    providerUC,
     relayUC,
     govUC,
     assetsUC,
@@ -523,6 +554,10 @@ export async function newApp(): Promise<App> {
     pollRateLimiter,
     govWriteRateLimiter,
   };
+
+  // OIDC provider-ийн нийтийн endpoint-ууд нь /api/v1-ээс ГАДУУР, үндэс дээр
+  // сууна (стандарт болон nginx-ийн дүрмүүдээр тогтоогдсон замууд).
+  registerOIDCRoutes(app, oidcKeys, oidcSvc, issuer());
 
   const v1 = express.Router();
   registerRoutes(v1, deps);
