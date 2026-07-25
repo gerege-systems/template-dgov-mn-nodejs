@@ -14,6 +14,7 @@ import {
 } from '../../../constants/index.js';
 import { newMemoryCache } from '../../../datasources/caches/memory.js';
 import { newRedisCache, type RedisCache } from '../../../datasources/caches/redis.js';
+import { newRBACRepository } from '../../../datasources/repositories/postgres/rbac/rbac_postgres.js';
 import { newUserRepository } from '../../../datasources/repositories/postgres/users/users_postgres.js';
 import { setupPostgres, type Db } from '../../../datasources/drivers/pg.js';
 import { newHealthHandler } from '../../../http/handlers/v1/health.js';
@@ -42,6 +43,7 @@ import { newEidClient } from '../../../pkg/eid/eid.js';
 import { newGoogleClient } from '../../../pkg/google/google.js';
 import { newJWTServiceWithRefresh } from '../../../pkg/jwt/jwt.js';
 import { newAuthUsecase } from '../../../usecases/auth/auth_impl.js';
+import { newRBACUsecase } from '../../../usecases/rbac/rbac_impl.js';
 import { newUsersUsecase } from '../../../usecases/users/users_impl.js';
 import * as logger from '../../../pkg/logger/logger.js';
 import { setupTracing, type Shutdown } from '../../../pkg/observability/tracing.js';
@@ -216,12 +218,17 @@ export async function newApp(): Promise<App> {
     eidDisplayText: AppConfig.EID_DISPLAY_TEXT,
   });
 
+  // RBAC — динамик role/permission. Мөн requirePermission-ийн resolver.
+  const rbacRepo = newRBACRepository(db);
+  const rbacUC = newRBACUsecase(rbacRepo);
+
   const deps: Deps = {
     db,
     redisCache,
     jwtService,
     usersUC,
     authUC,
+    rbacUC,
     // SSO eID proxy нь SSO_EID_PROXY_BASE_URL тохируулагдсан үед идэвхжинэ.
     eidProxyEnabled: AppConfig.SSO_EID_PROXY_BASE_URL !== '',
     authMiddleware,
