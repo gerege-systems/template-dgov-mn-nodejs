@@ -3,10 +3,11 @@
   "version": "3.0.0",
   "private": true,
   "type": "module",
-  "description": "Government Template Platform V3.0 — Vite + React SPA (nginx-ээр статикаар үйлчлэгдэж, /api/* нь api контейнер руу проксилогдоно).",
+  "description": "Government Template Platform V3.0 \u2014 Vite + React SPA (nginx-\u044d\u044d\u0440 \u0441\u0442\u0430\u0442\u0438\u043a\u0430\u0430\u0440 \u04af\u0439\u043b\u0447\u043b\u044d\u0433\u0434\u044d\u0436, /api/* \u043d\u044c api \u043a\u043e\u043d\u0442\u0435\u0439\u043d\u0435\u0440 \u0440\u0443\u0443 \u043f\u0440\u043e\u043a\u0441\u0438\u043b\u043e\u0433\u0434\u043e\u043d\u043e).",
   "scripts": {
     "dev": "vite --port 3000",
     "build": "tsc --noEmit && vite build",
+    "icons": "node scripts/gen-icons.mjs",
     "preview": "vite preview --port 3000",
     "lint": "eslint src --max-warnings 0",
     "typecheck": "tsc --noEmit",
@@ -32,6 +33,8 @@
     "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^5.1.0",
+    "png-to-ico": "^3.0.2",
+    "sharp": "^0.35.3",
     "typescript": "5.4.3",
     "vite": "^6.0.11",
     "vitest": "^4.1.10"

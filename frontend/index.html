@@ -8,7 +8,17 @@
       name="description"
       content="Цахим засаглалыг бүтээх суурь — eID нэвтрэлт, RBAC, AI туслах бүхий төрийн үйлчилгээний платформ."
     />
-    <link rel="icon" href="/favicon.ico" />
+    <!--
+      Икон бүр НЭГ эх сурвалжаас — `public/brand.webp` (апп-ын лого). Өмнө нь
+      favicon нь логотой огт хамаагүй placeholder байсныг зассан.
+      Дахин үүсгэх: `npm run icons` (scripts/gen-icons.mjs).
+    -->
+    <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
+    <!-- iOS нь тунгалаг хэсгийг хар болгодог тул энэ нь цагаан суурьтай. -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- Хаягийн мөр / task switcher-ийн өнгө — брэндийн улаан. -->
+    <meta name="theme-color" content="#b4262d" />
   </head>
   <body>
     <div id="root"></div>
