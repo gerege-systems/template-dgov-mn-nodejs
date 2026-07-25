@@ -254,6 +254,104 @@
           "chain_hash"
         ]
       },
+      "SiteAppearance": {
+        "type": "object",
+        "properties": {
+          "accent": {
+            "type": "string",
+            "description": "preset нэр (cobalt · teal · violet · emerald · amber) эсвэл #rrggbb"
+          },
+          "font": {
+            "type": "string",
+            "enum": [
+              "inter",
+              "serif",
+              "system"
+            ]
+          },
+          "style": {
+            "type": "string",
+            "enum": [
+              "comfortable",
+              "compact"
+            ]
+          },
+          "theme": {
+            "type": "string",
+            "enum": [
+              "light",
+              "dark",
+              "system"
+            ]
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "accent",
+          "font",
+          "style",
+          "theme"
+        ]
+      },
+      "Theme": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "config": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Чөлөөт JSONB: appearance (enum/hex-ээр шалгагдана) + landing текст/цэс"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "config",
+          "is_active",
+          "created_at"
+        ]
+      },
+      "ThemeUpsert": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "config": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
       "Permission": {
         "type": "object",
         "properties": {
@@ -1296,6 +1394,419 @@
             "$ref": "#/components/responses/Error"
           },
           "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/site/appearance": {
+      "get": {
+        "summary": "Сайтын нийтийн харагдац",
+        "description": "НЭВТРЭЛТГҮЙ — нэвтрээгүй зочны landing үүнийг уншдаг. accent нь preset нэр (\"cobalt\" г.м.) эсвэл \"#rrggbb\" custom hex. Богино TTL (60с) кэштэй; админ өөрчлөлт кэшийг шууд цэвэрлэнэ.",
+        "tags": [
+          "site"
+        ],
+        "responses": {
+          "200": {
+            "description": "Харагдацын default",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/SiteAppearance"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Сайтын нийтийн харагдацыг шинэчлэх",
+        "description": "Утгын шалгалт: accent нь preset нэр эсвэл #rrggbb (3-оронтой hex ЗӨВШӨӨРӨХГҮЙ); font/style/theme нь тогтсон enum. Буруу утга DB-д хүрэхгүй.",
+        "tags": [
+          "site"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "accent": {
+                    "type": "string",
+                    "maxLength": 32
+                  },
+                  "font": {
+                    "type": "string",
+                    "enum": [
+                      "inter",
+                      "serif",
+                      "system"
+                    ]
+                  },
+                  "style": {
+                    "type": "string",
+                    "enum": [
+                      "comfortable",
+                      "compact"
+                    ]
+                  },
+                  "theme": {
+                    "type": "string",
+                    "enum": [
+                      "light",
+                      "dark",
+                      "system"
+                    ]
+                  }
+                },
+                "required": [
+                  "accent",
+                  "font",
+                  "style",
+                  "theme"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/themes/active": {
+      "get": {
+        "summary": "Идэвхтэй landing загвар",
+        "description": "НЭВТРЭЛТГҮЙ — landing SSR уншдаг. Идэвхтэй theme байхгүй бол 404. Богино TTL кэштэй.",
+        "tags": [
+          "themes"
+        ],
+        "responses": {
+          "200": {
+            "description": "Идэвхтэй theme",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Theme"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/themes": {
+      "get": {
+        "summary": "Загваруудыг жагсаах",
+        "tags": [
+          "themes"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Загварууд",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Theme"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "summary": "Шинэ загвар үүсгэх",
+        "description": "config нь ЧӨЛӨӨТ JSONB (landing-ийн текст/цэс хоёр хэлээр). appearance хэсэг нь enum/hex-ээр шалгагдана; нийт хэмжээ ≤128 KiB (DoS хамгаалалт).",
+        "tags": [
+          "themes"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ThemeUpsert"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Үүсгэгдсэн загвар",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Theme"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/themes/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "summary": "Загварыг авах",
+        "tags": [
+          "themes"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Загвар",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Theme"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "put": {
+        "summary": "Загварыг шинэчлэх",
+        "tags": [
+          "themes"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ThemeUpsert"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Загварыг устгах",
+        "description": "ИДЭВХТЭЙ загварыг устгах боломжгүй (400) — landing эх сурвалжгүй болно. Эхлээд өөр загварыг идэвхжүүлнэ.",
+        "tags": [
+          "themes"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/themes/{id}/active": {
+      "put": {
+        "summary": "Загварыг идэвхжүүлэх",
+        "description": "Нэг загварыг идэвхтэй болгож БУСДЫГ идэвхгүй болгоно. Partial unique index-ийн улмаас алхмууд НЭГ транзакцид явна.",
+        "tags": [
+          "themes"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
             "$ref": "#/components/responses/Error"
           }
         }

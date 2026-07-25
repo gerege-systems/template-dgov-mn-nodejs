@@ -16,6 +16,10 @@ import { newMemoryCache } from '../../../datasources/caches/memory.js';
 import { newRedisCache, type RedisCache } from '../../../datasources/caches/redis.js';
 import { newAuditRepository } from '../../../datasources/repositories/postgres/audit/audit_postgres.js';
 import { newRBACRepository } from '../../../datasources/repositories/postgres/rbac/rbac_postgres.js';
+import {
+  newSiteRepository,
+  newThemeRepository,
+} from '../../../datasources/repositories/postgres/site/site_postgres.js';
 import { newUserRepository } from '../../../datasources/repositories/postgres/users/users_postgres.js';
 import { setupPostgres, type Db } from '../../../datasources/drivers/pg.js';
 import { newHealthHandler } from '../../../http/handlers/v1/health.js';
@@ -46,6 +50,7 @@ import { newJWTServiceWithRefresh } from '../../../pkg/jwt/jwt.js';
 import { newAuditUsecase } from '../../../usecases/audit/audit_usecase.js';
 import { newAuthUsecase } from '../../../usecases/auth/auth_impl.js';
 import { newRBACUsecase } from '../../../usecases/rbac/rbac_impl.js';
+import { newSiteUsecase, newThemeUsecase } from '../../../usecases/site/site_usecase.js';
 import { newUsersUsecase } from '../../../usecases/users/users_impl.js';
 import * as logger from '../../../pkg/logger/logger.js';
 import { setupTracing, type Shutdown } from '../../../pkg/observability/tracing.js';
@@ -228,6 +233,11 @@ export async function newApp(): Promise<App> {
   // дор явдаг тул хүсэлтийн identity-аас үл хамаарна.
   const auditUC = newAuditUsecase(newAuditRepository(db));
 
+  // Site харагдац + landing theme — нийтийн config (RLS-д хамаарахгүй). Хоёулаа
+  // богино TTL кэштэй: нэвтрээгүй зочны landing тэднийг хүсэлт бүрд уншдаг.
+  const siteUC = newSiteUsecase(newSiteRepository(db));
+  const themeUC = newThemeUsecase(newThemeRepository(db));
+
   const deps: Deps = {
     db,
     redisCache,
@@ -236,6 +246,8 @@ export async function newApp(): Promise<App> {
     authUC,
     rbacUC,
     auditUC,
+    siteUC,
+    themeUC,
     // SSO eID proxy нь SSO_EID_PROXY_BASE_URL тохируулагдсан үед идэвхжинэ.
     eidProxyEnabled: AppConfig.SSO_EID_PROXY_BASE_URL !== '',
     authMiddleware,

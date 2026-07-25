@@ -14,6 +14,7 @@ import type { JWTService } from '../../pkg/jwt/jwt.js';
 import type { AuditUsecase } from '../../usecases/audit/audit_usecase.js';
 import type { AuthUsecase } from '../../usecases/auth/auth_usecase.js';
 import type { RBACUsecase } from '../../usecases/rbac/rbac_usecase.js';
+import type { SiteUsecase, ThemeUsecase } from '../../usecases/site/site_usecase.js';
 import type { UsersUsecase } from '../../usecases/users/users_usecase.js';
 import type { RateLimiter } from '../middlewares/ratelimit.js';
 import type { Middleware } from '../types.js';
@@ -21,6 +22,7 @@ import { registerAuditRoutes } from './route_audit.js';
 import { registerAuthRoutes } from './route_auth.js';
 import { registerCoreRoutes } from './route_core.js';
 import { registerRBACRoutes } from './route_rbac.js';
+import { registerSiteRoutes } from './route_site.js';
 import { registerUsersRoutes } from './route_users.js';
 
 /** Deps нь route бүртгэлд шаардлагатай бүх хамаарлын багц. */
@@ -44,6 +46,10 @@ export interface Deps {
    * best-effort бичдэг тул хамаарал нь ил байх ёстой.
    */
   auditUC: AuditUsecase;
+  /** siteUC нь сайтын нийтийн харагдацын default (landing уншина). */
+  siteUC: SiteUsecase;
+  /** themeUC нь landing-ийн нэрлэсэн загварууд (CRUD + идэвхтэй сонголт). */
+  themeUC: ThemeUsecase;
   /**
    * eidProxyEnabled нь SSO eID proxy тохируулагдсан эсэх — /users/me хариунд
    * eid_proxy болж, frontend eID хуудсуудыг SSO хэрэглэгчид нээнэ.
@@ -64,5 +70,6 @@ export function registerRoutes(router: Router, deps: Deps): void {
   registerAuditRoutes(router, deps);
   registerAuthRoutes(router, deps);
   registerRBACRoutes(router, deps);
+  registerSiteRoutes(router, deps);
   registerUsersRoutes(router, deps);
 }
