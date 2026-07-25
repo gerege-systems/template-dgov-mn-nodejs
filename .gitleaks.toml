@@ -16,8 +16,18 @@ Unit тестийн жишээ (dummy) утгууд. jwt.test.ts дахь secret
 """
 regexes = [
   '''test-secret-that-is-at-least-32-characters-long''',
+  # base64("not-encrypted-at-all") — integrations-ийн тестийн фикстур: GCM нь
+  # шифрлэгдээгүй өгөгдлийг татгалзахыг батлана. Түүхэнд (commit 1560d02)
+  # литералаар үлдсэн тул энд зөвшөөрнө; кодод нь тооцоолсон утга болгож зассан.
+  '''bm90LWVuY3J5cHRlZC1hdC1hbGw=''',
 ]
 paths = [
   '''backend/src/pkg/jwt/jwt\.test\.ts''',
   '''backend/src/config/config\.test\.ts''',
+  # secrethash.test.ts нь Go/Ory Hydra-гаас гаргасан ЭТАЛОН hash векторуудыг
+  # агуулна (шилжилтийн байт-нийцлийг батлах зорилготой). Эдгээр нь нээлттэй
+  # тестийн утгууд бөгөөд hash тул задлагдахгүй — гэхдээ энтропи өндөр тул
+  # generic-api-key дүрэмд өртөнө.
+  '''backend/src/pkg/secrethash/secrethash\.test\.ts''',
 ]
+

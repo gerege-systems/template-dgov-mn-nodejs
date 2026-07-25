@@ -159,7 +159,10 @@ describe('list / disconnect / token', () => {
   });
 
   it('гэмтсэн/өөр түлхүүрээр шифрлэгдсэн токен нь ДОТООД алдаа', async () => {
-    const { uc } = build([row({ accessToken: 'bm90LWVuY3J5cHRlZC1hdC1hbGw=' })]);
+    // Шифрлэгдээгүй энгийн base64 — GCM-ийн tag шалгалт унана. (Literal-аар
+    // бичихгүй: өндөр энтропитой мөр нь secret-scanner-ийг дэмий асаадаг.)
+    const notEncrypted = Buffer.from('not-encrypted-at-all', 'utf8').toString('base64');
+    const { uc } = build([row({ accessToken: notEncrypted })]);
     await expect(uc.token(background(), userId, 'google-drive')).rejects.toSatisfy((err: unknown) =>
       is(err, ErrorType.Internal),
     );
