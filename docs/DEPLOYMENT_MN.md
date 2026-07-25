@@ -172,6 +172,16 @@ RELAY_DEMO_MODE=false                     # production-д унтраа — бо�
 
 Нууц утгуудыг `openssl rand -base64 48`-аар үүсгэ.
 
+**Файлын эрх чухал.** Api image нь distroless-ийн `nonroot` хэрэглэгчээр (uid
+**65532**) ажилладаг бөгөөд `backend.env` нь тэр контейнерт bind-mount хийгддэг.
+root-ийн эзэмшлийн `chmod 600` файлыг тэр хэрэглэгч уншиж чадахгүй тул контейнер
+`failed to load config file: .env: EACCES`-ээр гарна. Файлыг хувийн хэвээр,
+гэхдээ контейнерт уншигдахуйц байлга:
+
+```bash
+chown 65532:65532 backend.env && chmod 600 backend.env
+```
+
 **`INTEGRATION_ENC_KEY` нь нэг л удаа бичигдэнэ.** Түүнийг сольсноор өмнө
 шифрлэсэн бүх утга (хадгалсан OAuth token, superadmin-ийн TOTP secret) тайлагдахаа
 болино. CD workflow нь түлхүүр БАЙХГҮЙ тохиолдолд Л `backend.env`-д бичдэг тул

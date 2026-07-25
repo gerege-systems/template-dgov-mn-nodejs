@@ -301,13 +301,18 @@ const envSearchPaths = ['.env', path.join('src', 'config', '.env'), '/.env'];
 function loadEnvFiles(): Record<string, string> {
   const merged: Record<string, string> = {};
   for (const p of envSearchPaths) {
+    if (!fs.existsSync(p)) continue;
     try {
-      if (!fs.existsSync(p)) continue;
       Object.assign(merged, parseDotEnv(fs.readFileSync(p, 'utf8')));
-      break;
-    } catch {
-      throw ErrLoadConfig;
+    } catch (err) {
+      // ЯГ ямар шалтгаанаар уншиж чадаагүйг мессежид хавсаргана. Хамгийн түгээмэл
+      // тохиолдол нь EACCES: контейнер nonroot-оор ажилладаг тул mount хийсэн
+      // .env файл нь тэр uid-д уншигдахуйц байх ёстой. Тайлбаргүй
+      // "failed to load config file" нь үүнийг цагийн турш нуудаг.
+      const reason = err instanceof Error ? err.message : String(err);
+      throw new Error(`${ErrLoadConfig.message}: ${p}: ${reason}`);
     }
+    break;
   }
   return merged;
 }

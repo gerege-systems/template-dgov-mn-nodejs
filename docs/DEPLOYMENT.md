@@ -171,6 +171,16 @@ RELAY_DEMO_MODE=false                   # off in production — real platforms c
 
 Generate secrets with `openssl rand -base64 48`.
 
+**File permissions matter.** The api image runs as the distroless `nonroot` user
+(uid **65532**), and `backend.env` is bind-mounted into it. A root-owned `chmod
+600` file is unreadable to that user and the container exits with
+`failed to load config file: .env: EACCES`. Keep the file private *and* readable
+by the container:
+
+```bash
+chown 65532:65532 backend.env && chmod 600 backend.env
+```
+
 **`INTEGRATION_ENC_KEY` is write-once.** Rotating it makes every previously
 encrypted value (stored OAuth tokens, superadmin TOTP secrets) undecryptable. The
 CD workflow writes it into `backend.env` only if the key is absent, so it never
