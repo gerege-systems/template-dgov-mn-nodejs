@@ -1922,6 +1922,534 @@ export function openapiDocument(): OpenApiDocument {
           },
         },
       },
+      '/admin/users': {
+        get: {
+          summary: 'Хэрэглэгчдийг жагсаах',
+          description: '`users.manage` эрхээр. Query: `offset`, `limit` (≤200), `role`, `active`.',
+          tags: ['admin'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'offset', in: 'query', schema: { type: 'integer', default: 0 } },
+            { name: 'limit', in: 'query', schema: { type: 'integer', default: 50, maximum: 200 } },
+            { name: 'role', in: 'query', schema: { type: 'integer' } },
+            { name: 'active', in: 'query', schema: { type: 'string', enum: ['true'] } },
+          ],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+          },
+        },
+        post: {
+          summary: 'Иргэнийг регистрээр урьдчилан бүртгэх (private платформ)',
+          description:
+            'Private горимд ЗӨВХӨН ингэж бүртгэсэн иргэн Government SSO-оор нэвтэрнэ. Иргэн хожим нэвтрэхэд энэ мөр civil_id/sso_sub-оор холбогдоно. admin/superadmin role-ыг ЗӨВХӨН super admin ононо (шалгалт usecase давхаргад — `users.manage` эрхтэй энгийн admin өөрийгөө дэвшүүлж чадахгүй).',
+          tags: ['admin'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    register: { type: 'string', minLength: 8, maxLength: 20 },
+                    first_name: { type: 'string', maxLength: 100 },
+                    last_name: { type: 'string', maxLength: 100 },
+                    first_name_en: { type: 'string', maxLength: 100 },
+                    last_name_en: { type: 'string', maxLength: 100 },
+                    role_id: { type: 'integer', minimum: 1, maximum: 4 },
+                  },
+                  required: ['register'],
+                },
+              },
+            },
+          },
+          responses: {
+            '201': { $ref: '#/components/responses/Ok' },
+            '400': { $ref: '#/components/responses/Error' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+            '409': { $ref: '#/components/responses/Error' },
+            '422': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/admin/users/{id}/role': {
+        put: {
+          summary: 'Хэрэглэгчийн эрхийг солих',
+          description:
+            'Дуудагчийн role нь usecase руу ДАМЖИНА: энгийн admin нь зөвхөн manager ↔ user солино, admin эрхийг ЗӨВХӨН super admin олгож/хасна.',
+          tags: ['admin'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: { role_id: { type: 'integer', minimum: 1, maximum: 4 } },
+                  required: ['role_id'],
+                },
+              },
+            },
+          },
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+            '422': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/admin/users/{id}/active': {
+        put: {
+          summary: 'Хэрэглэгчийг идэвхжүүлэх/идэвхгүй болгох',
+          tags: ['admin'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: { active: { type: 'boolean' } },
+                  required: ['active'],
+                },
+              },
+            },
+          },
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+            '422': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/admin/users/{id}': {
+        delete: {
+          summary: 'Хэрэглэгчийг зөөлөн устгах',
+          tags: ['admin'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          ],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+            '404': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/auth/superadmin/onboard/google': {
+        post: {
+          summary: 'Super admin бүртгэл — Google алхам (урилгын хаалга)',
+          description:
+            'OAuth code-ийг солиж и-мэйлийг **урилгын allow-list**-ийн эсрэг шалгана. Урилгагүй / аль хэдийн ашигласан урилга / баталгаажаагүй Google и-мэйл нь **403**. Цаашдын бүх алхам УРИЛГЫН и-мэйл дээр ажиллана (Google-ийн буцаасан утгад итгэхгүй). Хариунд `onboard_token`.',
+          tags: ['superadmin'],
+          security: [],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    code: {
+                      type: 'string',
+                    },
+                    redirect_uri: {
+                      type: 'string',
+                    },
+                  },
+                  required: ['code'],
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              $ref: '#/components/responses/Ok',
+            },
+            '400': {
+              $ref: '#/components/responses/Error',
+            },
+            '403': {
+              $ref: '#/components/responses/Error',
+            },
+            '422': {
+              $ref: '#/components/responses/Error',
+            },
+            '429': {
+              $ref: '#/components/responses/Error',
+            },
+          },
+        },
+      },
+      '/auth/superadmin/onboard/eid/start': {
+        post: {
+          summary: 'Бүртгэлийн eID алхмыг QR-аар эхлүүлэх',
+          description:
+            '`callback_url` хоосон бол cross-device (desktop QR); өгвөл same-device (mobile deep link).',
+          tags: ['superadmin'],
+          security: [],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    onboard_token: {
+                      type: 'string',
+                    },
+                    callback_url: {
+                      type: 'string',
+                    },
+                  },
+                  required: ['onboard_token'],
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              $ref: '#/components/responses/Ok',
+            },
+            '400': {
+              $ref: '#/components/responses/Error',
+            },
+            '403': {
+              $ref: '#/components/responses/Error',
+            },
+            '422': {
+              $ref: '#/components/responses/Error',
+            },
+            '429': {
+              $ref: '#/components/responses/Error',
+            },
+          },
+        },
+      },
+      '/auth/superadmin/onboard/eid/start-id': {
+        post: {
+          summary: 'Бүртгэлийн eID алхмыг РД-аар эхлүүлэх (push)',
+          description: 'Иргэний регистрийн дугаараар бүртгэлтэй төхөөрөмж рүү push илгээнэ.',
+          tags: ['superadmin'],
+          security: [],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    onboard_token: {
+                      type: 'string',
+                    },
+                    national_id: {
+                      type: 'string',
+                    },
+                    callback_url: {
+                      type: 'string',
+                    },
+                  },
+                  required: ['onboard_token', 'national_id'],
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              $ref: '#/components/responses/Ok',
+            },
+            '400': {
+              $ref: '#/components/responses/Error',
+            },
+            '403': {
+              $ref: '#/components/responses/Error',
+            },
+            '422': {
+              $ref: '#/components/responses/Error',
+            },
+            '429': {
+              $ref: '#/components/responses/Error',
+            },
+          },
+        },
+      },
+      '/auth/superadmin/onboard/eid/poll': {
+        post: {
+          summary: 'Бүртгэлийн eID session-ийг long-poll хийх',
+          description:
+            '⚠️ Энэ алхамд **session ОЛГОГДОХГҮЙ, хэрэглэгч ҮҮСЭХГҮЙ** — eID нь зөвхөн "урьсан хүн бодитоор хэн бэ" гэдгийг тогтооно. COMPLETE үед identity нь pending session-д баригдаж алхам `email` болно. ~2.5с тутам дуудагддаг тул тусдаа СУЛ rate limiter-тэй.',
+          tags: ['superadmin'],
+          security: [],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    onboard_token: {
+                      type: 'string',
+                    },
+                    session_id: {
+                      type: 'string',
+                    },
+                  },
+                  required: ['onboard_token', 'session_id'],
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              $ref: '#/components/responses/Ok',
+            },
+            '400': {
+              $ref: '#/components/responses/Error',
+            },
+            '403': {
+              $ref: '#/components/responses/Error',
+            },
+            '422': {
+              $ref: '#/components/responses/Error',
+            },
+            '429': {
+              $ref: '#/components/responses/Error',
+            },
+          },
+        },
+      },
+      '/auth/superadmin/onboard/email/send': {
+        post: {
+          summary: 'Урилгын и-мэйл рүү OTP илгээх',
+          description:
+            'OTP-г Verify API үүсгэж илгээнэ; сервер зөвхөн request_id-г богино TTL-тэй хадгална.',
+          tags: ['superadmin'],
+          security: [],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    onboard_token: {
+                      type: 'string',
+                    },
+                  },
+                  required: ['onboard_token'],
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              $ref: '#/components/responses/Ok',
+            },
+            '400': {
+              $ref: '#/components/responses/Error',
+            },
+            '403': {
+              $ref: '#/components/responses/Error',
+            },
+            '422': {
+              $ref: '#/components/responses/Error',
+            },
+            '429': {
+              $ref: '#/components/responses/Error',
+            },
+          },
+        },
+      },
+      '/auth/superadmin/onboard/email/verify': {
+        post: {
+          summary: 'И-мэйлийн OTP-г шалгах',
+          description:
+            'Буруу код нь 400. Оролдлого хэтэрвэл кодыг цуцалж 403 өгнө (дахин илгээх шаардлагатай).',
+          tags: ['superadmin'],
+          security: [],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    onboard_token: {
+                      type: 'string',
+                    },
+                    code: {
+                      type: 'string',
+                    },
+                  },
+                  required: ['onboard_token', 'code'],
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              $ref: '#/components/responses/Ok',
+            },
+            '400': {
+              $ref: '#/components/responses/Error',
+            },
+            '403': {
+              $ref: '#/components/responses/Error',
+            },
+            '422': {
+              $ref: '#/components/responses/Error',
+            },
+            '429': {
+              $ref: '#/components/responses/Error',
+            },
+          },
+        },
+      },
+      '/auth/superadmin/onboard/totp/init': {
+        post: {
+          summary: 'TOTP тохируулга эхлүүлэх (otpauth URI)',
+          description:
+            'Дахин дуудвал ШИНЭ secret үүснэ (QR алдсан тохиолдолд). Secret нь ХАРААХАН идэвхжээгүй — зөвхөн `totp/verify` амжилттай болоход л шифрлэгдэж DB-д бичигдэнэ.',
+          tags: ['superadmin'],
+          security: [],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    onboard_token: {
+                      type: 'string',
+                    },
+                  },
+                  required: ['onboard_token'],
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              $ref: '#/components/responses/Ok',
+            },
+            '400': {
+              $ref: '#/components/responses/Error',
+            },
+            '403': {
+              $ref: '#/components/responses/Error',
+            },
+            '422': {
+              $ref: '#/components/responses/Error',
+            },
+            '429': {
+              $ref: '#/components/responses/Error',
+            },
+          },
+        },
+      },
+      '/auth/superadmin/onboard/totp/verify': {
+        post: {
+          summary: 'TOTP кодыг шалгаж бүртгэлийг ТӨГСГӨХ',
+          description:
+            'Амжилттай бол super admin үүсч session олгогдоно. **Энгийн текст нөөц кодууд ЗӨВХӨН энэ хариунд, ЗӨВХӨН НЭГ УДАА** буцна (DB-д зөвхөн SHA-256 hash; дахин авах зам БАЙХГҮЙ). Урилга `accepted` болж дахин ашиглагдахгүй.',
+          tags: ['superadmin'],
+          security: [],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    onboard_token: {
+                      type: 'string',
+                    },
+                    code: {
+                      type: 'string',
+                    },
+                  },
+                  required: ['onboard_token', 'code'],
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              $ref: '#/components/responses/Ok',
+            },
+            '400': {
+              $ref: '#/components/responses/Error',
+            },
+            '403': {
+              $ref: '#/components/responses/Error',
+            },
+            '422': {
+              $ref: '#/components/responses/Error',
+            },
+            '429': {
+              $ref: '#/components/responses/Error',
+            },
+          },
+        },
+      },
+      '/auth/superadmin/mfa': {
+        post: {
+          summary: 'Super admin нэвтрэлтийн 2 дахь шат (MFA)',
+          description:
+            '`/auth/google` эсвэл `/auth/eid/poll`-ийн буцаасан `mfa_token`-ийг TOTP код ЭСВЭЛ нөөц кодоор баталгаажуулж session олгоно. Нөөц код НЭГ УДААГИЙН. Токен тус бүрийн буруу оролдлого хязгаарт хүрмэгц токен ЦУЦЛАГДАНА (дахин нэвтрэх шаардлагатай). MFA идэвхгүй / super admin биш бол 403 (fail-closed).',
+          tags: ['superadmin'],
+          security: [],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    mfa_token: {
+                      type: 'string',
+                    },
+                    code: {
+                      type: 'string',
+                    },
+                  },
+                  required: ['mfa_token', 'code'],
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              $ref: '#/components/responses/Ok',
+            },
+            '400': {
+              $ref: '#/components/responses/Error',
+            },
+            '403': {
+              $ref: '#/components/responses/Error',
+            },
+            '422': {
+              $ref: '#/components/responses/Error',
+            },
+            '429': {
+              $ref: '#/components/responses/Error',
+            },
+          },
+        },
+      },
       '/admin/ai/prompts': {
         get: {
           summary: 'AI prompt давхаргуудыг жагсаах',

@@ -31,9 +31,11 @@ import type { SignUsecase } from '../../usecases/sign/sign_usecase.js';
 import type { SSOUsecase } from '../../usecases/sso/sso_usecase.js';
 import type { SiteUsecase, ThemeUsecase } from '../../usecases/site/site_usecase.js';
 import type { SuperadminUsecase } from '../../usecases/superadmin/superadmin_usecase.js';
+import type { OnboardingUsecase } from '../../usecases/superadmin_onboarding/onboarding_usecase.js';
 import type { UsersUsecase } from '../../usecases/users/users_usecase.js';
 import type { RateLimiter } from '../middlewares/ratelimit.js';
 import type { Middleware } from '../types.js';
+import { registerAdminRoutes } from './route_admin.js';
 import { registerAIRoutes } from './route_ai.js';
 import { registerApplicationsRoutes } from './route_applications.js';
 import { registerAssetsRoutes } from './route_assets.js';
@@ -56,6 +58,7 @@ import { registerSignRoutes } from './route_sign.js';
 import { registerSiteRoutes } from './route_site.js';
 import { registerSSORoutes } from './route_sso.js';
 import { registerSuperadminRoutes } from './route_superadmin.js';
+import { registerSuperadminOnboardRoutes } from './route_superadmin_onboard.js';
 import { registerUsersRoutes } from './route_users.js';
 
 /** Deps нь route бүртгэлд шаардлагатай бүх хамаарлын багц. */
@@ -118,6 +121,11 @@ export interface Deps {
    */
   superadminUC: SuperadminUsecase;
   /**
+   * onboardingUC нь урилгаар хаалттай super admin бүртгэлийн шидтэн болон
+   * MFA-тай нэвтрэлтийн 2 дахь шат.
+   */
+  onboardingUC: OnboardingUsecase;
+  /**
    * signUC нь PDF гарын үсэг (PAdES) — eID PIN2-оор баталгаажиж, eidmongolia-ийн
    * stamp эсвэл серверийн Document-Signer-ээр лацлагдана.
    */
@@ -162,6 +170,7 @@ export interface Deps {
  */
 export function registerRoutes(router: Router, deps: Deps): void {
   registerMetaRoutes(router, deps);
+  registerAdminRoutes(router, deps);
   registerAIRoutes(router, deps);
   registerApplicationsRoutes(router, deps);
   registerAssetsRoutes(router, deps);
@@ -183,5 +192,6 @@ export function registerRoutes(router: Router, deps: Deps): void {
   registerSiteRoutes(router, deps);
   registerSSORoutes(router, deps);
   registerSuperadminRoutes(router, deps);
+  registerSuperadminOnboardRoutes(router, deps);
   registerUsersRoutes(router, deps);
 }

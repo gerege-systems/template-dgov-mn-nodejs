@@ -23,3 +23,33 @@ export interface SuperadminInviteRepository {
    */
   markAccepted(ctx: Ctx, email: string): Promise<void>;
 }
+
+/** RecoveryCode нь 2FA нөөц кодын хадгалагдсан хэлбэр (зөвхөн hash). */
+export interface RecoveryCode {
+  id: string;
+  userId: string;
+  codeHash: string;
+  usedAt: Date | null;
+  createdAt: Date;
+}
+
+/**
+ * RecoveryCodeRepository нь 2FA нөөц кодуудын (user_recovery_codes) gateway.
+ * Кодууд нь per-user тул хүснэгт RLS-тэй. DB-д ЗӨВХӨН SHA-256 hash
+ * хадгалагдана — энгийн текст код энэ давхаргад ХЭЗЭЭ Ч хүрэхгүй.
+ */
+export interface RecoveryCodeRepository {
+  /**
+   * replace нь тухайн хэрэглэгчийн ӨМНӨХ бүх кодыг устгаад шинэ hash-уудыг
+   * НЭГ транзакцид оруулна (дахин үүсгэх нь хуучныг хүчингүй болгоно).
+   */
+  replace(ctx: Ctx, userId: string, hashes: string[]): Promise<void>;
+  /** listActive нь хэрэглэгдээгүй (used_at IS NULL) кодуудыг буцаана. */
+  listActive(ctx: Ctx, userId: string): Promise<RecoveryCode[]>;
+  /**
+   * consume нь өгсөн hash-тай, хэрэглэгдээгүй НЭГ кодыг АТОМААР "хэрэглэсэн"
+   * болгож тэмдэглэнэ. Тохирох идэвхтэй код байхгүй бол NotFound — иймээс код
+   * нэг л удаа ажиллана.
+   */
+  consume(ctx: Ctx, userId: string, hash: string): Promise<void>;
+}

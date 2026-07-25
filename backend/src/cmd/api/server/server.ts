@@ -29,6 +29,8 @@ import { newRegistryRepository } from '../../../datasources/repositories/postgre
 import { newRelayRepository } from '../../../datasources/repositories/postgres/relay/relay_postgres.js';
 import { newSSOTokenRepository } from '../../../datasources/repositories/postgres/ssotoken/ssotoken_postgres.js';
 import { newSSOUserRepository } from '../../../datasources/repositories/postgres/ssouser/ssouser_postgres.js';
+import { newRecoveryCodeRepository } from '../../../datasources/repositories/postgres/recovery/recovery_postgres.js';
+import { newSuperadminAccountRepository } from '../../../datasources/repositories/postgres/superadminaccount/superadminaccount_postgres.js';
 import { newSuperadminInviteRepository } from '../../../datasources/repositories/postgres/superadmininvite/superadmininvite_postgres.js';
 import { newUserIntegrationsRepository } from '../../../datasources/repositories/postgres/userintegrations/userintegrations_postgres.js';
 import { newOrgStampRepository } from '../../../datasources/repositories/postgres/orgstamp/orgstamp_postgres.js';
@@ -60,6 +62,7 @@ import {
 import { observabilityGate } from '../../../http/middlewares/observability_gate.js';
 import { newRateLimiter, type RateLimiter } from '../../../http/middlewares/ratelimit.js';
 import { newGeminiClient } from '../../../pkg/gemini/gemini.js';
+import { newVerifyClient } from '../../../pkg/verify/verify.js';
 import { recovererMiddleware } from '../../../http/middlewares/recoverer.js';
 import { requestIDMiddleware } from '../../../http/middlewares/requestid.js';
 import { securityHeadersMiddleware } from '../../../http/middlewares/security.js';
@@ -100,6 +103,7 @@ import { newSecurityUsecase } from '../../../usecases/security/security_usecase.
 import { newSignUsecase } from '../../../usecases/sign/sign_usecase.js';
 import { newSiteUsecase, newThemeUsecase } from '../../../usecases/site/site_usecase.js';
 import { newSuperadminUsecase } from '../../../usecases/superadmin/superadmin_usecase.js';
+import { newOnboardingUsecase } from '../../../usecases/superadmin_onboarding/onboarding_usecase.js';
 import { newUsersUsecase } from '../../../usecases/users/users_impl.js';
 import { background } from '../../../pkg/ctx/ctx.js';
 import type { Ctx } from '../../../pkg/ctx/ctx.js';
@@ -451,11 +455,37 @@ export async function newApp(): Promise<App> {
 
   // Super admin — админ удирдлага, урилгын allow-list, хандалтын горим.
   // Урилга нь super admin эрхийг ШУУД олгодоггүй (onboarding шидтэн шаардлагатай).
+  const superadminInviteRepo = newSuperadminInviteRepository(db);
   const superadminUC = newSuperadminUsecase(
     usersUC,
     auditUC,
-    newSuperadminInviteRepository(db),
+    superadminInviteRepo,
     platformSettingsRepo,
+  );
+
+  // Урилгаар хаалттай super admin бүртгэлийн шидтэн + MFA нэвтрэлтийн 2 дахь
+  // шат. TOTP secret нь INTEGRATION_ENC_KEY-ээр шифрлэгдэнэ (ил текстээр
+  // хадгалахыг зөвшөөрөхгүй — түлхүүр хоосон бол энд boot зогсоно).
+  const onboardingUC = newOnboardingUsecase(
+    googleClient,
+    eidClient,
+    newVerifyClient(AppConfig.VERIFY_API_BASE, AppConfig.VERIFY_API_KEY, AppConfig.VERIFY_CHANNEL),
+    userRepo,
+    newRecoveryCodeRepository(db),
+    newSuperadminAccountRepository(db),
+    superadminInviteRepo,
+    jwtService,
+    redisCache,
+    AppConfig.INTEGRATION_ENC_KEY,
+    {
+      issuer: 'Government Template Platform V3.0',
+      pendingTTLSeconds: 30 * 60,
+      otpTTLSeconds: 10 * 60,
+      otpMaxAttempts: 5,
+      mfaMaxAttempts: 5,
+      eidDisplayText: AppConfig.EID_RP_NAME,
+      recoveryCodeCount: 10,
+    },
   );
 
   // Site харагдац + landing theme — нийтийн config (RLS-д хамаарахгүй). Хоёулаа
@@ -595,6 +625,7 @@ export async function newApp(): Promise<App> {
     providerUC,
     signUC,
     superadminUC,
+    onboardingUC,
     relayUC,
     govUC,
     assetsUC,
