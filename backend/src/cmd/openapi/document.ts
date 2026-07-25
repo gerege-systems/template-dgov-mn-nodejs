@@ -1657,6 +1657,219 @@ export function openapiDocument(): OpenApiDocument {
           },
         },
       },
+      '/gov/services': {
+        get: {
+          summary: 'Иргэний үйлчилгээний каталог',
+          description:
+            'Идэвхтэй (`enabled` + `lifecycle=active`) үйлчилгээнүүд. Амьдралын үйл явдлын мастер нь РЕГИСТР — паспорт дээрх өөрчлөлт энд шууд тусна.',
+          tags: ['gov'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/gov/overview': {
+        get: {
+          summary: 'Иргэний нүүр хуудасны нэгтгэл',
+          tags: ['gov'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/gov/applications': {
+        get: {
+          summary: 'Миний хүсэлтүүд',
+          tags: ['gov'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+          },
+        },
+        post: {
+          summary: 'Хүсэлт илгээх',
+          description:
+            'ГОЛ САЛААЛТ: `fulfilment=auto` үйлчилгээ НЭГ транзакцид шууд биелж лавлагаа олгогдоно (`auto_issued=true`) — менежерийн дараалалд ОРОХГҮЙ. `manual` бол хүсэлт бүртгэгдэж SLA цаг эхэлж, EU 2018/1724 Art.6(2)(b)-ийн дагуу "хүлээн авсан" мэдэгдэл өгнө. Үнэлэх эрх/үнэлгээний зайтай гэж тэмдэглэгдсэн `auto` үйлчилгээ автоматаар биелэхгүй — гараар хянуулах руу буурна.',
+          tags: ['gov'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    service_id: { type: 'string', format: 'uuid' },
+                    note: { type: 'string', maxLength: 2000 },
+                    payload: { type: 'object', additionalProperties: true },
+                  },
+                  required: ['service_id'],
+                },
+              },
+            },
+          },
+          responses: {
+            '201': { $ref: '#/components/responses/Ok' },
+            '400': { $ref: '#/components/responses/Error' },
+            '401': { $ref: '#/components/responses/Error' },
+            '422': { $ref: '#/components/responses/Error' },
+            '429': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/gov/applications/{id}/timeline': {
+        get: {
+          summary: 'Хүсэлтийн явц (timeline)',
+          description:
+            'Эзэмшлийг ЭХЛЭЭД шалгана — "байхгүй" ба "чинийх биш" хоёр ИЖИЛ 404 (өөр хүний хүсэлт байгаа эсэхийг тандах боломжгүй).',
+          tags: ['gov'],
+          security: [{ bearerAuth: [] }],
+          parameters: [{ $ref: '#/components/parameters/GovAppId' }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '404': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/gov/applications/{id}/provide-info': {
+        post: {
+          summary: 'Нэмэлт мэдээлэл өгөх',
+          description:
+            '`info_required` төлөвт байгаа хүсэлтэд иргэн мэдээлэл өгснийг бүртгэж SLA цагийг ҮРГЭЛЖЛҮҮЛНЭ — `due_at` нь зогссон хугацаагаар хойшилно (иргэний удаашрал байгууллагын зөрчил болж бүртгэгдэхгүй).',
+          tags: ['gov'],
+          security: [{ bearerAuth: [] }],
+          parameters: [{ $ref: '#/components/parameters/GovAppId' }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: { note: { type: 'string', maxLength: 2000 } },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '409': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/gov/officer/queue': {
+        get: {
+          summary: 'Менежерийн дараалал',
+          description:
+            'ХОЁР давхар хамгаалалт: `gov.review` эрх + DB давхаргад `officer` RLS үүрэг (эрхийн шалгалт алдаатай байсан ч users/payments/appointments ХААЛТТАЙ). `assigned_to` нь ЗӨВХӨН `me` — өөр хүний ID шургуулах боломжгүй.',
+          tags: ['gov-officer'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'status', in: 'query', schema: { type: 'string' } },
+            { name: 'assigned_to', in: 'query', schema: { type: 'string', enum: ['me'] } },
+            { name: 'overdue', in: 'query', schema: { type: 'boolean' } },
+            { name: 'limit', in: 'query', schema: { type: 'integer', default: 50, maximum: 200 } },
+            { name: 'offset', in: 'query', schema: { type: 'integer', default: 0 } },
+          ],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '400': { $ref: '#/components/responses/Error' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/gov/officer/queue/{id}/assign': {
+        post: {
+          summary: 'Хүсэлтийг өөртөө авах',
+          description:
+            'SQL WHERE guard нь зэрэг ирсэн 2 дахь оролдлогыг 409-ээр таслана (өөр менежерийнхийг булаах боломжгүй).',
+          tags: ['gov-officer'],
+          security: [{ bearerAuth: [] }],
+          parameters: [{ $ref: '#/components/parameters/GovAppId' }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+            '409': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/gov/officer/queue/{id}/decide': {
+        post: {
+          summary: 'Шийдвэр гаргах',
+          description:
+            'ТАТГАЛЗАХ шийдвэр нь ҮНДЭСЛЭЛГҮЙ гарахгүй (400) — иргэн юунд татгалзсаныг мэдэж гомдол гаргах боломжтой байх ёстой. Зөвшөөрсний дараа гаралтын төрөл шийднэ: лавлагаа бол ШУУД `completed` + лавлагаа олгогдоно; биет зүйл бол `approved` (хүргэгдэх хүртэл). Төлөвийн машин зөрчигдвөл 409.',
+          tags: ['gov-officer'],
+          security: [{ bearerAuth: [] }],
+          parameters: [{ $ref: '#/components/parameters/GovAppId' }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    approve: { type: 'boolean' },
+                    note: { type: 'string', maxLength: 2000 },
+                    result: { type: 'string', maxLength: 64 },
+                  },
+                  required: ['approve'],
+                },
+              },
+            },
+          },
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '400': { $ref: '#/components/responses/Error' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+            '409': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/gov/references': {
+        get: {
+          summary: 'Миний лавлагаанууд',
+          tags: ['gov'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+          },
+        },
+        post: {
+          summary: 'Лавлагаа авах',
+          description:
+            'Танигдсан төрлүүд: residence · birth · marriage · tax · social_ins · criminal. 30 хоног хүчинтэй.',
+          tags: ['gov'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: { type: { type: 'string', maxLength: 64 } },
+                  required: ['type'],
+                },
+              },
+            },
+          },
+          responses: {
+            '201': { $ref: '#/components/responses/Ok' },
+            '400': { $ref: '#/components/responses/Error' },
+            '401': { $ref: '#/components/responses/Error' },
+            '429': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
       '/gspace': {
         get: {
           summary: 'Gerege Space товч (файлууд + квот)',

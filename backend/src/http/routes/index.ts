@@ -17,6 +17,7 @@ import type { AssetsUsecase } from '../../usecases/assets/assets_usecase.js';
 import type { AuthUsecase } from '../../usecases/auth/auth_usecase.js';
 import type { CoreUsecase } from '../../usecases/core/core_usecase.js';
 import type { GatewayUsecase } from '../../usecases/gateway/gateway_usecase.js';
+import type { GovUsecase } from '../../usecases/gov/gov_usecase.js';
 import type { GSpaceUsecase } from '../../usecases/gspace/gspace_usecase.js';
 import type { IntegrationsUsecase } from '../../usecases/integrations/integrations_usecase.js';
 import type { OrgUsecase } from '../../usecases/org/org_usecase.js';
@@ -36,6 +37,7 @@ import { registerCoreRoutes } from './route_core.js';
 import { registerEidProfileRoutes } from './route_eidprofile.js';
 import { registerMetaRoutes } from './route_meta.js';
 import { registerGatewayRoutes } from './route_gateway.js';
+import { registerGovRoutes } from './route_gov.js';
 import { registerGSpaceRoutes } from './route_gspace.js';
 import { registerIntegrationsRoutes } from './route_integrations.js';
 import { registerOrgRoutes } from './route_org.js';
@@ -99,6 +101,8 @@ export interface Deps {
   integrationsUC: IntegrationsUsecase;
   /** gspaceUC нь хэрэглэгчийн өөрийн файлын SFTP хадгалалт (квоттой). */
   gspaceUC: GSpaceUsecase;
+  /** govUC нь иргэний портал + менежерийн дараалал (хүсэлт, лавлагаа, төлбөр). */
+  govUC: GovUsecase;
   /** gatewayUC нь API Gateway-ийн admin гадаргуу (service CRUD + телеметр). */
   gatewayUC: GatewayUsecase;
   /**
@@ -130,6 +134,7 @@ export function registerRoutes(router: Router, deps: Deps): void {
   registerCoreRoutes(router, deps);
   registerEidProfileRoutes(router, deps);
   registerGatewayRoutes(router, deps);
+  registerGovRoutes(router, deps);
   registerGSpaceRoutes(router, deps);
   registerIntegrationsRoutes(router, deps);
   registerOrgRoutes(router, deps);
