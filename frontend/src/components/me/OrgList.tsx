@@ -1,7 +1,6 @@
-"use client";
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Plus, Save, X, Building2, ChevronRight } from 'lucide-react';
 import { useT } from '@/lib/lang';
@@ -37,7 +36,7 @@ export default function OrgList() {
 
   const orgsQuery = useQuery({
     queryKey: ['orgs'],
-    queryFn: () => getJSON<Organization[]>('/api/org'),
+    queryFn: () => getJSON<Organization[]>('/org'),
   });
 
   const items = orgsQuery.data ?? null;
@@ -57,7 +56,7 @@ export default function OrgList() {
     if (!form.reg_no.trim() || !form.name.trim()) return;
     setSaving(true);
     setActionError('');
-    const res = await postJSON('/api/org', {
+    const res = await postJSON('/org', {
       reg_no: form.reg_no.trim(),
       name: form.name.trim(),
       name_latin: form.name_latin.trim() || undefined,
@@ -150,7 +149,7 @@ export default function OrgList() {
                   <td data-label={T('org.role')}>{o.role ? T(roleKey(o.role)) : '—'}</td>
                   <td className="mono" data-label={T('org.created')}>{fmtDate(o.created_at)}</td>
                   <td className="users-table__actions">
-                    <Link className="btn btn--ghost btn--sm" href={`/me/organizations/${o.id}`} title={T('org.detail')}>
+                    <Link className="btn btn--ghost btn--sm" to={`/me/organizations/${o.id}`} title={T('org.detail')}>
                       <ChevronRight size={14} strokeWidth={2} />
                     </Link>
                   </td>

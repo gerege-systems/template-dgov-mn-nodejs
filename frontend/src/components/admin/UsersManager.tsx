@@ -1,4 +1,3 @@
-"use client";
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -68,11 +67,11 @@ export default function UsersManager({ currentUserId, currentUserRoleId, readOnl
 
   const usersQuery = useQuery({
     queryKey: ['admin-users', page],
-    queryFn: () => getJSON<AdminUser[]>(`/api/admin/users?offset=${page * PAGE_SIZE}&limit=${PAGE_SIZE}`),
+    queryFn: () => getJSON<AdminUser[]>(`/admin/users?offset=${page * PAGE_SIZE}&limit=${PAGE_SIZE}`),
   });
   const rolesQuery = useQuery({
     queryKey: ['rbac-roles'],
-    queryFn: () => getJSON<RoleItem[]>('/api/rbac/roles'),
+    queryFn: () => getJSON<RoleItem[]>('/rbac/roles'),
   });
 
   const items = usersQuery.data ?? null;
@@ -100,7 +99,7 @@ export default function UsersManager({ currentUserId, currentUserRoleId, readOnl
     if (!text) return;
     setLookingUp(true); setAddError(''); setCitizen(null);
     try {
-      const data = await getJSON<CoreCitizen>(`/api/core/users?search_text=${encodeURIComponent(text)}`);
+      const data = await getJSON<CoreCitizen>(`/core/users?search_text=${encodeURIComponent(text)}`);
       if (data && data.id != null) setCitizen(data);
       else setAddError((data && typeof data.message === 'string' ? data.message : '') || T('users.notFound'));
     } catch (e) {
@@ -116,7 +115,7 @@ export default function UsersManager({ currentUserId, currentUserRoleId, readOnl
     setSaving(true);
     // Нэр нь Core-оос ирнэ; иргэн эхлээд SSO-оор нэвтэрхэд SSO-гийн нэрээр
     // шинэчлэгдэнэ. register нь Core-ийн reg_no (эрх бүхий эх сурвалж).
-    const res = await sendJSON('/api/admin/users', 'POST', {
+    const res = await sendJSON('/admin/users', 'POST', {
       register: String(citizen.reg_no ?? register).trim(),
       first_name: citizen.first_name ? String(citizen.first_name) : undefined,
       last_name: citizen.last_name ? String(citizen.last_name) : undefined,
@@ -131,11 +130,11 @@ export default function UsersManager({ currentUserId, currentUserRoleId, readOnl
     }
   };
 
-  const changeRole = (id: string, roleId: number) => mutate(`/api/admin/users/${id}/role`, 'PUT', { role_id: roleId });
-  const toggleActive = (u: AdminUser) => mutate(`/api/admin/users/${u.id}/active`, 'PUT', { active: !u.active });
+  const changeRole = (id: string, roleId: number) => mutate(`/admin/users/${id}/role`, 'PUT', { role_id: roleId });
+  const toggleActive = (u: AdminUser) => mutate(`/admin/users/${u.id}/active`, 'PUT', { active: !u.active });
   const remove = (id: string) => {
     if (!window.confirm(T('users.deleteConfirm'))) return;
-    void mutate(`/api/admin/users/${id}`, 'DELETE');
+    void mutate(`/admin/users/${id}`, 'DELETE');
   };
 
   const fmtDate = (iso: string) => {

@@ -1,7 +1,5 @@
-"use client";
 
-import React from 'react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { KeyRound } from 'lucide-react';
 import { useT } from '@/lib/lang';
 import { roleLabel, displayName, type SessionUser } from '@/lib/types';
@@ -42,7 +40,7 @@ export default function HomeView({ me }: { me: SessionUser }) {
             </div>
           </div>
           <div className="profile-card__action">
-            <Link className="btn btn--secondary" href="/profile">{T('me.home.viewProfile')}</Link>
+            <Link className="btn btn--secondary" to="/profile">{T('me.home.viewProfile')}</Link>
           </div>
         </div>
       </section>
@@ -60,7 +58,6 @@ export default function HomeView({ me }: { me: SessionUser }) {
         {me.google ? (
           <div className="profile-card" style={{ marginBottom: 4 }}>
             {me.google.picture ? (
-              // eslint-disable-next-line @next/next/no-img-element
               <img className="profile-card__avatar" src={me.google.picture} alt="" width={44} height={44} style={{ objectFit: 'cover', padding: 0 }} referrerPolicy="no-referrer" />
             ) : (
               <div className="profile-card__avatar" aria-hidden="true">{initialsOf(me.google.name || me.google.email || 'G')}</div>

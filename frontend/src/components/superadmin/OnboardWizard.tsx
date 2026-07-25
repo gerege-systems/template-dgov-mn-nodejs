@@ -3,7 +3,7 @@
 
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { ShieldCheck, Loader2, Check, Copy, Download, RefreshCw } from 'lucide-react';
 import Alert from '@/components/Alert';
@@ -76,7 +76,7 @@ function GoogleStep({ error }: { error?: string }) {
       </div>
       {error && <Alert kind="danger">{error}</Alert>}
       <Alert kind="info">{T('onboard.inviteNotice')}</Alert>
-      <a className="btn btn--google btn--lg btn--block" href="/api/auth/superadmin/onboard/google/start">
+      <a className="btn btn--google btn--lg btn--block" href="/auth/superadmin/onboard/google/start">
         <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.2 13.3 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9.1h12.4c-.5 2.9-2.1 5.3-4.6 7l7.1 5.5c4.2-3.9 6.6-9.6 6.6-17z"/><path fill="#FBBC05" d="M10.4 28.3a14.5 14.5 0 0 1 0-8.6l-7.8-6.1a24 24 0 0 0 0 20.8l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.1-5.5c-2 1.4-4.6 2.2-8.8 2.2-6.4 0-11.8-3.8-13.6-9.3l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
         <span>{T('onboard.googleButton')}</span>
       </a>
@@ -114,7 +114,7 @@ function EidStep({ onboardToken, onDone }: { onboardToken: string; onDone: () =>
   }, []);
 
   const poll = useCallback(async (sessionId: string) => {
-    const res = await postJSON<{ state?: string; step?: string }>('/api/auth/superadmin/onboard/eid/poll', {
+    const res = await postJSON<{ state?: string; step?: string }>('/auth/superadmin/onboard/eid/poll', {
       onboard_token: onboardToken,
       session_id: sessionId,
     });
@@ -152,7 +152,7 @@ function EidStep({ onboardToken, onDone }: { onboardToken: string; onDone: () =>
     setPhase('starting');
     // Онбординг үед cross-device (browser өөрөө poll) — same-device callback resume
     // хийхгүй тул callbackUrl хоосон.
-    const res = await postJSON<StartData>('/api/auth/superadmin/onboard/eid/start', {
+    const res = await postJSON<StartData>('/auth/superadmin/onboard/eid/start', {
       onboard_token: onboardToken,
       callbackUrl: '',
     });
@@ -168,7 +168,7 @@ function EidStep({ onboardToken, onDone }: { onboardToken: string; onDone: () =>
     setStart(null); setIdError('');
     lastMethod.current = 'id';
     setPhase('starting');
-    const res = await postJSON<StartData>('/api/auth/superadmin/onboard/eid/start-id', {
+    const res = await postJSON<StartData>('/auth/superadmin/onboard/eid/start-id', {
       onboard_token: onboardToken,
       national_id: rd,
       callbackUrl: '',
@@ -292,7 +292,7 @@ function EmailStep({ onboardToken, email, onDone }: { onboardToken: string; emai
   const send = useCallback(async () => {
     setSending(true);
     setError('');
-    const res = await postJSON('/api/auth/superadmin/onboard/email/send', { onboard_token: onboardToken });
+    const res = await postJSON('/auth/superadmin/onboard/email/send', { onboard_token: onboardToken });
     setSending(false);
     if (!res.ok) setError(res.message || T('onboard.emailSendError'));
   }, [onboardToken, T]);
@@ -307,7 +307,7 @@ function EmailStep({ onboardToken, email, onDone }: { onboardToken: string; emai
     const c = code.trim();
     if (!c) { setError(T('onboard.codeRequired')); return; }
     setBusy(true); setError('');
-    const res = await postJSON('/api/auth/superadmin/onboard/email/verify', { onboard_token: onboardToken, code: c });
+    const res = await postJSON('/auth/superadmin/onboard/email/verify', { onboard_token: onboardToken, code: c });
     setBusy(false);
     if (res.ok) onDone();
     else setError(res.message || T('onboard.emailVerifyError'));
@@ -356,7 +356,7 @@ function TotpStep({ onboardToken, onDone }: { onboardToken: string; onDone: (cod
     initRef.current = true;
     (async () => {
       setLoading(true);
-      const res = await postJSON<{ secret: string; otpauth_url: string }>('/api/auth/superadmin/onboard/totp/init', { onboard_token: onboardToken });
+      const res = await postJSON<{ secret: string; otpauth_url: string }>('/auth/superadmin/onboard/totp/init', { onboard_token: onboardToken });
       setLoading(false);
       if (res.ok && res.data?.otpauth_url) setInit({ secret: res.data.secret, otpauth_url: res.data.otpauth_url });
       else setError(res.message || T('onboard.totpInitError'));
@@ -372,7 +372,7 @@ function TotpStep({ onboardToken, onDone }: { onboardToken: string; onDone: (cod
     const c = code.trim();
     if (!c) { setError(T('onboard.codeRequired')); return; }
     setBusy(true); setError('');
-    const res = await postJSON<{ recovery_codes?: string[] }>('/api/auth/superadmin/onboard/totp/verify', { onboard_token: onboardToken, code: c });
+    const res = await postJSON<{ recovery_codes?: string[] }>('/auth/superadmin/onboard/totp/verify', { onboard_token: onboardToken, code: c });
     setBusy(false);
     if (res.ok) onDone(res.data?.recovery_codes ?? []);
     else setError(res.message || T('onboard.totpVerifyError'));
@@ -512,7 +512,7 @@ export default function OnboardWizard({ code, gerror }: { code?: string; gerror?
     exchangedRef.current = true;
     setExchanging(true);
     (async () => {
-      const res = await postJSON<{ onboard_token?: string; email?: string }>('/api/auth/superadmin/onboard/google', { code });
+      const res = await postJSON<{ onboard_token?: string; email?: string }>('/auth/superadmin/onboard/google', { code });
       setExchanging(false);
       // URL-аас code-ийг цэвэрлэнэ (дахин exchange хийхгүй, refresh-д аюулгүй).
       try { window.history.replaceState(null, '', '/superadmin/onboard'); } catch { /* no-op */ }

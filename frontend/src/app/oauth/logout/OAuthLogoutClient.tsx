@@ -4,7 +4,7 @@
 // (/api/provider/logout/accept) RP руу буцна.
 'use client';
 
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { postJSON } from '@/lib/client';
 
@@ -18,8 +18,8 @@ export default function OAuthLogoutClient({ challenge }: { challenge: string }) 
       return;
     }
     setBusy(true);
-    await postJSON('/api/auth/logout', undefined).catch(() => {});
-    const r = await postJSON<{ redirect_to?: string }>('/api/provider/logout/accept', {
+    await postJSON('/auth/logout', undefined).catch(() => {});
+    const r = await postJSON<{ redirect_to?: string }>('/provider/logout/accept', {
       logout_challenge: challenge,
     });
     if (r.ok && r.data?.redirect_to) {
@@ -43,7 +43,7 @@ export default function OAuthLogoutClient({ challenge }: { challenge: string }) 
       {error && <div className="field__error">{error}</div>}
 
       <div style={{ display: 'flex', gap: 10 }}>
-        <Link className="btn btn--secondary btn--lg btn--block" href="/">
+        <Link className="btn btn--secondary btn--lg btn--block" to="/">
           Цуцлах
         </Link>
         <button

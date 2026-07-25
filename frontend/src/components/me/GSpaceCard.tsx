@@ -1,4 +1,3 @@
-"use client";
 
 import React, { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -61,7 +60,7 @@ export default function GSpaceCard() {
   // Ашиглалтын самбарыг картан дээр шууд харуулна (нэг SFTP list дуудлага).
   const q = useQuery({
     queryKey: ['gspace'],
-    queryFn: () => getJSON<GSpaceOverview>('/api/gspace'),
+    queryFn: () => getJSON<GSpaceOverview>('/gspace'),
   });
   const ov = q.data;
   const files = ov?.files ?? [];
@@ -82,7 +81,7 @@ export default function GSpaceCard() {
         return;
       }
       const data = await fileToBase64(file);
-      const res = await postJSON('/api/gspace/upload', { name: file.name, data });
+      const res = await postJSON('/gspace/upload', { name: file.name, data });
       if (res.ok) await qc.invalidateQueries({ queryKey: ['gspace'] });
       else setErr(res.message || 'Хуулахад алдаа гарлаа.');
     } catch {
@@ -95,7 +94,7 @@ export default function GSpaceCard() {
   const onDelete = async (name: string) => {
     if (!window.confirm(`«${name}»-г устгах уу?`)) return;
     setBusyName(name); setErr('');
-    const res = await sendJSON(`/api/gspace?name=${encodeURIComponent(name)}`, 'DELETE');
+    const res = await sendJSON(`/gspace?name=${encodeURIComponent(name)}`, 'DELETE');
     setBusyName('');
     if (res.ok) await qc.invalidateQueries({ queryKey: ['gspace'] });
     else setErr(res.message || 'Устгахад алдаа гарлаа.');
@@ -185,7 +184,7 @@ export default function GSpaceCard() {
                   </span>
                 </span>
                 <span className="defrow__value" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  <a className="btn btn--ghost btn--sm" href={`/api/gspace/download?name=${encodeURIComponent(f.name)}`} title="Татах"><Download size={14} /></a>
+                  <a className="btn btn--ghost btn--sm" href={`/gspace/download?name=${encodeURIComponent(f.name)}`} title="Татах"><Download size={14} /></a>
                   <button className="btn btn--ghost btn--sm" type="button" title="Устгах" onClick={() => onDelete(f.name)} disabled={busyName === f.name}>
                     {busyName === f.name ? <Loader2 size={14} className="spin" /> : <Trash2 size={14} />}
                   </button>

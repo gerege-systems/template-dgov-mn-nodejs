@@ -1,24 +1,23 @@
 // Government Template Platform V3.0
 // Gerege Systems Development Team & Claude AI, 2026
-import React from 'react';
 import { LogIn } from 'lucide-react';
 import SigninShell from '@/components/SigninShell';
 import { safeNext } from '@/lib/navigation';
+import { useSearchParams } from 'react-router-dom';
+import { usePageTitle } from '@/lib/usePageTitle';
+import { startSSOLogin } from '@/lib/authFlows';
 
-export const dynamic = 'force-dynamic';
 
-export const metadata = { title: 'Нэвтрэх — Government Template Platform V3.0' };
 
 // Нэвтрэлт нь Government SSO (sso.dgov.mn)-оор дамжина. Товч дарахад sso.dgov.mn
 // руу шилжиж, тэндээ нэвтэрч, буцаж ирнэ (OIDC RP урсгал). SSO callback амжилтгүй
 // бол энд ?error=sso-тэй буцаж, дахин оролдох боломж өгнө.
-export default async function LoginPage(props: {
-  searchParams: Promise<{ next?: string; error?: string }>;
-}) {
-  const searchParams = await props.searchParams;
-  const next = safeNext(searchParams.next);
-  const ssoHref = `/api/auth/sso/start${next && next !== '/' ? `?next=${encodeURIComponent(next)}` : ''}`;
-  const failed = searchParams.error === 'sso';
+export default function LoginPage() {
+  usePageTitle('Нэвтрэх');
+  const [searchParams] = useSearchParams();
+  const next = safeNext((searchParams.get('next') ?? undefined));
+  const startSso = () => void startSSOLogin(next);
+  const failed = (searchParams.get('error') ?? undefined) === 'sso';
 
   return (
     <SigninShell>
@@ -50,7 +49,7 @@ export default async function LoginPage(props: {
 
         <a
           className="btn btn--eid btn--lg btn--block"
-          href={ssoHref}
+          onClick={startSso}
           style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
         >
           <LogIn size={18} strokeWidth={2} />

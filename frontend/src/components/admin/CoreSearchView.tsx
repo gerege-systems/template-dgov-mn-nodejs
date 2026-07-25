@@ -1,4 +1,3 @@
-"use client";
 
 import React, { useState } from 'react';
 import { Search, User, Building2, Loader2, Inbox } from 'lucide-react';
@@ -44,7 +43,7 @@ export default function CoreSearchView() {
     setLoading(true); setMsg(''); setResult(null);
     try {
       const path = mode === 'user' ? 'users' : 'organizations';
-      const data = await getJSON<Rec>(`/api/core/${path}?search_text=${encodeURIComponent(text)}`);
+      const data = await getJSON<Rec>(`/core/${path}?search_text=${encodeURIComponent(text)}`);
       if (data && data.id != null) setResult(data);
       else setMsg(typeof data?.message === 'string' ? data.message : 'Илэрц олдсонгүй.');
     } catch (e) {

@@ -1,10 +1,8 @@
-"use client";
 
 // Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
 
-import React from 'react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { User, Mail, ShieldCheck, Clock, Hash, RefreshCw } from 'lucide-react';
 import { useT } from '@/lib/lang';
 import { roleLabel, displayName, type SessionUser } from '@/lib/types';
@@ -43,7 +41,7 @@ export default function ProfileView({ me }: { me: SessionUser }) {
             </div>
           </div>
           <div className="profile-card__action">
-            <Link className="btn btn--secondary" href="/settings">{T('me.profile.changePw')}</Link>
+            <Link className="btn btn--secondary" to="/settings">{T('me.profile.changePw')}</Link>
           </div>
         </div>
       </section>

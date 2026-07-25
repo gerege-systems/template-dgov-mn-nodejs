@@ -1,10 +1,9 @@
-"use client";
 
 // Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
 
-import React, { useState } from 'react';
-import Link from 'next/link';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, ArrowLeft, Building2, Clock, ArrowUp } from 'lucide-react';
 import { getJSON, postJSON } from '@/lib/client';
@@ -41,8 +40,8 @@ function AssignmentRow({ a }: { a: RelayAssignment }) {
 export default function RelayRequestDetailView({ id }: { id: string }) {
   const { T } = useT();
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ['relay-req', id], queryFn: () => getJSON<RelayRequestDetail>(`/api/relay/requests/${id}`), refetchInterval: POLL_MS });
-  const platforms = useQuery({ queryKey: ['relay-platforms'], queryFn: () => getJSON<RelayPlatform[]>('/api/relay/platforms') });
+  const q = useQuery({ queryKey: ['relay-req', id], queryFn: () => getJSON<RelayRequestDetail>(`/relay/requests/${id}`), refetchInterval: POLL_MS });
+  const platforms = useQuery({ queryKey: ['relay-platforms'], queryFn: () => getJSON<RelayPlatform[]>('/relay/platforms') });
   const [upTo, setUpTo] = useState('');
   const [fwErr, setFwErr] = useState('');
   const [fwBusy, setFwBusy] = useState(false);
@@ -50,7 +49,7 @@ export default function RelayRequestDetailView({ id }: { id: string }) {
   const forwardUp = async () => {
     if (!upTo) return;
     setFwErr(''); setFwBusy(true);
-    const res = await postJSON(`/api/relay/requests/${id}/forward`, { platform_code: upTo });
+    const res = await postJSON(`/relay/requests/${id}/forward`, { platform_code: upTo });
     setFwBusy(false);
     if (!res.ok) { setFwErr(res.message || 'error'); return; }
     setUpTo('');
@@ -64,7 +63,7 @@ export default function RelayRequestDetailView({ id }: { id: string }) {
 
   return (
     <>
-      <Link href="/admin/relay" className="btn btn--ghost" style={{ marginBottom: 12, display: 'inline-flex', gap: 6 }}>
+      <Link to="/admin/relay" className="btn btn--ghost" style={{ marginBottom: 12, display: 'inline-flex', gap: 6 }}>
         <ArrowLeft size={15} /> {T('relay.back')}
       </Link>
 

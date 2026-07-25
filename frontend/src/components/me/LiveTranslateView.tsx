@@ -1,6 +1,5 @@
-"use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Languages, Mic, Square, Volume2 } from 'lucide-react';
 import PageHead from '@/components/PageHead';
 import { useT } from '@/lib/lang';
@@ -69,7 +68,7 @@ export default function LiveTranslateView() {
         source_text?: string;
         translated?: string;
         audio?: { mime: string; data: string };
-      }>('/api/ai/translate', { audio: { mime, data }, target_lang: targetLang, speak: withSpeak });
+      }>('/ai/translate', { audio: { mime, data }, target_lang: targetLang, speak: withSpeak });
       const d = body.data;
       if (body.ok && d?.translated) {
         setRows((r) => [...r, { source: d.source_text ?? '', translated: d.translated ?? '' }]);

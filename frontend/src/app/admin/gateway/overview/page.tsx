@@ -1,13 +1,10 @@
-import React from 'react';
 import PageHead from '@/components/PageHead';
 import GatewayOverviewView from '@/components/gateway/GatewayOverviewView';
-import { requireGatewayAccess } from '../guard';
+import { usePageTitle } from '@/lib/usePageTitle';
 
-export const dynamic = 'force-dynamic';
-export const metadata = { title: 'API Gateway — Тойм' };
 
-export default async function Page() {
-  await requireGatewayAccess();
+export default function Page() {
+  usePageTitle('API Gateway — Тойм');
   return (
     <>
       <PageHead eyebrowKey="group.gateway" titleKey="nav.gwOverview" subKey="gateway.overview.sub" />

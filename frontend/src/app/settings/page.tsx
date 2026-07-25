@@ -1,8 +1,7 @@
-import { redirect } from 'next/navigation';
+import { Navigate } from 'react-router-dom';
 
-export const dynamic = 'force-dynamic';
 
 // /settings → /me/settings рүү шилжсэн (хуучин bookmark-уудыг хадгална).
 export default function SettingsRedirect() {
-  redirect('/me/settings');
+  return <Navigate to='/me/settings' replace />;
 }

@@ -1,6 +1,5 @@
-"use client";
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell, CheckCheck, CheckCircle2, AlertTriangle, Info, Inbox } from 'lucide-react';
 import { getJSON, postJSON } from '@/lib/client';
@@ -16,7 +15,7 @@ function icon(category: string) {
 export default function GovNotificationsView() {
   const qc = useQueryClient();
   const [err, setErr] = useState('');
-  const q = useQuery({ queryKey: ['gov-notifications'], queryFn: () => getJSON<GovNotification[]>('/api/gov/notifications') });
+  const q = useQuery({ queryKey: ['gov-notifications'], queryFn: () => getJSON<GovNotification[]>('/gov/notifications') });
   const items = q.data ?? [];
   const hasUnread = items.some((n) => !n.read);
 
@@ -24,12 +23,12 @@ export default function GovNotificationsView() {
 
   const markRead = async (n: GovNotification) => {
     if (n.read) return;
-    const res = await postJSON(`/api/gov/notifications/${n.id}/read`, {});
+    const res = await postJSON(`/gov/notifications/${n.id}/read`, {});
     if (res.ok) await refresh(); else setErr(res.message || 'Алдаа гарлаа.');
   };
 
   const markAll = async () => {
-    const res = await postJSON('/api/gov/notifications/read-all', {});
+    const res = await postJSON('/gov/notifications/read-all', {});
     if (res.ok) await refresh(); else setErr(res.message || 'Алдаа гарлаа.');
   };
 

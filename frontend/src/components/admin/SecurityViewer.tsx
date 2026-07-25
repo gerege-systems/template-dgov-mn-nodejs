@@ -1,4 +1,3 @@
-"use client";
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -29,7 +28,7 @@ export default function SecurityViewer() {
 
   const query = useQuery({
     queryKey: ['security-events', limit, offset],
-    queryFn: () => getJSON<SecurityEvent[]>(`/api/security/events?limit=${limit}&offset=${offset}`),
+    queryFn: () => getJSON<SecurityEvent[]>(`/security/events?limit=${limit}&offset=${offset}`),
   });
 
   const rows = query.data ?? null;

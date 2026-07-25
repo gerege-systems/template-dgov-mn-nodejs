@@ -1,6 +1,4 @@
-"use client";
 
-import React from 'react';
 import { useT } from '@/lib/lang';
 import type { DictKey } from '@/lib/i18n';
 

@@ -1,13 +1,10 @@
-import React from 'react';
-import { redirect } from 'next/navigation';
 import HomeView from '@/components/me/HomeView';
-import { fetchMe } from '@/lib/api';
+import { useMe } from '@/lib/session';
+import { usePageTitle } from '@/lib/usePageTitle';
 
-export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Хяналтын самбар — Government Template Platform V3.0' };
 
-export default async function MeDashboardPage() {
-  const me = await fetchMe();
-  if (!me) redirect('/login?next=/me/dashboard');
+export default function MeDashboardPage() {
+  usePageTitle('Хяналтын самбар');
+  const me = useMe();
   return <HomeView me={me} />;
 }

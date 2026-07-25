@@ -1,9 +1,8 @@
-"use client";
 
 // Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ShieldCheck, KeyRound } from 'lucide-react';
 import { useT } from '@/lib/lang';
@@ -19,7 +18,7 @@ export default function EidCertificatesView({ show }: { show: boolean }) {
   const [filter, setFilter] = useState<Filter>('all');
   const q = useQuery({
     queryKey: ['eid-pki-certs'],
-    queryFn: () => pkiGet<{ certificates: PkiCertItem[] }>('/api/me/eid/certificates'),
+    queryFn: () => pkiGet<{ certificates: PkiCertItem[] }>('/me/eid/certificates'),
     enabled: show,
   });
 

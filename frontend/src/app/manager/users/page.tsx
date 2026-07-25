@@ -1,17 +1,12 @@
-import React from 'react';
-import { redirect } from 'next/navigation';
 import PageHead from '@/components/PageHead';
 import UsersManager from '@/components/admin/UsersManager';
-import { fetchMe, fetchMyPermissions } from '@/lib/api';
+import { useMe } from '@/lib/session';
+import { usePageTitle } from '@/lib/usePageTitle';
 
-export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Хэрэглэгчид — Менежер' };
 
-export default async function ManagerUsersPage() {
-  const me = await fetchMe();
-  if (!me) redirect('/login?next=/manager/users');
-  const perms = await fetchMyPermissions();
-  if (!perms.includes('users.manage')) redirect('/');
+export default function ManagerUsersPage() {
+  usePageTitle('Хэрэглэгчид — Менежер');
+  const me = useMe();
 
   return (
     <>

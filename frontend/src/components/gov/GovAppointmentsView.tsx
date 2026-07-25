@@ -1,6 +1,5 @@
-"use client";
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CalendarClock, Plus, X, Inbox, Loader2 } from 'lucide-react';
 import { getJSON, postJSON } from '@/lib/client';
@@ -21,15 +20,15 @@ export default function GovAppointmentsView() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
-  const apptQ = useQuery({ queryKey: ['gov-appointments'], queryFn: () => getJSON<GovAppointment[]>('/api/gov/appointments') });
-  const svcQ = useQuery({ queryKey: ['gov-services'], queryFn: () => getJSON<GovService[]>('/api/gov/services') });
+  const apptQ = useQuery({ queryKey: ['gov-appointments'], queryFn: () => getJSON<GovAppointment[]>('/gov/appointments') });
+  const svcQ = useQuery({ queryKey: ['gov-services'], queryFn: () => getJSON<GovService[]>('/gov/services') });
   const items = apptQ.data ?? [];
   const services = svcQ.data ?? [];
 
   const book = async () => {
     if (!when) { setErr('Огноо цагаа сонгоно уу.'); return; }
     setBusy(true); setErr('');
-    const res = await postJSON('/api/gov/appointments', {
+    const res = await postJSON('/gov/appointments', {
       service_id: serviceId || undefined,
       scheduled_at: new Date(when).toISOString(),
       location,
@@ -44,7 +43,7 @@ export default function GovAppointmentsView() {
   const cancel = async (a: GovAppointment) => {
     if (!window.confirm('Цаг захиалгыг цуцлах уу?')) return;
     setErr('');
-    const res = await postJSON(`/api/gov/appointments/${a.id}/cancel`, {});
+    const res = await postJSON(`/gov/appointments/${a.id}/cancel`, {});
     if (res.ok) await qc.invalidateQueries({ queryKey: ['gov-appointments'] });
     else setErr(res.message || 'Цуцлахад алдаа гарлаа.');
   };

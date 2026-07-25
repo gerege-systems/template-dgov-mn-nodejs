@@ -1,6 +1,5 @@
-"use client";
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Video, Loader2, ExternalLink, Copy, Check } from 'lucide-react';
 import { postJSON } from '@/lib/client';
 
@@ -21,7 +20,7 @@ export default function MeetSpace() {
   const create = async () => {
     setCreating(true);
     setErr('');
-    const res = await postJSON<MeetSpaceData>('/api/integrations/google-meet/create-space', {});
+    const res = await postJSON<MeetSpaceData>('/integrations/google-meet/create-space', {});
     setCreating(false);
     if (res.ok && res.data?.meetingUri) setMeet(res.data);
     else setErr(res.message || 'Уулзалт үүсгэхэд алдаа гарлаа.');

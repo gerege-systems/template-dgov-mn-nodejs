@@ -1,21 +1,20 @@
-import React from 'react';
-import { redirect } from 'next/navigation';
 import PageHead from '@/components/PageHead';
 import OrgDetail from '@/components/me/OrgDetail';
-import { fetchMe } from '@/lib/api';
+import { useParams } from 'react-router-dom';
+import { useMe } from '@/lib/session';
+import { usePageTitle } from '@/lib/usePageTitle';
 
-export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Байгууллага — Government Template Platform V3.0' };
 
-export default async function MeOrganizationDetailPage(props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
-  const me = await fetchMe();
-  if (!me) redirect(`/login?next=/me/organizations/${params.id}`);
+export default function MeOrganizationDetailPage() {
+  usePageTitle('Байгууллага');
+  const params = useParams();
+  const routeId = params.id ?? params.regNo ?? '';
+  const me = useMe();
 
   return (
     <>
       <PageHead eyebrowKey="sys.user" titleKey="org.title" subKey="org.detail" />
-      <OrgDetail orgId={params.id} currentUserId={me.id} />
+      <OrgDetail orgId={routeId} currentUserId={me.id} />
     </>
   );
 }

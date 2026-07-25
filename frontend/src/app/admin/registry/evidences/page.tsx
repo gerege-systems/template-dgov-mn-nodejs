@@ -1,13 +1,10 @@
-import React from 'react';
 import PageHead from '@/components/PageHead';
 import RegistryEvidencesView from '@/components/registry/RegistryEvidencesView';
-import { requireRegistryAccess } from '../guard';
+import { usePageTitle } from '@/lib/usePageTitle';
 
-export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Нотолгооны каталог — Ring System' };
 
-export default async function Page() {
-  await requireRegistryAccess();
+export default function Page() {
+  usePageTitle('Нотолгооны каталог — Ring System');
   return (
     <>
       <PageHead eyebrowKey="group.registry" titleKey="nav.registryEvidences" subKey="registry.evidences.sub" />

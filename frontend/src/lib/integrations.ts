@@ -1,4 +1,3 @@
-import 'server-only';
 
 // Гуравдагч этгээдийн интеграцийн (Google Drive, Dropbox, Google Meet) OAuth
 // бүртгэл. Зөвхөн server талд уншигдана — client ID/secret хэзээ ч browser-т
@@ -62,11 +61,18 @@ export function getIntegration(id: string): IntegrationProvider | undefined {
   return INTEGRATIONS.find((p) => p.id === id);
 }
 
-// configured нь client ID env тохируулагдсан эсэхээр "холбох боломжтой"
-// эсэхийг шийднэ. Secret-ийг шалгахгүй (энэ нь page-д харагдах статусыг тогтоох
-// зорилготой; secret зөвхөн token exchange-д хэрэгтэй).
-export function isConfigured(p: IntegrationProvider): boolean {
-  return !!(process.env[p.clientIdEnv] || '').trim();
+/**
+ * isConfigured нь тухайн провайдерыг ХОЛБОХ боломжтой эсэхийг заана.
+ *
+ * ⚠️ SPA-д одоогоор ҮРГЭЛЖ false: гуравдагч талын OAuth code-ийг солихдоо
+ * client secret шаардагддаг тул тэр алхам зөвхөн СЕРВЕР талд байж болно. BFF
+ * устсан бөгөөд API нь эдгээр провайдерын OAuth-ийг хараахан хэрэгжүүлээгүй —
+ * иймд "холбох" товч харагдахгүй (жагсаах/салгах нь API-аар ажилласаар байна).
+ * API талд `/integrations/:provider/connect` нэмэгдмэгц энэ утгыг тэндээс
+ * (`/config`) уншина.
+ */
+export function isConfigured(_p: IntegrationProvider): boolean {
+  return false;
 }
 
 // IntegrationStatus нь page-аас view руу дамжуулах серилизованих аюулгүй төлөв —
@@ -95,77 +101,7 @@ export type IntegrationToken = {
   expires_at?: number;
 };
 
-// exchangeCodeForToken нь authorization code-г провайдерын token endpoint руу
-// client_secret-тэйгээр илгээж access/refresh токен болгон солилцоно. Алдаа
-// гарвал throw хийнэ (callback нь exchange_failed-ээр буцаана).
-export async function exchangeCodeForToken(
-  p: IntegrationProvider,
-  origin: string,
-  code: string,
-): Promise<IntegrationToken> {
-  const body = new URLSearchParams({
-    code,
-    client_id: process.env[p.clientIdEnv] || '',
-    client_secret: process.env[p.clientSecretEnv] || '',
-    redirect_uri: redirectURI(origin, p.id),
-    grant_type: 'authorization_code',
-  });
-
-  const res = await fetch(p.tokenUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
-    body,
-    cache: 'no-store',
-  });
-  if (!res.ok) {
-    throw new Error(`token exchange failed: ${res.status}`);
-  }
-  const json = (await res.json()) as {
-    access_token?: string;
-    refresh_token?: string;
-    expires_in?: number;
-  };
-  if (!json.access_token) {
-    throw new Error('token exchange: no access_token in response');
-  }
-  return {
-    access_token: json.access_token,
-    refresh_token: json.refresh_token,
-    expires_at: json.expires_in ? Date.now() + json.expires_in * 1000 : undefined,
-  };
-}
-
-// appOrigin нь OAuth redirect_uri болон буцах redirect-д ашиглах нийтийн
-// origin. Reverse proxy-ний цаана req.url-ийн origin (дотоод хаяг) буруу байж
-// болзошгүй тул тохируулсан APP_ORIGIN-г эрхэмлэнэ; эс бөгөөс req-ээс гаргана.
-// redirect_uri нь Google/Dropbox-д бүртгэсэнтэй ЯГ таарах ёстой тул энэ нь
-// чухал — connect ба callback хоёр ижил утгыг ашиглана.
-export function appOrigin(req: Request): string {
-  const configured = (process.env.APP_ORIGIN || '').split(',')[0].trim();
-  return configured || new URL(req.url).origin;
-}
-
-// redirectURI нь тухайн origin дээрх BFF callback зам.
-export function redirectURI(origin: string, id: IntegrationID): string {
-  return `${origin.replace(/\/$/, '')}/api/integrations/${id}/callback`;
-}
-
-// buildAuthorizeURL нь провайдерын authorize endpoint рүү чиглэх бүрэн URL-ийг
-// CSRF-ийн state-тэйгээр бүтээнэ.
-export function buildAuthorizeURL(p: IntegrationProvider, origin: string, state: string): string {
-  const u = new URL(p.authorizeUrl);
-  u.searchParams.set('client_id', process.env[p.clientIdEnv] || '');
-  u.searchParams.set('redirect_uri', redirectURI(origin, p.id));
-  u.searchParams.set('response_type', 'code');
-  u.searchParams.set('scope', p.scope);
-  u.searchParams.set('state', state);
-  // access_type=offline + prompt=consent — refresh_token-ийг ҮРГЭЛЖ буцаахын
-  // тулд (offline ганцаараа дахин зөвшөөрөлд refresh_token өгдөггүй). Ингэснээр
-  // access token хугацаа дуусахад refresh хийж чадна.
-  u.searchParams.set('access_type', 'offline');
-  u.searchParams.set('prompt', 'consent');
-  // token_access_type=offline — Dropbox-ийн refresh_token авах параметр (Google
-  // үүнийг үл хэрэгсэнэ). Ингэснээр Dropbox-ийн богино настай токеныг шинэчилнэ.
-  u.searchParams.set('token_access_type', 'offline');
-  return u.toString();
-}
+// ⚠️ Гуравдагч талын OAuth-ийн token exchange (client_secret шаарддаг) энэ
+// модульд ОРОХГҮЙ: SPA нь статикаар түгээгддэг тул ямар ч нууц агуулж болохгүй.
+// Тэр алхмыг API талд (`/integrations/:provider/connect|callback`) хэрэгжүүлэх
+// хүртэл "холбох" боломж хаалттай — жагсаах/салгах нь API-аар ажиллана.

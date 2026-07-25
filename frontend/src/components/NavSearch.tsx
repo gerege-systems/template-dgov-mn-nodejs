@@ -1,10 +1,9 @@
-"use client";
 
 // Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
 
-import React, { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search } from 'lucide-react';
 
 // Дээд талын хайлт — command-palette маягаар цэсний зүйлсийг (эрхийн дагуу
@@ -16,7 +15,7 @@ export interface SearchItem {
 }
 
 export default function NavSearch({ items, placeholder, emptyText }: { items: SearchItem[]; placeholder: string; emptyText: string }) {
-  const router = useRouter();
+  const navigate = useNavigate();
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
@@ -42,7 +41,7 @@ export default function NavSearch({ items, placeholder, emptyText }: { items: Se
   const go = (href: string) => {
     setQ('');
     setOpen(false);
-    router.push(href);
+    navigate(href);
   };
 
   return (

@@ -12,6 +12,7 @@ import {
 import { useLang } from '@/lib/lang';
 import { landingCopy, type LandingCopy } from './copy';
 import { deepMerge } from '@/lib/theme';
+import { startSSOLogin } from '@/lib/authFlows';
 
 // Нээлттэй эх (Open Source) кодын GitHub репозитор.
 const GITHUB_URL = 'https://github.com/gerege-systems/template-dgov-mn';
@@ -54,7 +55,7 @@ export default function LandingPage({ next, themeLanding }: Props) {
   const brand = t.brand || 'Government Template Platform V3.0';
   // Government SSO (sso.dgov.mn) руу нэвтрэлт эхлүүлэх — backend /sso/start руу
   // прокси хийж, browser-ийг sso.dgov.mn-ий authorize URL руу шилжүүлнэ.
-  const ssoHref = `/api/auth/sso/start${next ? `?next=${encodeURIComponent(next)}` : ''}`;
+  const startSso = () => void startSSOLogin(next);
 
   return (
     <div className="lp">
@@ -62,7 +63,6 @@ export default function LandingPage({ next, themeLanding }: Props) {
       <header className="lp-nav">
         <div className="lp-nav__inner">
           <a className="lp-nav__brand" href="#top">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img className="lp-nav__mark" src="/brand.webp" alt="" aria-hidden="true" />
             <span className="lp-nav__name">{brand}</span>
           </a>
@@ -84,10 +84,10 @@ export default function LandingPage({ next, themeLanding }: Props) {
               <Languages size={15} strokeWidth={2} />
               <span>{lang === 'mn' ? 'EN' : 'МН'}</span>
             </button>
-            <a className="lp-btn lp-btn--gold lp-btn--sm" href={ssoHref}>
+            <button type="button" className="lp-btn lp-btn--gold lp-btn--sm" onClick={startSso}>
               <LogIn size={16} strokeWidth={2} />
               <span>{t.nav.login}</span>
-            </a>
+            </button>
             <button
               type="button"
               className="lp-nav__burger"
@@ -129,10 +129,10 @@ export default function LandingPage({ next, themeLanding }: Props) {
               <p className="lp-hero__lede">{t.hero.lede}</p>
 
               <div className="lp-hero__cta">
-                <a className="lp-btn lp-btn--gold lp-btn--lg" href={ssoHref}>
+                <button type="button" className="lp-btn lp-btn--gold lp-btn--lg" onClick={startSso}>
                   {t.hero.ctaLogin}
                   <ArrowRight size={18} strokeWidth={2} />
-                </a>
+                </button>
                 <a className="lp-btn lp-btn--outline lp-btn--lg" href={GITHUB_URL} target="_blank" rel="noreferrer">
                   <GitHubMark size={18} />
                   {t.hero.ctaExplore}
@@ -301,10 +301,10 @@ export default function LandingPage({ next, themeLanding }: Props) {
             <h2>{t.cta.title}</h2>
             <p>{t.cta.sub}</p>
             <div className="lp-cta__buttons">
-              <a className="lp-btn lp-btn--gold lp-btn--lg" href={ssoHref}>
+              <button type="button" className="lp-btn lp-btn--gold lp-btn--lg" onClick={startSso}>
                 {t.cta.ctaLogin}
                 <ArrowRight size={18} strokeWidth={2} />
-              </a>
+              </button>
               <a className="lp-btn lp-btn--glass lp-btn--lg" href={GITHUB_URL} target="_blank" rel="noreferrer">
                 <GitHubMark size={18} />
                 {t.cta.ctaExplore}
@@ -320,7 +320,6 @@ export default function LandingPage({ next, themeLanding }: Props) {
         <div className="lp-container lp-footer__inner">
           <div className="lp-footer__brand">
             <div className="lp-footer__mark">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/brand.webp" alt="" aria-hidden="true" />
               <span>{brand}</span>
             </div>

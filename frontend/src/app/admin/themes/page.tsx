@@ -1,17 +1,11 @@
-import React from 'react';
-import { redirect } from 'next/navigation';
 import PageHead from '@/components/PageHead';
 import ThemeManager from '@/components/admin/ThemeManager';
-import { fetchMe, fetchMyPermissions } from '@/lib/api';
 
-export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Landing theme — Админ' };
+import { usePageTitle } from '@/lib/usePageTitle';
 
-export default async function AdminThemesPage() {
-  const me = await fetchMe();
-  if (!me) redirect('/login?next=/admin/themes');
-  const perms = await fetchMyPermissions();
-  if (!perms.includes('settings.manage')) redirect('/');
+
+export default function AdminThemesPage() {
+  usePageTitle('Landing theme — Админ');
 
   return (
     <>

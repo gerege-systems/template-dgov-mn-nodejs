@@ -199,3 +199,22 @@ export function roleLabel(roleId: number, lang: 'mn' | 'en' = 'mn'): string {
   const en: Record<number, string> = { 1: 'Superadmin', 2: 'Admin', 3: 'Manager', 4: 'User' };
   return (lang === 'en' ? en : mn)[roleId] ?? (lang === 'en' ? 'User' : 'Хэрэглэгч');
 }
+
+/**
+ * SiteAppearance нь сайтын нийтийн харагдацын өгөгдмөл (нэвтрээгүй үзэгчид ч
+ * хамаарна) — өнгө, фонт, нягтрал, гэрэл/бараан.
+ */
+export interface SiteAppearance {
+  accent: string;
+  font: 'inter' | 'serif' | 'system';
+  style: 'comfortable' | 'compact';
+  theme: 'light' | 'dark' | 'system';
+}
+
+/** DEFAULT_SITE_APPEARANCE нь backend хариулаагүй үеийн аюулгүй өгөгдмөл. */
+export const DEFAULT_SITE_APPEARANCE: SiteAppearance = {
+  accent: 'cobalt',
+  font: 'inter',
+  style: 'comfortable',
+  theme: 'light',
+};

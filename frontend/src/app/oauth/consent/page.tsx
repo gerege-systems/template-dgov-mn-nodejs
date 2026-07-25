@@ -1,21 +1,28 @@
-// eID based AI enabled Government Template Platform V3.0
-// OIDC provider consent хуудас — Hydra нь consent_challenge-тэй энд чиглүүлнэ.
-import { redirect } from 'next/navigation';
-import { getAccessToken } from '@/lib/session';
+// Government Template Platform V3.0
+// Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
+
+import React from 'react';
+import { Navigate, useSearchParams } from 'react-router-dom';
+
+import { useSession } from '@/lib/session';
 import ConsentClient from './ConsentClient';
 
-export const dynamic = 'force-dynamic';
+/**
+ * OIDC зөвшөөрлийн хуудас. Challenge-гүй бол нүүр рүү; нэвтрээгүй бол нэвтрэх
+ * хуудас руу (буцаад энэ challenge дээрээ ирнэ).
+ */
+export default function OAuthConsentPage(): React.ReactElement | null {
+  const [searchParams] = useSearchParams();
+  const { me, loading } = useSession();
+  const challenge = searchParams.get('consent_challenge') ?? '';
 
-export default async function OAuthConsentPage(props: {
-  searchParams: Promise<{ consent_challenge?: string }>;
-}) {
-  const { consent_challenge: challenge } = await props.searchParams;
-  if (!challenge) redirect('/');
-  const token = await getAccessToken();
-  if (!token) {
+  if (!challenge) return <Navigate to="/" replace />;
+  if (loading) return null;
+  if (!me) {
     const ret = `/oauth/consent?consent_challenge=${encodeURIComponent(challenge)}`;
-    redirect(`/login?next=${encodeURIComponent(ret)}`);
+    return <Navigate to={`/login?next=${encodeURIComponent(ret)}`} replace />;
   }
+
   return (
     <section className="signin-card" aria-labelledby="consent-title">
       <ConsentClient challenge={challenge} />

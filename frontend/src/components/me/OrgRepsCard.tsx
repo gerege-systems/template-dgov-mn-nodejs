@@ -1,10 +1,9 @@
-"use client";
 
 // Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
 
 import React, { useState } from 'react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Building2, Plus, ChevronRight } from 'lucide-react';
 import { useT } from '@/lib/lang';
@@ -39,13 +38,13 @@ export default function OrgRepsCard({ show }: { show: boolean }) {
 
   const q = useQuery({
     queryKey: ['eid-organizations'],
-    queryFn: () => getJSON<OrgRep[]>('/api/me/eid/organizations'),
+    queryFn: () => getJSON<OrgRep[]>('/me/eid/organizations'),
     enabled: show,
   });
 
   const add = useMutation({
     mutationFn: async (reg: string) => {
-      const res = await postJSON<OrgRep[]>('/api/me/eid/organizations', { reg_no: reg });
+      const res = await postJSON<OrgRep[]>('/me/eid/organizations', { reg_no: reg });
       if (!res.ok) throw new Error(res.message || T('me.orgs.add.error'));
       return res.data ?? [];
     },
@@ -91,7 +90,7 @@ export default function OrgRepsCard({ show }: { show: boolean }) {
           {q.data.map((o) => (
             <Link
               key={o.org_etsi}
-              href={`/me/organizations/eid/${encodeURIComponent(o.org_register)}`}
+              to={`/me/organizations/eid/${encodeURIComponent(o.org_register)}`}
               className="org-rep org-rep--link"
               aria-label={`${o.org_name} — ${T('me.orgs.manage')}`}
             >

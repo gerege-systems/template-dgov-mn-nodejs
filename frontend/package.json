@@ -1,31 +1,36 @@
 {
-  "name": "dan-dgov-web",
-  "version": "27.0.0",
+  "name": "dgov-web",
+  "version": "3.0.0",
   "private": true,
-  "description": "gerege-backend-template-v27-д тохирсон Next.js frontend — me.dgov.mn-ийн gerege theme дээр суурилсан.",
+  "type": "module",
+  "description": "Government Template Platform V3.0 — Vite + React SPA (nginx-ээр статикаар үйлчлэгдэж, /api/* нь api контейнер руу проксилогдоно).",
   "scripts": {
-    "dev": "next dev -p 3000",
-    "build": "next build",
-    "start": "next start -p 3000",
-    "lint": "next lint",
+    "dev": "vite --port 3000",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --port 3000",
+    "lint": "eslint src --max-warnings 0",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.0",
     "lucide-react": "^1.23.0",
-    "next": "15.5.20",
     "qrcode.react": "^4.2.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "server-only": "^0.0.1"
+    "react-router-dom": "^7.1.5"
   },
   "devDependencies": {
     "@types/node": "20.11.30",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
-    "eslint": "8.57.0",
-    "eslint-config-next": "15.5.20",
+    "@typescript-eslint/eslint-plugin": "^8.20.0",
+    "@typescript-eslint/parser": "^8.20.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
     "typescript": "5.4.3",
+    "vite": "^6.0.11",
     "vitest": "^4.1.10"
   },
   "overrides": {

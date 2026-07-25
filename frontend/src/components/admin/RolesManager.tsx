@@ -1,4 +1,3 @@
-"use client";
 
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -37,11 +36,11 @@ export default function RolesManager() {
 
   const rolesQuery = useQuery({
     queryKey: ['rbac-roles-full'],
-    queryFn: () => getJSON<Role[]>('/api/rbac/roles'),
+    queryFn: () => getJSON<Role[]>('/rbac/roles'),
   });
   const permsQuery = useQuery({
     queryKey: ['rbac-permissions'],
-    queryFn: () => getJSON<Permission[]>('/api/rbac/permissions'),
+    queryFn: () => getJSON<Permission[]>('/rbac/permissions'),
   });
 
   const roles = rolesQuery.data ?? null;
@@ -73,7 +72,7 @@ export default function RolesManager() {
   const save = async (role: Role) => {
     setSavingId(role.id);
     setActionError('');
-    const res = await sendJSON(`/api/rbac/roles/${role.id}/permissions`, 'PUT', {
+    const res = await sendJSON(`/rbac/roles/${role.id}/permissions`, 'PUT', {
       permissions: Array.from(draft[role.id] ?? []),
     });
     if (res.ok) await reload();
@@ -84,7 +83,7 @@ export default function RolesManager() {
   const createRole = async () => {
     if (!form.name.trim()) return;
     setActionError('');
-    const res = await sendJSON('/api/rbac/roles', 'POST', { name: form.name, key: form.key });
+    const res = await sendJSON('/rbac/roles', 'POST', { name: form.name, key: form.key });
     if (res.ok) {
       setAdding(false);
       setForm({ name: '', key: '' });
@@ -95,7 +94,7 @@ export default function RolesManager() {
   const remove = async (role: Role) => {
     if (!window.confirm(`${role.name} — ${T('roles.deleteConfirm')}`)) return;
     setActionError('');
-    const res = await sendJSON(`/api/rbac/roles/${role.id}`, 'DELETE');
+    const res = await sendJSON(`/rbac/roles/${role.id}`, 'DELETE');
     if (res.ok) await reload();
     else setActionError(res.message || T('roles.deleteError'));
   };

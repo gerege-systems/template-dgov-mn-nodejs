@@ -1,6 +1,5 @@
-"use client";
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FileCheck, Plus, Download, Inbox, Loader2 } from 'lucide-react';
 import { getJSON, postJSON } from '@/lib/client';
@@ -22,12 +21,12 @@ export default function GovReferencesView() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
-  const q = useQuery({ queryKey: ['gov-references'], queryFn: () => getJSON<GovReference[]>('/api/gov/references') });
+  const q = useQuery({ queryKey: ['gov-references'], queryFn: () => getJSON<GovReference[]>('/gov/references') });
   const items = q.data ?? [];
 
   const request = async () => {
     setBusy(true); setErr('');
-    const res = await postJSON('/api/gov/references', { type });
+    const res = await postJSON('/gov/references', { type });
     setBusy(false);
     if (res.ok) await qc.invalidateQueries({ queryKey: ['gov-references'] });
     else setErr(res.message || 'Лавлагаа захиалахад алдаа гарлаа.');

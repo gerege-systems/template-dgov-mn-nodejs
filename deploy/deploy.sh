@@ -13,11 +13,9 @@ cd "$REPO_DIR"
 
 # DEPLOY_SERVICES — deploy хийж, health хүлээх compose үйлчилгээнүүд.
 #
-# Одоогоор `api` Л — Next.js `web` контейнер нь шинэ Node API-гийн ХАРААХАН порт
-# хийгдээгүй route-уудыг дуудах тул эвдэрсэн UI үйлчлэх байсан (nginx нь `/`-ыг
-# статик төлөвийн хуудсанд үйлчилдэг). Vite + React SPA гармагц үүнийг
-# "api web" болго. Хэрэгтэй бол орчноос дарж бичиж болно.
-SERVICES="${DEPLOY_SERVICES:-api}"
+# `api` ба `web` ХОЁУЛАА: web нь Vite + React SPA-ийн статик build-ийг nginx-ээр
+# үйлчилнэ (server талын код байхгүй). Хэрэгтэй бол орчноос дарж бичиж болно.
+SERVICES="${DEPLOY_SERVICES:-api web}"
 
 echo "▶ Deploy commit: $(git rev-parse --short HEAD) — $(git log -1 --pretty=%s)"
 echo "▶ Services: ${SERVICES}"

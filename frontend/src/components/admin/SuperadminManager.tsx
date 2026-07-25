@@ -1,4 +1,3 @@
-"use client";
 
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -51,12 +50,12 @@ export default function SuperadminManager({ currentUserId }: Props) {
   // Админ түвшний бүртгэлүүд (super admin + admin).
   const adminsQuery = useQuery({
     queryKey: ['superadmin-admins'],
-    queryFn: () => getJSON<AdminUser[]>('/api/superadmin/admins'),
+    queryFn: () => getJSON<AdminUser[]>('/superadmin/admins'),
   });
   // Superadmin онбординг урилгууд (pending/accepted).
   const invitesQuery = useQuery({
     queryKey: ['superadmin-invites'],
-    queryFn: () => getJSON<Invite[]>('/api/superadmin/invites'),
+    queryFn: () => getJSON<Invite[]>('/superadmin/invites'),
   });
 
   const admins = adminsQuery.data ?? null;
@@ -86,7 +85,7 @@ export default function SuperadminManager({ currentUserId }: Props) {
     setPreviewLoading(true);
     try {
       const rec = await getJSON<{ id?: string; first_name?: string; last_name?: string; full_name?: string }>(
-        `/api/superadmin/admins/by-register?register=${encodeURIComponent(reg)}`,
+        `/superadmin/admins/by-register?register=${encodeURIComponent(reg)}`,
       );
       const name = (rec?.full_name || `${rec?.last_name ?? ''} ${rec?.first_name ?? ''}`).trim();
       if (rec && rec.id) setPreview({ name: name || rec.id });
@@ -104,7 +103,7 @@ export default function SuperadminManager({ currentUserId }: Props) {
     if (!reg) return;
     setActionError('');
     setPromoting(true);
-    const res = await sendJSON('/api/superadmin/admins/by-register', 'POST', { register: reg });
+    const res = await sendJSON('/superadmin/admins/by-register', 'POST', { register: reg });
     setPromoting(false);
     if (res.ok) {
       setRegister('');
@@ -124,7 +123,7 @@ export default function SuperadminManager({ currentUserId }: Props) {
     if (!email) return;
     setActionError('');
     setInviting(true);
-    const res = await sendJSON('/api/superadmin/invites', 'POST', { email });
+    const res = await sendJSON('/superadmin/invites', 'POST', { email });
     setInviting(false);
     if (res.ok) {
       setInviteEmail('');
@@ -137,7 +136,7 @@ export default function SuperadminManager({ currentUserId }: Props) {
   const deleteInvite = async (email: string) => {
     if (!window.confirm(T('superadmin.inviteDeleteConfirm'))) return;
     setActionError('');
-    const res = await sendJSON(`/api/superadmin/invites/${encodeURIComponent(email)}`, 'DELETE');
+    const res = await sendJSON(`/superadmin/invites/${encodeURIComponent(email)}`, 'DELETE');
     if (res.ok) await reloadInvites();
     else setActionError(res.message || T('superadmin.actionError'));
   };
@@ -153,7 +152,7 @@ export default function SuperadminManager({ currentUserId }: Props) {
   const revokeAdmin = async (u: AdminUser) => {
     if (!window.confirm(T('superadmin.revokeConfirm'))) return;
     setActionError('');
-    const res = await sendJSON(`/api/superadmin/admins/${u.id}`, 'DELETE');
+    const res = await sendJSON(`/superadmin/admins/${u.id}`, 'DELETE');
     if (res.ok) await reload();
     else setActionError(res.message || T('superadmin.actionError'));
   };

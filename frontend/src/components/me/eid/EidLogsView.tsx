@@ -1,4 +1,3 @@
-"use client";
 
 // Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
@@ -37,7 +36,7 @@ export default function EidLogsView({ show }: { show: boolean }) {
 
   const q = useQuery({
     queryKey: ['eid-pki-logs', limit],
-    queryFn: () => pkiGet<ActResponse>(`/api/me/eid/activity?limit=${limit}&offset=0`),
+    queryFn: () => pkiGet<ActResponse>(`/me/eid/activity?limit=${limit}&offset=0`),
     enabled: show,
   });
 

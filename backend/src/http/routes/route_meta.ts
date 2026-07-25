@@ -3,6 +3,7 @@
 
 import type { Router } from 'express';
 
+import { AppConfig, issuer } from '../../config/config.js';
 import { newSuccessResponse, wrap } from '../response.js';
 import type { Deps } from './index.js';
 
@@ -18,6 +19,31 @@ export function registerMetaRoutes(router: Router, _deps: Deps): void {
         name: 'template-dgov-mn-nodejs',
         version: '3.0.0',
         stack: 'Node.js · Express 5 · PostgreSQL · Redis',
+      });
+    }),
+  );
+
+  /**
+   * GET /config — SPA-д хэрэгтэй НУУЦ БИШ тохиргоо.
+   *
+   * BFF байхгүй тул browser нь Google-ийн зөвшөөрлийн URL-ыг өөрөө угсарна;
+   * `client_id` нь угаасаа ил (consent дэлгэц дээр харагддаг) утга. Client
+   * SECRET энд ХЭЗЭЭ Ч гарахгүй — code солилт зөвхөн сервер талд хийгддэг.
+   * Мөн аль боломж тохируулагдсаныг мэдэгдэж, UI "тохируулаагүй" гэдгийг зөв
+   * харуулна (эс бөгөөс товч дарж 500 авна).
+   */
+  router.get(
+    '/config',
+    wrap((req, res) => {
+      newSuccessResponse(req, res, 200, 'public configuration', {
+        google_client_id: AppConfig.GOOGLE_CLIENT_ID,
+        issuer: issuer(),
+        features: {
+          google_login: AppConfig.GOOGLE_CLIENT_ID !== '',
+          sso: AppConfig.SSO_ISSUER !== '',
+          ai: AppConfig.GEMINI_API_KEY !== '',
+          sign: AppConfig.EID_RP_UUID !== '',
+        },
       });
     }),
   );

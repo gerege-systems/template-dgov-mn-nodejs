@@ -3,7 +3,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ShieldCheck, Loader2 } from 'lucide-react';
 import Alert from '@/components/Alert';
 import { postJSON } from '@/lib/client';
@@ -27,7 +27,7 @@ export default function MFAChallenge({ mfaToken, next }: { mfaToken?: string; ne
     }
     setBusy(true);
     setError('');
-    const res = await postJSON('/api/auth/superadmin/mfa', {
+    const res = await postJSON('/auth/superadmin/mfa', {
       ...(mfaToken ? { mfa_token: mfaToken } : {}),
       code: c,
     });

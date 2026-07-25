@@ -1,4 +1,3 @@
-"use client";
 
 // Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
@@ -6,8 +5,8 @@
 // Ring R1 — үйлчилгээний паспортын жагсаалт: шүүлтүүр, хайлт, шинэ паспорт
 // үүсгэх. Шинэ паспорт үргэлж ноорогоор эхэлдэг (backend талд албадсан).
 
-import React, { useState } from 'react';
-import Link from 'next/link';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Library, Search } from 'lucide-react';
 import { getJSON, postJSON } from '@/lib/client';
@@ -33,7 +32,7 @@ export default function RegistryServicesView() {
       const qs = new URLSearchParams();
       if (status) qs.set('status', status);
       if (q.trim()) qs.set('q', q.trim());
-      return getJSON<RegistryService[]>(`/api/registry/services${qs.size ? `?${qs}` : ''}`);
+      return getJSON<RegistryService[]>(`/registry/services${qs.size ? `?${qs}` : ''}`);
     },
   });
 
@@ -52,7 +51,7 @@ export default function RegistryServicesView() {
   const create = async () => {
     setErr('');
     setCreating(true);
-    const r = await postJSON('/api/registry/services', form);
+    const r = await postJSON('/registry/services', form);
     setCreating(false);
     if (!r.ok) {
       setErr(r.message || T('registry.error'));
@@ -108,7 +107,7 @@ export default function RegistryServicesView() {
             {services.data!.map((s) => (
               <div className="defrow" key={s.id}>
                 <span className="defrow__label" style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <Link href={`/admin/registry/services/${s.id}`}>{s.name}</Link>
+                  <Link to={`/admin/registry/services/${s.id}`}>{s.name}</Link>
                   <span className="muted mono" style={{ fontSize: 12 }}>
                     {s.code} · {s.authority}
                   </span>

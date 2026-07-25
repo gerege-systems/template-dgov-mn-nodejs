@@ -1,4 +1,3 @@
-"use client";
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Save, X, Plus, Trash2 } from 'lucide-react';
@@ -27,14 +26,6 @@ interface Props {
 
 // ---- path-based get/set (override tree) ----------------------------------
 type Json = Record<string, unknown>;
-function getPath(obj: unknown, path: (string | number)[]): unknown {
-  let cur: unknown = obj;
-  for (const k of path) {
-    if (cur == null || typeof cur !== 'object') return undefined;
-    cur = (cur as Json)[k as string];
-  }
-  return cur;
-}
 function setPath<T>(obj: T, path: (string | number)[], value: unknown): T {
   if (path.length === 0) return value as T;
   const [head, ...rest] = path;
@@ -92,8 +83,8 @@ export default function ThemeEditor({ theme, onDone }: Props) {
     const config: ThemeConfig = { appearance, landing };
     // theme.id хоосон биш бол засвар (PUT); шинэ/clone бол үүсгэх (POST).
     const res = theme?.id
-      ? await sendJSON(`/api/admin/themes/${theme.id}`, 'PUT', { name, config })
-      : await sendJSON('/api/admin/themes', 'POST', { name, config });
+      ? await sendJSON(`/admin/themes/${theme.id}`, 'PUT', { name, config })
+      : await sendJSON('/admin/themes', 'POST', { name, config });
     setBusy(false);
     if (res.ok) { onDone(); return; }
     setError(res.message || L('Хадгалахад алдаа гарлаа.', 'Failed to save.'));

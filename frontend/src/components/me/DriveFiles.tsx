@@ -1,4 +1,3 @@
-"use client";
 
 import React, { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -46,7 +45,7 @@ export default function DriveFiles() {
   // Файлуудыг зөвхөн popup нээгдсэн үед татна (хэрэггүй хүсэлт хийхгүй).
   const q = useQuery({
     queryKey: ['drive-files'],
-    queryFn: () => getJSON<DriveFile[]>('/api/integrations/google-drive/files'),
+    queryFn: () => getJSON<DriveFile[]>('/integrations/google-drive/files'),
     enabled: open,
   });
   const files = q.data ?? [];
@@ -63,7 +62,7 @@ export default function DriveFiles() {
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const res = await fetch('/api/integrations/google-drive/upload', {
+      const res = await fetch('/integrations/google-drive/upload', {
         method: 'POST',
         headers: { 'x-dgov-csrf': '1' },
         body: fd,
@@ -123,7 +122,6 @@ export default function DriveFiles() {
                     {isFolder
                       ? <Folder size={16} style={{ color: 'var(--dan-blue-text)' }} />
                       : f.iconLink
-                        // eslint-disable-next-line @next/next/no-img-element
                         ? <img src={f.iconLink} alt="" width={16} height={16} />
                         : <HardDrive size={16} />}
                     <span>

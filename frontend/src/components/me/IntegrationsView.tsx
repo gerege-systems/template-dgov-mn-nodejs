@@ -1,7 +1,6 @@
-"use client";
 
 import React from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'react-router-dom';
 import { HardDrive, Box, Video, CheckCircle2, AlertCircle, Clock, Plus, Check } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { postJSON } from '@/lib/client';
@@ -10,6 +9,7 @@ import DriveFiles from './DriveFiles';
 import DropboxFiles from './DropboxFiles';
 import MeetSpace from './MeetSpace';
 import GSpaceCard from './GSpaceCard';
+import { useRefreshData } from '@/lib/refresh';
 
 const ICONS: Record<IntegrationID, LucideIcon> = {
   'google-drive': HardDrive,
@@ -33,8 +33,8 @@ const DESCRIPTIONS: Record<IntegrationID, string> = {
 type GoogleLoginStatus = { configured: boolean; connected: boolean; email: string; name: string; picture: string };
 
 export default function EidIntegrationsView({ items, google }: { items: IntegrationStatus[]; google?: GoogleLoginStatus }) {
-  const router = useRouter();
-  const params = useSearchParams();
+  const refreshData = useRefreshData();
+  const [params] = useSearchParams();
   const connectedParam = params.get('connected');
   const error = params.get('error');
   const errorProvider = params.get('provider');
@@ -46,9 +46,9 @@ export default function EidIntegrationsView({ items, google }: { items: Integrat
     if (!window.confirm('Энэ холболтыг салгах уу?')) return;
     setPending(id);
     setActionErr('');
-    const res = await postJSON(`/api/integrations/${id}/disconnect`, {});
+    const res = await postJSON(`/integrations/${id}/disconnect`, {});
     setPending(null);
-    if (res.ok) router.refresh();
+    if (res.ok) void refreshData();
     else setActionErr(res.message || 'Салгахад алдаа гарлаа. Дахин оролдоно уу.');
   }
 
@@ -56,9 +56,9 @@ export default function EidIntegrationsView({ items, google }: { items: Integrat
     if (!window.confirm('Google холболтыг салгах уу? Дараа нь Google-ээр нэвтрэх боломжгүй болно.')) return;
     setGoogleBusy(true);
     setActionErr('');
-    const res = await postJSON('/api/integrations/google-login/disconnect', {});
+    const res = await postJSON('/integrations/google-login/disconnect', {});
     setGoogleBusy(false);
-    if (res.ok) router.refresh();
+    if (res.ok) void refreshData();
     else setActionErr(res.message || 'Салгахад алдаа гарлаа. Дахин оролдоно уу.');
   }
 
@@ -242,7 +242,7 @@ function ActionButton({
   if (status.configured) {
     return (
       <a
-        href={`/api/integrations/${status.id}/connect`}
+        href={`/integrations/${status.id}/connect`}
         title="Холбох"
         aria-label="Холбох"
         className="int-card__action"

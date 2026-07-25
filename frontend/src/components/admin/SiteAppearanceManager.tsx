@@ -1,16 +1,14 @@
-"use client";
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Palette, Check, Save } from 'lucide-react';
 import Alert from '@/components/Alert';
 import SegmentedControl from '@/components/SegmentedControl';
 import { getJSON, sendJSON } from '@/lib/client';
 import { useT } from '@/lib/lang';
-import type { SiteAppearance } from '@/lib/api';
+import type { SiteAppearance } from '@/lib/types';
 
 const PRESETS = ['cobalt', 'teal', 'violet', 'emerald', 'amber'] as const;
-type Preset = (typeof PRESETS)[number];
 const HEX = /^#[0-9a-fA-F]{6}$/;
 const DEFAULT_CUSTOM = '#1767e7';
 
@@ -25,7 +23,7 @@ export default function SiteAppearanceManager() {
 
   const query = useQuery({
     queryKey: ['site-appearance'],
-    queryFn: () => getJSON<SiteAppearance>('/api/site/appearance'),
+    queryFn: () => getJSON<SiteAppearance>('/site/appearance'),
   });
 
   const [accent, setAccent] = useState<string>('cobalt'); // preset нэр эсвэл hex
@@ -50,7 +48,7 @@ export default function SiteAppearanceManager() {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const res = await sendJSON('/api/admin/site/appearance', 'PUT', { accent, font, style, theme });
+      const res = await sendJSON('/admin/site/appearance', 'PUT', { accent, font, style, theme });
       if (!res.ok) throw new Error(res.message || T('site.appearance.saveError'));
     },
     onSuccess: () => {

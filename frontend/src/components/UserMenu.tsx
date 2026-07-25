@@ -1,7 +1,6 @@
-"use client";
 
-import React, { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
+import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ChevronDown, User, Settings, Globe, Moon, Sun, Monitor, HelpCircle, LogOut } from 'lucide-react';
 import SegmentedControl from './SegmentedControl';
 import { usePreferences, showToast } from '@/lib/preferences';
@@ -73,7 +72,6 @@ export default function UserMenu({ username, email, initials, picture }: Props) 
         }}
       >
         {picture ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img className="topbar__avatar" src={picture} alt="" width={28} height={28} style={{ objectFit: 'cover', padding: 0 }} referrerPolicy="no-referrer" />
         ) : (
           <span className="topbar__avatar">{initials}</span>
@@ -89,11 +87,11 @@ export default function UserMenu({ username, email, initials, picture }: Props) 
             <div className="user-menu__sub mono">{email}</div>
           </div>
 
-          <Link className="user-menu__item" role="menuitem" href="/me/profile" onClick={() => setOpen(false)}>
+          <Link className="user-menu__item" role="menuitem" to="/me/profile" onClick={() => setOpen(false)}>
             <User size={16} strokeWidth={2} />
             <span>{lang === 'en' ? 'Profile' : 'Профайл'}</span>
           </Link>
-          <Link className="user-menu__item" role="menuitem" href="/me/settings" onClick={() => setOpen(false)}>
+          <Link className="user-menu__item" role="menuitem" to="/me/settings" onClick={() => setOpen(false)}>
             <Settings size={16} strokeWidth={2} />
             <span>{lang === 'en' ? 'Settings' : 'Тохиргоо'}</span>
           </Link>

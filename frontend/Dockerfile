@@ -1,34 +1,26 @@
 # syntax=docker/dockerfile:1.7
-# Multi-stage build for the Next.js BFF. Produces a slim image from the
-# `output: 'standalone'` bundle (see next.config.mjs).
-
-# ---------- deps ----------
-FROM node:20-alpine AS deps
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
+# Government Template Platform V3.0 — Vite + React SPA.
+#
+# Гаралт нь ЦЭВЭР СТАТИК файлууд: build нь тэдгээрийг үүсгэж, nginx үйлчилнэ.
+# Server талын код БАЙХГҮЙ тул нууц (client secret, токен) энэ дүрсэнд
+# ХЭЗЭЭ Ч ордоггүй — API-тай харилцах бүхэн browser-аас ижил origin-оор явна.
 
 # ---------- builder ----------
 FROM node:20-alpine AS builder
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+COPY package.json package-lock.json ./
+RUN npm ci
 COPY . .
-ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 # ---------- runtime ----------
-FROM node:20-alpine AS runner
-WORKDIR /app
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV PORT=3000
-RUN addgroup -S nodejs && adduser -S nextjs -G nodejs
+FROM nginx:1.27-alpine AS runner
+# SPA-ийн статик файлууд.
+COPY --from=builder /app/dist /usr/share/nginx/html
+# Контейнер доторх nginx: SPA fallback + /api проксиг гаднах nginx хийдэг тул
+# энд зөвхөн статик үйлчилгээ (хамгийн бага гадаргуу).
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Standalone server + static assets + public dir.
-COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-USER nextjs
-EXPOSE 3000
-CMD ["node", "server.js"]
+EXPOSE 80
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget -qO- http://127.0.0.1/healthz || exit 1

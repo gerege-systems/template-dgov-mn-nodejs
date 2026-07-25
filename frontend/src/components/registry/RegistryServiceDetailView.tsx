@@ -1,4 +1,3 @@
-"use client";
 
 // Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
@@ -11,7 +10,7 @@
 // баримт, богиносгосон хугацааг baseline-тай харьцуулж бүртгэнэ.
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   FileText, Paperclip, History, ShieldCheck, ShieldAlert, Send, Archive, Trash2, Plus, Save,
@@ -29,7 +28,7 @@ import { Loading, StatusChip, ProactivityChip, Delta, fmtDate, fmtNum } from './
 export default function RegistryServiceDetailView({ id }: { id: string }) {
   const { T } = useT();
   const qc = useQueryClient();
-  const router = useRouter();
+  const navigate = useNavigate();
 
   const [err, setErr] = useState('');
   const [msg, setMsg] = useState('');
@@ -39,23 +38,23 @@ export default function RegistryServiceDetailView({ id }: { id: string }) {
 
   const svc = useQuery({
     queryKey: ['registry-service', id],
-    queryFn: () => getJSON<RegistryService>(`/api/registry/services/${id}`),
+    queryFn: () => getJSON<RegistryService>(`/registry/services/${id}`),
   });
   const versions = useQuery({
     queryKey: ['registry-versions', id],
-    queryFn: () => getJSON<RegistryVersion[]>(`/api/registry/services/${id}/versions`),
+    queryFn: () => getJSON<RegistryVersion[]>(`/registry/services/${id}/versions`),
   });
   const report = useQuery({
     queryKey: ['registry-once-only-report', id],
-    queryFn: () => getJSON<RegistryOnceOnlyReport>(`/api/registry/services/${id}/once-only`),
+    queryFn: () => getJSON<RegistryOnceOnlyReport>(`/registry/services/${id}/once-only`),
   });
   const catalogue = useQuery({
     queryKey: ['registry-evidences'],
-    queryFn: () => getJSON<RegistryEvidence[]>('/api/registry/evidences'),
+    queryFn: () => getJSON<RegistryEvidence[]>('/registry/evidences'),
   });
   const lifeEvents = useQuery({
     queryKey: ['registry-life-events'],
-    queryFn: () => getJSON<RegistryLifeEvent[]>('/api/registry/life-events'),
+    queryFn: () => getJSON<RegistryLifeEvent[]>('/registry/life-events'),
   });
 
   // Засварын төлөв — сервер өгөгдөл ирэхэд/шинэчлэгдэхэд дүүргэнэ.
@@ -110,7 +109,7 @@ export default function RegistryServiceDetailView({ id }: { id: string }) {
   const save = () =>
     run(
       () =>
-        sendJSON(`/api/registry/services/${id}`, 'PUT', {
+        sendJSON(`/registry/services/${id}`, 'PUT', {
           name: form.name,
           name_en: form.name_en,
           description: form.description,
@@ -148,7 +147,7 @@ export default function RegistryServiceDetailView({ id }: { id: string }) {
   const putEvidences = (next: RegistryEvidenceLink[]) =>
     run(
       () =>
-        sendJSON(`/api/registry/services/${id}/evidences`, 'PUT', {
+        sendJSON(`/registry/services/${id}/evidences`, 'PUT', {
           evidences: next.map((e) => ({
             evidence_id: e.evidence_id,
             required: e.required,
@@ -182,19 +181,19 @@ export default function RegistryServiceDetailView({ id }: { id: string }) {
 
   const publish = async () => {
     const ok = await run(
-      () => postJSON(`/api/registry/services/${id}/publish`, { change_note: changeNote }),
+      () => postJSON(`/registry/services/${id}/publish`, { change_note: changeNote }),
       T('registry.msg.published'),
     );
     if (ok) setChangeNote('');
   };
 
   const archive = () =>
-    run(() => postJSON(`/api/registry/services/${id}/archive`, {}), T('registry.msg.archived'));
+    run(() => postJSON(`/registry/services/${id}/archive`, {}), T('registry.msg.archived'));
 
   const remove = async () => {
     if (!window.confirm(T('registry.confirmDelete'))) return;
-    const ok = await run(() => sendJSON(`/api/registry/services/${id}`, 'DELETE'), T('registry.msg.deleted'));
-    if (ok) router.push('/admin/registry/services');
+    const ok = await run(() => sendJSON(`/registry/services/${id}`, 'DELETE'), T('registry.msg.deleted'));
+    if (ok) navigate('/admin/registry/services');
   };
 
   const toggleChannel = (ch: string) =>

@@ -1,4 +1,3 @@
-"use client";
 
 // Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
@@ -18,7 +17,7 @@ export default function EidDevicesView({ show }: { show: boolean }) {
   const [open, setOpen] = useState<Set<string>>(new Set());
   const q = useQuery({
     queryKey: ['eid-pki-devices'],
-    queryFn: () => pkiGet<{ devices: PkiDeviceItem[]; active_count: number; total: number }>('/api/me/eid/devices'),
+    queryFn: () => pkiGet<{ devices: PkiDeviceItem[]; active_count: number; total: number }>('/me/eid/devices'),
     enabled: show,
   });
 

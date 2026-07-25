@@ -13,7 +13,7 @@ export default function AcceptClient({ challenge }: { challenge: string }) {
   useEffect(() => {
     let done = false;
     (async () => {
-      const r = await postJSON<{ redirect_to?: string }>('/api/provider/login/accept', {
+      const r = await postJSON<{ redirect_to?: string }>('/provider/login/accept', {
         login_challenge: challenge,
       });
       if (done) return;

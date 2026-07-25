@@ -1,4 +1,3 @@
-"use client";
 
 // Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
@@ -53,19 +52,19 @@ export default function GovQueueView() {
 
   const stats = useQuery({
     queryKey: ['gov-queue-stats'],
-    queryFn: () => getJSON<GovQueueStats>('/api/gov/officer/stats'),
+    queryFn: () => getJSON<GovQueueStats>('/gov/officer/stats'),
     refetchInterval: POLL_MS,
   });
 
   const queue = useQuery({
     queryKey: ['gov-queue', tab],
-    queryFn: () => getJSON<GovQueueItem[]>(`/api/gov/officer/queue${queryFor(tab)}`),
+    queryFn: () => getJSON<GovQueueItem[]>(`/gov/officer/queue${queryFor(tab)}`),
     refetchInterval: POLL_MS,
   });
 
   const detail = useQuery({
     queryKey: ['gov-queue-item', openID],
-    queryFn: () => getJSON<GovQueueDetail>(`/api/gov/officer/queue/${openID}`),
+    queryFn: () => getJSON<GovQueueDetail>(`/gov/officer/queue/${openID}`),
     enabled: !!openID,
   });
 
@@ -82,7 +81,7 @@ export default function GovQueueView() {
     // postJSON нь throw хийдэггүй, ok=false буцаадаг — тиймээс ЗААВАЛ шалгана.
     // Эс тэгвээс 409 (өөр менежер аль хэдийн авсан) чимээгүй өнгөрч, UI
     // амжилттай мэт харагдана.
-    const res = await postJSON(`/api/gov/officer/queue/${id}/${action}`, body ?? {});
+    const res = await postJSON(`/gov/officer/queue/${id}/${action}`, body ?? {});
     if (!res.ok) {
       setErr(res.message || 'Үйлдэл амжилтгүй боллоо.');
       setBusy(false);

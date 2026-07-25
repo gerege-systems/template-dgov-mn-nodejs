@@ -1,15 +1,12 @@
-import React from 'react';
-import { redirect } from 'next/navigation';
 import PageHead from '@/components/PageHead';
 import EidIdView from '@/components/me/eid/EidIdView';
-import { fetchMe } from '@/lib/api';
+import { useMe } from '@/lib/session';
+import { usePageTitle } from '@/lib/usePageTitle';
 
-export const dynamic = 'force-dynamic';
-export const metadata = { title: 'eID үнэмлэх — Government Template Platform V3.0' };
 
-export default async function EidIdPage() {
-  const me = await fetchMe();
-  if (!me) redirect('/login?next=/me/eid/id');
+export default function EidIdPage() {
+  usePageTitle('eID үнэмлэх');
+  const me = useMe();
   return (
     <>
       <PageHead eyebrowKey="sys.user" titleKey="eid.id.title" subKey="eid.id.sub" />

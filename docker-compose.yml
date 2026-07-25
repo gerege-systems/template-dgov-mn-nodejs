@@ -102,41 +102,21 @@ services:
   web:
     build:
       context: ./frontend
-    environment:
-      NODE_ENV: production
-      # Next standalone-г 0.0.0.0 дээр bind хийлгэнэ (Docker нь HOSTNAME-г
-      # контейнер ID болгодог тул эс зааваас зөвхөн тэр IP дээр сонсож,
-      # localhost healthcheck refused болдог).
-      HOSTNAME: '0.0.0.0'
-      # BFF → backend over the internal network (frontend appends /api/v1).
-      BACKEND_URL: http://api:8080
-      COOKIE_SECURE: 'true'
-      APP_ORIGIN: ${APP_ORIGIN}
-      # Google OAuth — BFF start route consent URL-д client_id-г хэрэглэнэ (нууц
-      # биш). Хоосон бол Google товч "тохируулаагүй" руу чиглүүлнэ.
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
-      # Гуравдагч интеграцийн OAuth (BFF талд token exchange хийдэг тул client
-      # secret ч энд орно). redirect_uri = ${APP_ORIGIN}/api/integrations/<provider>/callback
-      GOOGLE_DRIVE_CLIENT_ID: ${GOOGLE_DRIVE_CLIENT_ID:-}
-      GOOGLE_DRIVE_CLIENT_SECRET: ${GOOGLE_DRIVE_CLIENT_SECRET:-}
-      DROPBOX_CLIENT_ID: ${DROPBOX_CLIENT_ID:-}
-      DROPBOX_CLIENT_SECRET: ${DROPBOX_CLIENT_SECRET:-}
-      GOOGLE_MEET_CLIENT_ID: ${GOOGLE_MEET_CLIENT_ID:-}
-      GOOGLE_MEET_CLIENT_SECRET: ${GOOGLE_MEET_CLIENT_SECRET:-}
+    # SPA нь ЦЭВЭР СТАТИК — server талын нууц (client secret, токен) энэ
+    # контейнерт ХЭЗЭЭ Ч ордоггүй. Гуравдагч талын OAuth-ийн бүх нууц зөвхөн
+    # api контейнерт байна; browser нь ижил origin дээрх /api/* руу л ханддаг.
     depends_on:
       api:
         condition: service_healthy
-    # Bind to loopback only; the public reverse proxy (nginx) forwards here.
+    # Зөвхөн loopback дээр — нийтийн урвуу proxy (nginx) энд дамжуулна.
     ports:
-      - '127.0.0.1:${WEB_PORT:-3007}:3000'
-    # 127.0.0.1 (localhost биш) — контейнерийн /etc/hosts-д ::1 localhost байгаа
-    # тул IPv6 refused-аас сэргийлнэ.
+      - '127.0.0.1:${WEB_PORT:-3007}:80'
     healthcheck:
-      test: ['CMD-SHELL', 'wget -q --spider http://127.0.0.1:3000/ || exit 1']
+      test: ['CMD-SHELL', 'wget -q --spider http://127.0.0.1/healthz || exit 1']
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      start_period: 10s
     restart: unless-stopped
 
   # OIDC provider нь api backend-д (usecases/oidc + oauth_clients хүснэгт)

@@ -1,11 +1,9 @@
-"use client";
 
 // Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
 
-import React from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Building2 } from 'lucide-react';
 import { useT } from '@/lib/lang';
@@ -30,18 +28,18 @@ interface OrgRep {
  */
 export default function OrgManageView({ regNo }: { regNo: string }) {
   const { T, lang } = useT();
-  const router = useRouter();
+  const navigate = useNavigate();
   const qc = useQueryClient();
 
   const q = useQuery({
     queryKey: ['eid-organizations'],
-    queryFn: () => getJSON<OrgRep[]>('/api/me/eid/organizations'),
+    queryFn: () => getJSON<OrgRep[]>('/me/eid/organizations'),
   });
   const rep = q.data?.find((o) => o.org_register === regNo);
 
   return (
     <>
-      <Link href="/me/organizations" className="btn btn--ghost btn--sm" style={{ marginBottom: 12 }}>
+      <Link to="/me/organizations" className="btn btn--ghost btn--sm" style={{ marginBottom: 12 }}>
         <ArrowLeft size={15} strokeWidth={2} />
         <span>{T('me.orgs.back')}</span>
       </Link>
@@ -70,7 +68,7 @@ export default function OrgManageView({ regNo }: { regNo: string }) {
               regNo={regNo}
               onUnlinked={() => {
                 void qc.invalidateQueries({ queryKey: ['eid-organizations'] });
-                router.push('/me/organizations');
+                navigate('/me/organizations');
               }}
             />
           </>
@@ -87,7 +85,7 @@ export default function OrgManageView({ regNo }: { regNo: string }) {
         <ImageUploadCard
           titleKey="me.assets.stampTitle"
           hintKey="me.assets.stampHint"
-          path={`/api/me/eid/organizations/${encodeURIComponent(regNo)}/stamp`}
+          path={`/me/eid/organizations/${encodeURIComponent(regNo)}/stamp`}
           queryKey={['org-stamp', regNo]}
           canEdit={rep.right_type === 'ADMIN'}
           aspect="1 / 1"

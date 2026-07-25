@@ -1,4 +1,3 @@
-"use client";
 
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { t, permLabel, roleName, type DictKey, type Lang } from './i18n';

@@ -1,14 +1,12 @@
-import React from 'react';
 import PageHead from '@/components/PageHead';
 import RegistryServiceDetailView from '@/components/registry/RegistryServiceDetailView';
-import { requireRegistryAccess } from '../../guard';
+import { usePageTitle } from '@/lib/usePageTitle';
+import { useParams } from 'react-router-dom';
 
-export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Паспортын дэлгэрэнгүй — Ring System' };
 
-export default async function Page(props: { params: Promise<{ id: string }> }) {
-  await requireRegistryAccess();
-  const { id } = await props.params;
+export default function Page() {
+  usePageTitle('Паспортын дэлгэрэнгүй — Ring System');
+  const { id = '' } = useParams();
   return (
     <>
       <PageHead eyebrowKey="group.registry" titleKey="nav.registryServices" subKey="registry.detail.sub" />

@@ -1,6 +1,5 @@
-"use client";
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bot, Loader2, Save } from 'lucide-react';
 import { useT } from '@/lib/lang';
@@ -28,7 +27,7 @@ export default function AiPromptsManager() {
 
   const promptsQuery = useQuery({
     queryKey: ['admin-ai-prompts'],
-    queryFn: () => getJSON<PromptItem[]>('/api/admin/ai/prompts'),
+    queryFn: () => getJSON<PromptItem[]>('/admin/ai/prompts'),
   });
 
   useEffect(() => {
@@ -42,7 +41,7 @@ export default function AiPromptsManager() {
     setSavingKey(key);
     setError('');
     setSavedKey(null);
-    const res = await sendJSON(`/api/admin/ai/prompts/${key}`, 'PUT', { content: drafts[key] ?? '' });
+    const res = await sendJSON(`/admin/ai/prompts/${key}`, 'PUT', { content: drafts[key] ?? '' });
     if (res.ok) {
       setSavedKey(key);
       await queryClient.invalidateQueries({ queryKey: ['admin-ai-prompts'] });

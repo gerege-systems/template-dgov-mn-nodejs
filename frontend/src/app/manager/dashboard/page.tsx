@@ -1,17 +1,12 @@
-import React from 'react';
-import { redirect } from 'next/navigation';
 import PageHead from '@/components/PageHead';
 import DashboardCards from '@/components/DashboardCards';
-import { fetchMe, fetchMyPermissions } from '@/lib/api';
+import { usePermissions } from '@/lib/session';
+import { usePageTitle } from '@/lib/usePageTitle';
 
-export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Менежер — Хяналтын самбар' };
 
-export default async function ManagerDashboardPage() {
-  const me = await fetchMe();
-  if (!me) redirect('/login?next=/manager/dashboard');
-  const perms = await fetchMyPermissions();
-  if (!perms.includes('manager.view')) redirect('/');
+export default function ManagerDashboardPage() {
+  usePageTitle('Менежер — Хяналтын самбар');
+  const perms = usePermissions();
 
   return (
     <>

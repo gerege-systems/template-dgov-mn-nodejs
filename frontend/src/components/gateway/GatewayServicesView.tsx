@@ -1,6 +1,5 @@
-"use client";
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, Power, Inbox, X, Pencil } from 'lucide-react';
 import { getJSON, sendJSON } from '@/lib/client';
@@ -24,7 +23,7 @@ export default function GatewayServicesView() {
   const [form, setForm] = useState(empty);
   const [err, setErr] = useState('');
 
-  const q = useQuery({ queryKey: ['gw-services'], queryFn: () => getJSON<GwService[]>('/api/gateway/services') });
+  const q = useQuery({ queryKey: ['gw-services'], queryFn: () => getJSON<GwService[]>('/gateway/services') });
   const items = q.data ?? [];
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['gw-services'] });
@@ -48,15 +47,15 @@ export default function GatewayServicesView() {
       enabled: editSvc ? editSvc.enabled : true,
     };
     const res = editSvc
-      ? await sendJSON(`/api/gateway/services/${editSvc.id}`, 'PUT', body)
-      : await sendJSON('/api/gateway/services', 'POST', body);
+      ? await sendJSON(`/gateway/services/${editSvc.id}`, 'PUT', body)
+      : await sendJSON('/gateway/services', 'POST', body);
     if (res.ok) { closeForm(); await refresh(); }
     else setErr(res.message || (editSvc ? 'Шинэчлэхэд алдаа гарлаа.' : 'Үүсгэхэд алдаа гарлаа.'));
   };
 
   const toggle = async (s: GwService) => {
     setErr('');
-    const res = await sendJSON(`/api/gateway/services/${s.id}`, 'PUT', {
+    const res = await sendJSON(`/gateway/services/${s.id}`, 'PUT', {
       name: s.name, protocol: s.protocol, host: s.host, port: s.port, path: s.path,
       retries: s.retries, connect_timeout_ms: s.connect_timeout_ms, tags: s.tags, enabled: !s.enabled,
     });
@@ -66,7 +65,7 @@ export default function GatewayServicesView() {
   const remove = async (s: GwService) => {
     if (!window.confirm(`"${s.name}" сервисийг устгах уу? Холбоотой маршрутууд мөн устана.`)) return;
     setErr('');
-    const res = await sendJSON(`/api/gateway/services/${s.id}`, 'DELETE');
+    const res = await sendJSON(`/gateway/services/${s.id}`, 'DELETE');
     if (res.ok) await refresh(); else setErr(res.message || 'Устгахад алдаа гарлаа.');
   };
 

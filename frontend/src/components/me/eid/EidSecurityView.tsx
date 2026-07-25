@@ -1,9 +1,7 @@
-"use client";
 
 // Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
 
-import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ShieldCheck, Smartphone, KeyRound, LogIn, Check, X } from 'lucide-react';
 import { useT } from '@/lib/lang';
@@ -14,7 +12,7 @@ import { pkiGet, type PkiSummary } from '@/lib/pki';
 // (тохиргоо өөрчилдөггүй — зөвхөн төлөв харуулна).
 export default function EidSecurityView({ show }: { show: boolean }) {
   const { T } = useT();
-  const q = useQuery({ queryKey: ['eid-pki-summary'], queryFn: () => pkiGet<PkiSummary>('/api/me/eid/summary'), enabled: show });
+  const q = useQuery({ queryKey: ['eid-pki-summary'], queryFn: () => pkiGet<PkiSummary>('/me/eid/summary'), enabled: show });
 
   if (!show) return null;
   const forbidden = q.data?.status === 403;

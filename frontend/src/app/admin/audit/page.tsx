@@ -1,17 +1,15 @@
-import React from 'react';
-import { redirect } from 'next/navigation';
 import PageHead from '@/components/PageHead';
 import AuditViewer from '@/components/admin/AuditViewer';
-import { fetchMe } from '@/lib/api';
 import { isAdminLevel } from '@/lib/types';
+import { useMe } from '@/lib/session';
+import { usePageTitle } from '@/lib/usePageTitle';
+import { Navigate } from 'react-router-dom';
 
-export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Аудит лог — Админ' };
 
-export default async function AdminAuditPage() {
-  const me = await fetchMe();
-  if (!me) redirect('/login?next=/admin/audit');
-  if (!isAdminLevel(me.roleId)) redirect('/');
+export default function AdminAuditPage() {
+  usePageTitle('Аудит лог — Админ');
+  const me = useMe();
+  if (!isAdminLevel(me.roleId)) return <Navigate to='/' replace />;
 
   return (
     <>

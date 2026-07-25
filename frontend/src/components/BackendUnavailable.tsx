@@ -1,5 +1,4 @@
-import React from 'react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { ServerCrash, RefreshCw } from 'lucide-react';
 import SigninShell from './SigninShell';
 
@@ -18,7 +17,7 @@ export default function BackendUnavailable() {
           Сервертэй холбогдоход түр саатал гарлаа. Хэсэг хугацааны дараа дахин
           оролдоно уу — таны нэвтрэлт хэвээр байна.
         </p>
-        <Link className="btn btn--primary btn--lg btn--block" href="/me/dashboard" style={{ marginTop: 16 }}>
+        <Link className="btn btn--primary btn--lg btn--block" to="/me/dashboard" style={{ marginTop: 16 }}>
           <RefreshCw size={18} strokeWidth={2} />
           <span>Дахин оролдох</span>
         </Link>

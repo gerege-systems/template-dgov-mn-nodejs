@@ -1,15 +1,17 @@
-// eID based AI enabled Government Template Platform V3.0
+// Government Template Platform V3.0
+// Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
+
+import React from 'react';
+import { useSearchParams } from 'react-router-dom';
+
 import OAuthLogoutClient from './OAuthLogoutClient';
 
-export const dynamic = 'force-dynamic';
-
-export default async function OAuthLogoutPage(props: {
-  searchParams: Promise<{ logout_challenge?: string }>;
-}) {
-  const { logout_challenge: challenge } = await props.searchParams;
+/** RP-initiated logout-ийн баталгаажуулах хуудас. */
+export default function OAuthLogoutPage(): React.ReactElement {
+  const [searchParams] = useSearchParams();
   return (
     <section className="signin-card" aria-labelledby="logout-title">
-      <OAuthLogoutClient challenge={challenge ?? ''} />
+      <OAuthLogoutClient challenge={searchParams.get('logout_challenge') ?? ''} />
     </section>
   );
 }

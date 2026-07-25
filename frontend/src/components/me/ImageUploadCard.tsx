@@ -1,9 +1,8 @@
-"use client";
 
 // Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
 
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { Upload, Trash2 } from 'lucide-react';
 import { useT } from '@/lib/lang';
@@ -119,7 +118,6 @@ export default function ImageUploadCard({
       ) : url ? (
         <div className="asset-preview" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ flex: 1, aspectRatio: aspect, maxWidth: 320, border: '1px solid var(--border)', borderRadius: 10, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={driveImgSrc(url)} alt={title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
           </div>
           {canEdit && (

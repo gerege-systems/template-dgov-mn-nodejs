@@ -1,6 +1,5 @@
-"use client";
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { ShieldCheck, RefreshCw, HelpCircle } from 'lucide-react';
 import Alert from '@/components/Alert';
@@ -8,6 +7,9 @@ import MFAChallenge from '@/components/superadmin/MFAChallenge';
 import { postJSON } from '@/lib/client';
 import { safeNext } from '@/lib/navigation';
 import { useT } from '@/lib/lang';
+import { useAppConfig } from '@/lib/appConfig';
+import { googleAuthorizeUrl } from '@/lib/authFlows';
+
 
 // Нэвтрэх арга: (A) РД-ээр — иргэний апп руу push, зөвшөөрөхөд browser нэвтэрнэ (CROSS-DEVICE).
 // (B) device-link — DESKTOP дээр QR (CROSS-DEVICE, тусдаа утсаар уншуулна, browser poll хийнэ);
@@ -43,6 +45,7 @@ type Phase = 'idle' | 'starting' | 'waiting' | 'expired' | 'refused' | 'error' |
 const POLL_INTERVAL_MS = 2500;
 
 export default function LoginForm({ next, notice, googleLink, googleError, mfaGate }: { next: string; notice?: string; googleLink?: boolean; googleError?: boolean; mfaGate?: boolean }) {
+  const config = useAppConfig();
   const { T } = useT();
 
   const [method, setMethod] = useState<Method>('id');
@@ -84,7 +87,7 @@ export default function LoginForm({ next, notice, googleLink, googleError, mfaGa
 
   const poll = useCallback(
     async (sessionId: string) => {
-      const res = await postJSON<{ state?: string; mfa_required?: boolean; mfa_token?: string }>('/api/auth/eid/poll', { session_id: sessionId });
+      const res = await postJSON<{ state?: string; mfa_required?: boolean; mfa_token?: string }>('/auth/eid/poll', { session_id: sessionId });
       if (!mounted.current) return;
 
       if (!res.ok) {
@@ -162,7 +165,7 @@ export default function LoginForm({ next, notice, googleLink, googleError, mfaGa
 
     const mobile = isMobileBrowser();
     const callbackUrl = mobile ? sameDeviceCallbackUrl() : '';
-    const res = await postJSON<StartData>('/api/auth/eid/start', { callbackUrl });
+    const res = await postJSON<StartData>('/auth/eid/start', { callbackUrl });
     if (!mounted.current) return;
 
     if (!res.ok || !res.data?.session_id) {
@@ -195,7 +198,7 @@ export default function LoginForm({ next, notice, googleLink, googleError, mfaGa
     // дараа eID app browser-ийг /auth/eid/callback руу буцаана. DESKTOP: callbackUrl хоосон, browser poll.
     const mobile = isMobileBrowser();
     const callbackUrl = mobile ? sameDeviceCallbackUrl() : '';
-    const res = await postJSON<StartData>('/api/auth/eid/start-id', { national_id: rd, callbackUrl });
+    const res = await postJSON<StartData>('/auth/eid/start-id', { national_id: rd, callbackUrl });
     if (!mounted.current) return;
 
     if (!res.ok || !res.data?.session_id) {
@@ -443,17 +446,21 @@ export default function LoginForm({ next, notice, googleLink, googleError, mfaGa
       {/* Google-ээр нэвтрэх — эхний удаа eID-ээр холбоно. glink горимд (эхний удаа
           Google-ээс буцаж ирсэн) энэ товчийг НУУНА: хэрэглэгч одоо eID-ээр
           баталгаажуулах ёстой тул дахин Google руу оруулах нь ойлгомжгүй болно. */}
-      {!googleLink && (
+      {!googleLink && config.features.google_login && (
         <>
           <div className="login-or"><span>{T('auth.eid.or')}</span></div>
 
-          <a
+          <button
+            type="button"
             className="btn btn--google btn--lg btn--block"
-            href={`/api/auth/google/start${next && next !== '/' ? `?next=${encodeURIComponent(next)}` : ''}`}
+            disabled={!config.features.google_login}
+            onClick={() =>
+              window.location.assign(googleAuthorizeUrl(config.google_client_id, next))
+            }
           >
             <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.2 13.3 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9.1h12.4c-.5 2.9-2.1 5.3-4.6 7l7.1 5.5c4.2-3.9 6.6-9.6 6.6-17z"/><path fill="#FBBC05" d="M10.4 28.3a14.5 14.5 0 0 1 0-8.6l-7.8-6.1a24 24 0 0 0 0 20.8l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.1-5.5c-2 1.4-4.6 2.2-8.8 2.2-6.4 0-11.8-3.8-13.6-9.3l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
             <span>{T('auth.google.button')}</span>
-          </a>
+          </button>
         </>
       )}
 

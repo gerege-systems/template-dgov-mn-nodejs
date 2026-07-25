@@ -1,4 +1,3 @@
-"use client";
 
 import React, { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -43,7 +42,7 @@ export default function DropboxFiles() {
 
   const q = useQuery({
     queryKey: ['dropbox-files'],
-    queryFn: () => getJSON<DbxFile[]>('/api/integrations/dropbox/files'),
+    queryFn: () => getJSON<DbxFile[]>('/integrations/dropbox/files'),
     enabled: open,
   });
   const files = q.data ?? [];
@@ -58,7 +57,7 @@ export default function DropboxFiles() {
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const res = await fetch('/api/integrations/dropbox/upload', { method: 'POST', headers: { 'x-dgov-csrf': '1' }, body: fd });
+      const res = await fetch('/integrations/dropbox/upload', { method: 'POST', headers: { 'x-dgov-csrf': '1' }, body: fd });
       const body = await res.json().catch(() => null);
       if (res.ok && body?.ok) await qc.invalidateQueries({ queryKey: ['dropbox-files'] });
       else setErr(body?.message || 'Хуулахад алдаа гарлаа.');
@@ -72,7 +71,7 @@ export default function DropboxFiles() {
   const openPreview = async (f: DbxFile) => {
     setPreviewLoading(true); setErr('');
     try {
-      const data = await getJSON<{ link: string }>(`/api/integrations/dropbox/preview?path=${encodeURIComponent(f.path)}`);
+      const data = await getJSON<{ link: string }>(`/integrations/dropbox/preview?path=${encodeURIComponent(f.path)}`);
       if (data?.link) setPreview({ name: f.name, url: data.link });
       else setErr('Урьдчилан харах боломжгүй.');
     } catch (e) {

@@ -1,7 +1,6 @@
-"use client";
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Plus, Save, X, Trash2, ArrowLeft, Building2 } from 'lucide-react';
 import { useT } from '@/lib/lang';
@@ -49,11 +48,11 @@ export default function OrgDetail({ orgId, currentUserId }: Props) {
 
   const orgQuery = useQuery({
     queryKey: ['org', orgId],
-    queryFn: () => getJSON<Organization>(`/api/org/${orgId}`),
+    queryFn: () => getJSON<Organization>(`/org/${orgId}`),
   });
   const membersQuery = useQuery({
     queryKey: ['org-members', orgId],
-    queryFn: () => getJSON<Member[]>(`/api/org/${orgId}/members`),
+    queryFn: () => getJSON<Member[]>(`/org/${orgId}/members`),
   });
 
   const org = orgQuery.data ?? null;
@@ -83,7 +82,7 @@ export default function OrgDetail({ orgId, currentUserId }: Props) {
     if (!form.user_id.trim()) return;
     setSaving(true);
     setActionError('');
-    const res = await postJSON(`/api/org/${orgId}/members`, { user_id: form.user_id.trim(), role: form.role });
+    const res = await postJSON(`/org/${orgId}/members`, { user_id: form.user_id.trim(), role: form.role });
     if (res.ok) {
       setAdding(false);
       setForm({ user_id: '', role: 'member' });
@@ -96,7 +95,7 @@ export default function OrgDetail({ orgId, currentUserId }: Props) {
 
   const changeRole = async (userId: string, role: string) => {
     setActionError('');
-    const res = await sendJSON(`/api/org/${orgId}/members/${userId}`, 'PUT', { role });
+    const res = await sendJSON(`/org/${orgId}/members/${userId}`, 'PUT', { role });
     if (res.ok) await reload();
     else setActionError(res.message || T('org.actionError'));
   };
@@ -104,7 +103,7 @@ export default function OrgDetail({ orgId, currentUserId }: Props) {
   const removeMember = async (userId: string) => {
     if (!window.confirm(T('org.removeConfirm'))) return;
     setActionError('');
-    const res = await sendJSON(`/api/org/${orgId}/members/${userId}`, 'DELETE');
+    const res = await sendJSON(`/org/${orgId}/members/${userId}`, 'DELETE');
     if (res.ok) await reload();
     else setActionError(res.message || T('org.actionError'));
   };
@@ -112,7 +111,7 @@ export default function OrgDetail({ orgId, currentUserId }: Props) {
   return (
     <div className="orgs">
       <div style={{ marginBottom: 16 }}>
-        <Link className="btn btn--ghost btn--sm" href="/me/organizations">
+        <Link className="btn btn--ghost btn--sm" to="/me/organizations">
           <ArrowLeft size={14} strokeWidth={2} /><span>{T('org.back')}</span>
         </Link>
       </div>

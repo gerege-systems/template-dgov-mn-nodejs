@@ -1,14 +1,12 @@
-import React from 'react';
 import PageHead from '@/components/PageHead';
 import RelayRequestDetailView from '@/components/relay/RelayRequestDetailView';
-import { requireRelayAccess } from '../guard';
+import { usePageTitle } from '@/lib/usePageTitle';
+import { useParams } from 'react-router-dom';
 
-export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Хүсэлтийн дэлгэрэнгүй — SLA хяналт' };
 
-export default async function Page(props: { params: Promise<{ id: string }> }) {
-  await requireRelayAccess();
-  const { id } = await props.params;
+export default function Page() {
+  usePageTitle('Хүсэлтийн дэлгэрэнгүй — SLA хяналт');
+  const { id = '' } = useParams();
   return (
     <>
       <PageHead eyebrowKey="group.relay" titleKey="nav.relayRequests" subKey="relay.detail.sub" />

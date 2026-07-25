@@ -1,4 +1,3 @@
-"use client";
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -38,7 +37,7 @@ export default function AuditViewer() {
 
   const query = useQuery({
     queryKey: ['audit', limit, offset],
-    queryFn: () => getJSON<AuditEntry[]>(`/api/audit?limit=${limit}&offset=${offset}`),
+    queryFn: () => getJSON<AuditEntry[]>(`/audit?limit=${limit}&offset=${offset}`),
   });
 
   const rows = query.data ?? null;
@@ -49,7 +48,7 @@ export default function AuditViewer() {
     setVerifyError('');
     setVerify(null);
     try {
-      const res = await getJSON<VerifyResult>('/api/audit/verify');
+      const res = await getJSON<VerifyResult>('/audit/verify');
       setVerify(res);
     } catch (e) {
       setVerifyError((e as Error).message || T('audit.loadError'));

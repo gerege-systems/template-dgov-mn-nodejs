@@ -1,26 +1,23 @@
-import React from 'react';
-import { redirect } from 'next/navigation';
 import SigninShell from '@/components/SigninShell';
 import { safeNext } from '@/lib/navigation';
 import EidVerify from './EidVerify';
+import { Navigate, useSearchParams } from 'react-router-dom';
+import { usePageTitle } from '@/lib/usePageTitle';
 
-export const dynamic = 'force-dynamic';
 
-export const metadata = { title: 'eID баталгаажуулалт — Government Template Platform V3.0' };
 
 // eID апп-аас App2App буцалтын callback (IdP-д бүртгэгдсэн
 // https://sso.dgov.mn/login/verify). eID апп буцахдаа session id-г
 // нэмдэг — нийтлэг нэрсийг (sessionToken / session_id / sid) хүлээж авна.
-export default async function EidVerifyPage(
-  props: {
-    searchParams: Promise<{ sessionToken?: string; session_id?: string; sid?: string; next?: string }>;
-  }
+export default function EidVerifyPage(
+  
 ) {
-  const searchParams = await props.searchParams;
-  const sessionId = searchParams.sessionToken || searchParams.session_id || searchParams.sid || '';
-  if (!sessionId) redirect('/login');
+  usePageTitle('eID баталгаажуулалт');
+  const [searchParams] = useSearchParams();
+  const sessionId = (searchParams.get('sessionToken') ?? undefined) || (searchParams.get('session_id') ?? undefined) || (searchParams.get('sid') ?? undefined) || '';
+  if (!sessionId) return <Navigate to='/login' replace />;
 
-  const next = safeNext(searchParams.next);
+  const next = safeNext((searchParams.get('next') ?? undefined));
 
   return (
     <SigninShell>

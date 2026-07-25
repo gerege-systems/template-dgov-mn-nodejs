@@ -1,8 +1,7 @@
-import { redirect } from 'next/navigation';
+import { Navigate } from 'react-router-dom';
 
-export const dynamic = 'force-dynamic';
 
 // /profile → /me/profile рүү шилжсэн (хуучин bookmark-уудыг хадгална).
 export default function ProfileRedirect() {
-  redirect('/me/profile');
+  return <Navigate to='/me/profile' replace />;
 }

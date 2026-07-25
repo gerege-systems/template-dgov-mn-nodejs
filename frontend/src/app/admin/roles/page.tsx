@@ -1,17 +1,11 @@
-import React from 'react';
-import { redirect } from 'next/navigation';
 import PageHead from '@/components/PageHead';
 import RolesManager from '@/components/admin/RolesManager';
-import { fetchMe, fetchMyPermissions } from '@/lib/api';
 
-export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Эрх (RBAC) — Админ' };
+import { usePageTitle } from '@/lib/usePageTitle';
 
-export default async function AdminRolesPage() {
-  const me = await fetchMe();
-  if (!me) redirect('/login?next=/admin/roles');
-  const perms = await fetchMyPermissions();
-  if (!perms.includes('roles.manage')) redirect('/');
+
+export default function AdminRolesPage() {
+  usePageTitle('Эрх (RBAC) — Админ');
 
   return (
     <>

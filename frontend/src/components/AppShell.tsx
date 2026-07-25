@@ -1,8 +1,7 @@
-"use client";
 
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { Link } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getJSON } from '@/lib/client';
 import {
@@ -206,7 +205,7 @@ const SYSTEMS: NavSystem[] = [
  * хэлийг useT()-ээр (mn/en) орчуулна.
  */
 export default function AppShell({ user, children }: Props) {
-  const pathname = usePathname() ?? '/';
+  const pathname = useLocation().pathname ?? '/';
   const { T, lang } = useT();
   const isAdmin = isAdminLevel(user.roleId); // super admin + admin
   const isSuper = isSuperAdmin(user.roleId);
@@ -215,7 +214,7 @@ export default function AppShell({ user, children }: Props) {
   // нэг л удаа татна (deduplication + кэш).
   const permsQuery = useQuery({
     queryKey: ['rbac-me'],
-    queryFn: () => getJSON<string[]>('/api/rbac/me'),
+    queryFn: () => getJSON<string[]>('/rbac/me'),
   });
   const perms = permsQuery.isPending ? null : (permsQuery.data ?? []);
 
@@ -323,8 +322,7 @@ export default function AppShell({ user, children }: Props) {
   return (
     <div className={`shell2${collapsed ? ' is-collapsed' : ''}`}>
       <aside className="iconrail">
-        <Link href="/" className="iconrail__brand" aria-label="Government Template Platform V3.0">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+        <Link to="/" className="iconrail__brand" aria-label="Government Template Platform V3.0">
           <img src="/brand.webp" alt="Government Template Platform V3.0" />
         </Link>
         <nav className="iconrail__nav" aria-label={T('shell.menu')}>
@@ -388,7 +386,7 @@ export default function AppShell({ user, children }: Props) {
                 return (
                   <Link
                     key={item.href}
-                    href={item.href}
+                    to={item.href}
                     className={`sidepanel__link${active ? ' is-active' : ''}`}
                     aria-current={active ? 'page' : undefined}
                     onClick={closeMobileNav}
@@ -445,7 +443,7 @@ export default function AppShell({ user, children }: Props) {
           return (
             <Link
               key={s.key}
-              href={firstHref(s)}
+              to={firstHref(s)}
               className={`bottombar__tab${active ? ' is-active' : ''}`}
               aria-label={T(s.labelKey)}
               aria-current={active ? 'page' : undefined}

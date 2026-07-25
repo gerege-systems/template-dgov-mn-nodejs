@@ -1,4 +1,3 @@
-"use client";
 
 // Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
@@ -8,7 +7,7 @@
 // гэж тэмдэглэх нь once-only зөрчлийг илрүүлэх урьдчилсан нөхцөл — тиймээс
 // backend нь in_khur тэмдэглэхэд khur_service_code-ыг заавал шаарддаг.
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Database, Plus, Trash2, Link2 } from 'lucide-react';
 import { getJSON, postJSON, sendJSON } from '@/lib/client';
@@ -34,7 +33,7 @@ export default function RegistryEvidencesView() {
 
   const evidences = useQuery({
     queryKey: ['registry-evidences'],
-    queryFn: () => getJSON<RegistryEvidence[]>('/api/registry/evidences'),
+    queryFn: () => getJSON<RegistryEvidence[]>('/registry/evidences'),
   });
 
   const refresh = () => {
@@ -46,7 +45,7 @@ export default function RegistryEvidencesView() {
   const create = async () => {
     setErr('');
     setBusy(true);
-    const r = await postJSON('/api/registry/evidences', form);
+    const r = await postJSON('/registry/evidences', form);
     setBusy(false);
     if (!r.ok) {
       setErr(r.message || T('registry.error'));
@@ -66,7 +65,7 @@ export default function RegistryEvidencesView() {
     if (!e.in_khur && !code) return;
 
     setBusy(true);
-    const r = await sendJSON(`/api/registry/evidences/${e.id}`, 'PUT', {
+    const r = await sendJSON(`/registry/evidences/${e.id}`, 'PUT', {
       name: e.name,
       description: e.description,
       holder_agency: e.holder_agency,
@@ -85,7 +84,7 @@ export default function RegistryEvidencesView() {
   const remove = async (id: string) => {
     if (!window.confirm(T('registry.confirmDelete'))) return;
     setBusy(true);
-    const r = await sendJSON(`/api/registry/evidences/${id}`, 'DELETE');
+    const r = await sendJSON(`/registry/evidences/${id}`, 'DELETE');
     setBusy(false);
     if (!r.ok) {
       setErr(r.message || T('registry.error'));

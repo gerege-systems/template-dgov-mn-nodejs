@@ -1,4 +1,3 @@
-"use client";
 
 // Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
@@ -38,7 +37,7 @@ export default function EidSignView() {
   // Төлөөлдөг байгууллагууд — байгаа бол "нэрийн өмнөөс зурах" сонголт харуулна.
   const orgsQ = useQuery({
     queryKey: ['eid-organizations'],
-    queryFn: () => getJSON<OrgRep[]>('/api/me/eid/organizations'),
+    queryFn: () => getJSON<OrgRep[]>('/me/eid/organizations'),
   });
   const orgs = orgsQ.data ?? [];
   const orgLabel = (o: OrgRep) => (lang === 'en' && o.org_name_en ? o.org_name_en : o.org_name);
@@ -52,7 +51,7 @@ export default function EidSignView() {
     const orgName = phase.orgName;
     pollTimer.current = setInterval(async () => {
       try {
-        const r = await fetch(`/api/sign/${encodeURIComponent(sid)}`, { cache: 'no-store' });
+        const r = await fetch(`/sign/${encodeURIComponent(sid)}`, { cache: 'no-store' });
         const data = await r.json();
         if (data.state === 'completed') {
           if (pollTimer.current) clearInterval(pollTimer.current);
@@ -85,7 +84,7 @@ export default function EidSignView() {
       if (orgEtsi) fd.set('onBehalfOf', orgEtsi);
       // Multipart body postJSON-оор явуулж болохгүй тул CSRF header-г шууд тавина
       // (lib/bff.ts checkOrigin шаарддаг; lib/client.ts-тэй ижил header).
-      const r = await fetch('/api/sign/init', { method: 'POST', headers: { [CSRF_HEADER]: '1' }, body: fd });
+      const r = await fetch('/sign/init', { method: 'POST', headers: { [CSRF_HEADER]: '1' }, body: fd });
       const data = await r.json();
       if (!r.ok) {
         setPhase({ kind: 'error', msg: data?.error ?? data?.message ?? 'Илгээж чадсангүй' });
@@ -206,7 +205,7 @@ export default function EidSignView() {
             <p style={{ fontSize: 13, color: 'var(--dan-blue-text)', marginTop: 4, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6 }}><Building2 size={14} /> {phase.orgName} {T('eid.sign.onBehalfOf')}</p>
           )}
           <div style={{ marginTop: 20, display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a className="btn btn--primary" href={`/api/sign/${encodeURIComponent(phase.sessionID)}/download`}>
+            <a className="btn btn--primary" href={`/sign/${encodeURIComponent(phase.sessionID)}/download`}>
               <Download size={16} style={{ marginRight: 8 }} /> Татаж авах
             </a>
             <button type="button" className="btn btn--secondary" onClick={reset}>

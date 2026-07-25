@@ -1,19 +1,20 @@
+// Government Template Platform V3.0
+// Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
+
 import { postJSON } from './client';
 
-// Гарах: BFF-ийн logout route-г дуудаж (refresh токенг backend-ийн blacklist руу
-// илгээж, cookie-г цэвэрлэнэ), дараа нь шилжинэ. SSO-ээр нэвтэрсэн бол хариунд
-// sso_logout_url ирнэ — тийш чиглүүлж SSO (Hydra) дээрх session-ийг мөн дуусгана
-// (тэндээс post_logout_redirect_uri-аар нүүр рүү буцна). Эс бөгөөс нүүр (/) рүү —
-// нүүр нь нэвтрэх картыг агуулсан landing тул дахин нэвтрэхэд бэлэн.
-// Сүлжээ амжилтгүй ч client талаас шилжүүлж, дахин нэвтрэхийг шаардана.
+/**
+ * signOut нь session-ийг СЕРВЕР талд дуусгана: refresh jti устаж, access токен
+ * deny-list-д ороод, API нь httpOnly cookie-г цэвэрлэнэ. Дараа нь browser-ийг
+ * бүрэн ачаалснаар клиент талын бүх кэш (TanStack Query) арилна.
+ *
+ * SSO-гоор нэвтэрсэн бол API нь RP-initiated logout URL-ыг өгвөл тийш
+ * чиглүүлнэ — эс бөгөөс IdP дээрх session амьд үлдэж, дахин "автоматаар"
+ * нэвтэрч орно.
+ */
 export async function signOut(): Promise<void> {
-  let ssoLogoutURL: string | undefined;
-  try {
-    const r = await postJSON<{ sso_logout_url?: string }>('/api/auth/logout', undefined);
-    ssoLogoutURL = r.data?.sso_logout_url;
-  } catch {
-    /* алдаа гарсан ч доор шилжүүлнэ */
-  } finally {
-    window.location.href = ssoLogoutURL || '/';
-  }
+  // Токенууд cookie-д тул биед юу ч дамжуулах шаардлагагүй.
+  const res = await postJSON<{ sso_logout_url?: string }>('/auth/logout', {});
+  const url = (res.data?.sso_logout_url ?? '').trim();
+  window.location.assign(url === '' ? '/' : url);
 }

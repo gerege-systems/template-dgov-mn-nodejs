@@ -1,6 +1,5 @@
-"use client";
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, Inbox, X, Copy, Check, Settings2, RefreshCw, Pencil, KeyRound, Download } from 'lucide-react';
 import { getJSON, sendJSON, postJSON } from '@/lib/client';
@@ -18,7 +17,7 @@ const MIN_SECRET_LEN = 16;
 
 // useServices нь service picker-т зориулж бүх gateway service-ийг татна.
 function useServices() {
-  return useQuery({ queryKey: ['gw-services'], queryFn: () => getJSON<GwService[]>('/api/gateway/services') });
+  return useQuery({ queryKey: ['gw-services'], queryFn: () => getJSON<GwService[]>('/gateway/services') });
 }
 
 export default function ApplicationsView() {
@@ -32,7 +31,7 @@ export default function ApplicationsView() {
   const [secretId, setSecretId] = useState<string | null>(null);
   const [err, setErr] = useState('');
 
-  const q = useQuery({ queryKey: ['applications'], queryFn: () => getJSON<Application[]>('/api/applications') });
+  const q = useQuery({ queryKey: ['applications'], queryFn: () => getJSON<Application[]>('/applications') });
   const items = q.data ?? [];
   const svcQ = useServices();
   const services = svcQ.data ?? [];
@@ -54,7 +53,7 @@ export default function ApplicationsView() {
 
   const create = async () => {
     setErr(''); setCreated(null);
-    const res = await postJSON<Application>('/api/applications', {
+    const res = await postJSON<Application>('/applications', {
       name: form.name,
       app_type: form.app_type,
       redirect_uris: needsRedirect(form.app_type) ? splitList(form.redirect_uris) : [],
@@ -69,7 +68,7 @@ export default function ApplicationsView() {
   const remove = async (a: Application) => {
     if (!window.confirm(T('apps.deleteConfirm').replace('{name}', a.name))) return;
     setErr('');
-    const res = await sendJSON(`/api/applications/${a.id}`, 'DELETE');
+    const res = await sendJSON(`/applications/${a.id}`, 'DELETE');
     if (res.ok) { if (openId === a.id) setOpenId(null); await refresh(); }
     else setErr(res.message || T('apps.deleteErr'));
   };
@@ -259,7 +258,7 @@ function EditDialog({ app, services, servicesLoading, onClose, onChanged, onSetS
 
   const save = async () => {
     setErr(''); setSaved(false); setSaving(true);
-    const res = await sendJSON(`/api/applications/${app.id}`, 'PUT', {
+    const res = await sendJSON(`/applications/${app.id}`, 'PUT', {
       name,
       app_type: appType,
       redirect_uris: needsRedirect(appType) ? splitList(redirects) : [],
@@ -275,7 +274,7 @@ function EditDialog({ app, services, servicesLoading, onClose, onChanged, onSetS
   const rotate = async () => {
     if (!window.confirm(T('apps.rotateConfirm'))) return;
     setErr(''); setRotated(null);
-    const res = await postJSON<Application>(`/api/applications/${app.id}/rotate-secret`, {});
+    const res = await postJSON<Application>(`/applications/${app.id}/rotate-secret`, {});
     if (res.ok && res.data) { setRotated(res.data); onChanged(); }
     else setErr(res.message || T('apps.rotateErr'));
   };
@@ -369,7 +368,7 @@ function SecretDialog({ app, onClose, onChanged }: {
 
   const submit = async () => {
     setErr(''); setSaved(null); setSaving(true);
-    const res = await sendJSON<Application>(`/api/applications/${app.id}/secret`, 'PUT', { secret: secret.trim() });
+    const res = await sendJSON<Application>(`/applications/${app.id}/secret`, 'PUT', { secret: secret.trim() });
     setSaving(false);
     if (res.ok) { setSaved(res.data ?? { ...app, secret: secret.trim() }); onChanged(); }
     else setErr(res.message || T('apps.setSecretErr'));

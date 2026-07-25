@@ -1,4 +1,3 @@
-"use client";
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Bot, Mic, Send, Square, Volume2, Wrench } from 'lucide-react';
@@ -66,7 +65,7 @@ export default function AiChatView() {
     setMessages((m) => [...m, userBubble]);
     setBusy(true);
     try {
-      const body = await postJSON<ChatData>('/api/ai/chat', { ...payload, history });
+      const body = await postJSON<ChatData>('/ai/chat', { ...payload, history });
       if (body?.ok && body.data?.reply) {
         const tools = (body.data.steps ?? [])
           .map((s) => s.tool)
@@ -125,7 +124,7 @@ export default function AiChatView() {
     if (speakingIdx !== null) return;
     setSpeakingIdx(idx);
     try {
-      const body = await postJSON<{ mime?: string; data?: string }>('/api/ai/tts', {
+      const body = await postJSON<{ mime?: string; data?: string }>('/ai/tts', {
         text: text.slice(0, 2000),
       });
       if (body.ok && body.data?.mime && body.data?.data) {

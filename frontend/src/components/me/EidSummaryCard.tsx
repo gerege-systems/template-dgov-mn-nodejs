@@ -1,4 +1,3 @@
-"use client";
 
 // Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
@@ -29,7 +28,7 @@ export default function EidSummaryCard({ show }: { show: boolean }) {
   const { T } = useT();
   const q = useQuery({
     queryKey: ['eid-pki-summary'],
-    queryFn: () => pkiGet<PkiSummary>('/api/me/eid/summary'),
+    queryFn: () => pkiGet<PkiSummary>('/me/eid/summary'),
     enabled: show,
   });
 

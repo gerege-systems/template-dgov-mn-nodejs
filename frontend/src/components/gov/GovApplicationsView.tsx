@@ -1,4 +1,3 @@
-"use client";
 
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -25,7 +24,7 @@ const EVENT_LABEL: Record<string, string> = {
 function Timeline({ id }: { id: string }) {
   const q = useQuery({
     queryKey: ['gov-application-timeline', id],
-    queryFn: () => getJSON<GovApplicationEvent[]>(`/api/gov/applications/${id}/timeline`),
+    queryFn: () => getJSON<GovApplicationEvent[]>(`/gov/applications/${id}/timeline`),
   });
 
   if (q.isPending) return <Loading />;
@@ -51,13 +50,13 @@ export default function GovApplicationsView() {
   const qc = useQueryClient();
   const [err, setErr] = useState('');
   const [openID, setOpenID] = useState<string | null>(null);
-  const q = useQuery({ queryKey: ['gov-applications'], queryFn: () => getJSON<GovApplication[]>('/api/gov/applications') });
+  const q = useQuery({ queryKey: ['gov-applications'], queryFn: () => getJSON<GovApplication[]>('/gov/applications') });
   const items = q.data ?? [];
 
   const cancel = async (a: GovApplication) => {
     if (!window.confirm(`"${a.service_name}" хүсэлтийг цуцлах уу?`)) return;
     setErr('');
-    const res = await postJSON(`/api/gov/applications/${a.id}/cancel`, {});
+    const res = await postJSON(`/gov/applications/${a.id}/cancel`, {});
     if (res.ok) await qc.invalidateQueries({ queryKey: ['gov-applications'] });
     else setErr(res.message || 'Цуцлахад алдаа гарлаа.');
   };
@@ -68,7 +67,7 @@ export default function GovApplicationsView() {
     const note = window.prompt('Шаардсан мэдээллийг бичнэ үү:') ?? '';
     if (!note.trim()) return;
     setErr('');
-    const res = await postJSON(`/api/gov/applications/${a.id}/provide-info`, { note });
+    const res = await postJSON(`/gov/applications/${a.id}/provide-info`, { note });
     if (res.ok) {
       await Promise.all([
         qc.invalidateQueries({ queryKey: ['gov-applications'] }),

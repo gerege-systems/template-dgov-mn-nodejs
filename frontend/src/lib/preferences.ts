@@ -1,4 +1,3 @@
-"use client";
 
 import { useCallback, useEffect, useState } from 'react';
 
@@ -112,35 +111,50 @@ export function usePreferences() {
   const setTheme = useCallback((value: ThemePref) => {
     if (!VALID.theme.has(value)) return;
     setThemeState(value);
-    try { localStorage.setItem(KEYS.theme, value); } catch {}
+    try { localStorage.setItem(KEYS.theme, value); } catch {
+    // localStorage хаагдсан (private горим) — тохиргоо хадгалагдахгүй нь
+    // ажиллагааг зогсоох шалтгаан биш.
+  }
     applyTheme(value);
   }, []);
 
   const setLang = useCallback((value: LangPref) => {
     if (!VALID.lang.has(value)) return;
     setLangState(value);
-    try { localStorage.setItem(KEYS.lang, value); } catch {}
+    try { localStorage.setItem(KEYS.lang, value); } catch {
+    // localStorage хаагдсан (private горим) — тохиргоо хадгалагдахгүй нь
+    // ажиллагааг зогсоох шалтгаан биш.
+  }
     applyLang(value);
   }, []);
 
   const setAccent = useCallback((value: AccentPref) => {
     if (!VALID.accent.has(value)) return;
     setAccentState(value);
-    try { localStorage.setItem(KEYS.accent, value); } catch {}
+    try { localStorage.setItem(KEYS.accent, value); } catch {
+    // localStorage хаагдсан (private горим) — тохиргоо хадгалагдахгүй нь
+    // ажиллагааг зогсоох шалтгаан биш.
+  }
     applyAccent(value);
   }, []);
 
   const setFont = useCallback((value: FontPref) => {
     if (!VALID.font.has(value)) return;
     setFontState(value);
-    try { localStorage.setItem(KEYS.font, value); } catch {}
+    try { localStorage.setItem(KEYS.font, value); } catch {
+    // localStorage хаагдсан (private горим) — тохиргоо хадгалагдахгүй нь
+    // ажиллагааг зогсоох шалтгаан биш.
+  }
     applyFont(value);
   }, []);
 
   const setStyle = useCallback((value: StylePref) => {
     if (!VALID.style.has(value)) return;
     setStyleState(value);
-    try { localStorage.setItem(KEYS.style, value); } catch {}
+    try { localStorage.setItem(KEYS.style, value); } catch {
+    // localStorage хаагдсан (private горим) — тохиргоо хадгалагдахгүй нь
+    // ажиллагааг зогсоох шалтгаан биш.
+  }
     applyStyle(value);
   }, []);
 

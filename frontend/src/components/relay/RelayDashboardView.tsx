@@ -1,10 +1,9 @@
-"use client";
 
 // Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
 
 import React from 'react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Inbox, Loader2, AlertTriangle, CheckCircle2, Gauge, Timer,
@@ -53,8 +52,8 @@ function EventIcon({ t }: { t: string }) {
 
 export default function RelayDashboardView() {
   const { T } = useT();
-  const ov = useQuery({ queryKey: ['relay-overview'], queryFn: () => getJSON<RelayOverview>('/api/relay/overview'), refetchInterval: POLL_MS });
-  const reqs = useQuery({ queryKey: ['relay-requests'], queryFn: () => getJSON<RelayRequest[]>('/api/relay/requests?limit=25'), refetchInterval: POLL_MS });
+  const ov = useQuery({ queryKey: ['relay-overview'], queryFn: () => getJSON<RelayOverview>('/relay/overview'), refetchInterval: POLL_MS });
+  const reqs = useQuery({ queryKey: ['relay-requests'], queryFn: () => getJSON<RelayRequest[]>('/relay/requests?limit=25'), refetchInterval: POLL_MS });
 
   if (ov.isPending) return <div className="card"><Loader2 className="spin" size={18} /> {T('relay.loading')}</div>;
   if (ov.isError) return <div className="alert alert--danger" role="alert">{(ov.error as Error).message}</div>;
@@ -119,7 +118,7 @@ export default function RelayDashboardView() {
           <div className="card__head"><div className="card__title"><Inbox size={18} style={{ color: 'var(--dan-blue-text)' }} /><h2>{T('relay.recentRequests')}</h2></div></div>
           <div>
             {(reqs.data ?? []).map((r) => (
-              <Link key={r.id} href={`/admin/relay/${r.id}`} className="defrow" style={{ textDecoration: 'none' }}>
+              <Link key={r.id} to={`/admin/relay/${r.id}`} className="defrow" style={{ textDecoration: 'none' }}>
                 <span className="defrow__label" style={{ display: 'flex', flexDirection: 'column' }}>
                   <span>{r.title || r.service_code}</span>
                   <span className="muted mono" style={{ fontSize: 12 }}>{r.source_platform} · {formatTS(r.due_at)}</span>

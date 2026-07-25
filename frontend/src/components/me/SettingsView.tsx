@@ -1,6 +1,4 @@
-"use client";
 
-import React from 'react';
 import { KeyRound, LogOut, Palette } from 'lucide-react';
 import { useT } from '@/lib/lang';
 import ChangePasswordForm from '@/app/settings/ChangePasswordForm';

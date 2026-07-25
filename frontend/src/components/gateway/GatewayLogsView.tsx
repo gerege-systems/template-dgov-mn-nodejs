@@ -1,6 +1,4 @@
-"use client";
 
-import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { RefreshCw, Inbox } from 'lucide-react';
 import { getJSON } from '@/lib/client';
@@ -8,7 +6,7 @@ import type { GwLog } from '@/lib/gatewayTypes';
 import { Loading, StatusChip, fmtDateTime } from './gwShared';
 
 export default function GatewayLogsView() {
-  const q = useQuery({ queryKey: ['gw-logs'], queryFn: () => getJSON<GwLog[]>('/api/gateway/logs?limit=100') });
+  const q = useQuery({ queryKey: ['gw-logs'], queryFn: () => getJSON<GwLog[]>('/gateway/logs?limit=100') });
   const logs = q.data ?? [];
 
   return (

@@ -1,6 +1,5 @@
-"use client";
 
-import React, { useId } from 'react';
+import { useId } from 'react';
 import { Check, X } from 'lucide-react';
 import { evaluatePassword } from '@/lib/password';
 

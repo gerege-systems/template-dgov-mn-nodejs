@@ -1,9 +1,8 @@
-"use client";
 
 // Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Trash2, Plus, Building2, Route as RouteIcon, ArrowUp, ArrowDown, KeyRound, Copy } from 'lucide-react';
 import { getJSON, postJSON, sendJSON } from '@/lib/client';
@@ -13,8 +12,8 @@ import type { RelayPlatform, RelayRoute } from '@/lib/relayTypes';
 export default function RelayConfigView() {
   const { T } = useT();
   const qc = useQueryClient();
-  const platforms = useQuery({ queryKey: ['relay-platforms'], queryFn: () => getJSON<RelayPlatform[]>('/api/relay/platforms') });
-  const routes = useQuery({ queryKey: ['relay-routes'], queryFn: () => getJSON<RelayRoute[]>('/api/relay/routes') });
+  const platforms = useQuery({ queryKey: ['relay-platforms'], queryFn: () => getJSON<RelayPlatform[]>('/relay/platforms') });
+  const routes = useQuery({ queryKey: ['relay-routes'], queryFn: () => getJSON<RelayRoute[]>('/relay/routes') });
 
   const [pf, setPf] = useState({ code: '', name: '', direction: 'downstream', supervisor_contact: '' });
   const [rt, setRt] = useState({ service_code: '', platform_id: '', sla_minutes: 60 });
@@ -23,25 +22,25 @@ export default function RelayConfigView() {
 
   const createPlatform = async () => {
     setErr('');
-    const r = await postJSON('/api/relay/platforms', { ...pf, endpoint_url: 'demo://loopback', enabled: true });
+    const r = await postJSON('/relay/platforms', { ...pf, endpoint_url: 'demo://loopback', enabled: true });
     if (!r.ok) { setErr(r.message || 'error'); return; }
     setPf({ code: '', name: '', direction: 'downstream', supervisor_contact: '' });
     qc.invalidateQueries({ queryKey: ['relay-platforms'] });
   };
   const delPlatform = async (id: string) => {
-    await sendJSON(`/api/relay/platforms/${id}`, 'DELETE');
+    await sendJSON(`/relay/platforms/${id}`, 'DELETE');
     qc.invalidateQueries({ queryKey: ['relay-platforms'] });
     qc.invalidateQueries({ queryKey: ['relay-routes'] });
   };
   const createRoute = async () => {
     setErr('');
-    const r = await postJSON('/api/relay/routes', rt);
+    const r = await postJSON('/relay/routes', rt);
     if (!r.ok) { setErr(r.message || 'error'); return; }
     setRt({ service_code: '', platform_id: '', sla_minutes: 60 });
     qc.invalidateQueries({ queryKey: ['relay-routes'] });
   };
   const delRoute = async (id: string) => {
-    await sendJSON(`/api/relay/routes/${id}`, 'DELETE');
+    await sendJSON(`/relay/routes/${id}`, 'DELETE');
     qc.invalidateQueries({ queryKey: ['relay-routes'] });
   };
   const copy = (v: string) => { void navigator.clipboard?.writeText(v); };
@@ -51,7 +50,7 @@ export default function RelayConfigView() {
   const all = platforms.data ?? [];
   const upstream = all.filter((p) => p.direction === 'upstream');
   const downstream = all.filter((p) => p.direction !== 'upstream');
-  const webhookURL = typeof window !== 'undefined' ? `${window.location.origin}/api/relay/webhook` : '/api/relay/webhook';
+  const webhookURL = typeof window !== 'undefined' ? `${window.location.origin}/api/relay/webhook` : '/relay/webhook';
 
   const platformRow = (p: RelayPlatform) => (
     <div className="defrow" key={p.id} style={{ flexWrap: 'wrap' }}>

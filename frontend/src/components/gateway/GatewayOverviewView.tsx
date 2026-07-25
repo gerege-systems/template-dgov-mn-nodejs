@@ -1,4 +1,3 @@
-"use client";
 
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -20,7 +19,7 @@ function StatCard({ icon, value, label }: { icon: React.ReactNode; value: React.
 
 export default function GatewayOverviewView() {
   const { T } = useT();
-  const q = useQuery({ queryKey: ['gw-overview'], queryFn: () => getJSON<GwOverview>('/api/gateway/overview') });
+  const q = useQuery({ queryKey: ['gw-overview'], queryFn: () => getJSON<GwOverview>('/gateway/overview') });
 
   if (q.isPending) return <Loading />;
   if (q.isError) return <div className="alert alert--danger" role="alert">{(q.error as Error).message}</div>;

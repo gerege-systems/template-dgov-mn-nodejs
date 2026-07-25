@@ -1,9 +1,7 @@
-"use client";
 
 // Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
 
-import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { CreditCard, ShieldCheck, KeyRound, Smartphone } from 'lucide-react';
 import { useT } from '@/lib/lang';
@@ -22,7 +20,7 @@ export default function EidIdView({ me }: { me: SessionUser }) {
   // хэрэглэгчид civil_id/national_id/kyc локалд байхгүй тул тэдгээрийг нөхцөлтэй
   // харуулж, нэр/PKI тоог summary-аас авна.
   const canView = !!eid || !!me.eidProxy;
-  const q = useQuery({ queryKey: ['eid-pki-summary'], queryFn: () => pkiGet<PkiSummary>('/api/me/eid/summary'), enabled: canView });
+  const q = useQuery({ queryKey: ['eid-pki-summary'], queryFn: () => pkiGet<PkiSummary>('/me/eid/summary'), enabled: canView });
   const s = q.data?.data ?? null;
 
   if (!canView) {

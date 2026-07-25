@@ -1,4 +1,3 @@
-"use client";
 
 // Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
@@ -7,8 +6,8 @@
 // байдлын задаргаа, once-only зөрчлийн жагсаалт. Зөрчил бүр өөрийн засварын
 // зааврыг (орлуулах ХУР лавлагаа) авч явна.
 
-import React, { useState } from 'react';
-import Link from 'next/link';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Library, FileCheck2, FileWarning, Database, AlertTriangle, Layers, Timer } from 'lucide-react';
 import { getJSON } from '@/lib/client';
@@ -23,13 +22,13 @@ export default function RegistryOverviewView() {
 
   const ov = useQuery({
     queryKey: ['registry-overview'],
-    queryFn: () => getJSON<RegistryOverview>('/api/registry/overview'),
+    queryFn: () => getJSON<RegistryOverview>('/registry/overview'),
   });
   const violations = useQuery({
     queryKey: ['registry-once-only', authority],
     queryFn: () =>
       getJSON<RegistryOnceOnlyViolation[]>(
-        `/api/registry/once-only${authority ? `?authority=${encodeURIComponent(authority)}` : ''}`,
+        `/registry/once-only${authority ? `?authority=${encodeURIComponent(authority)}` : ''}`,
       ),
   });
 
@@ -136,7 +135,7 @@ export default function RegistryOverviewView() {
             {(violations.data ?? []).map((v) => (
               <div className="defrow" key={`${v.service_id}-${v.evidence_id}`}>
                 <span className="defrow__label" style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <Link href={`/admin/registry/services/${v.service_id}`}>{v.service_name}</Link>
+                  <Link to={`/admin/registry/services/${v.service_id}`}>{v.service_name}</Link>
                   <span className="muted" style={{ fontSize: 12 }}>
                     {v.evidence_name} · {v.authority}
                   </span>

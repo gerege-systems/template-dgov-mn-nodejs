@@ -1,4 +1,3 @@
-"use client";
 
 import React, { useState } from 'react';
 import { KeyRound } from 'lucide-react';
@@ -21,7 +20,7 @@ export default function ChangePasswordForm() {
     setSuccess(false);
     setFieldErrors({});
 
-    const res = await postJSON('/api/auth/change-password', {
+    const res = await postJSON('/auth/change-password', {
       current_password: current,
       new_password: next,
     });

@@ -1,12 +1,12 @@
-"use client";
 
-import React, { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 import { ShieldCheck, RefreshCw } from 'lucide-react';
 import Alert from '@/components/Alert';
 import { postJSON } from '@/lib/client';
 import { safeNext } from '@/lib/navigation';
 import { useT } from '@/lib/lang';
+import { useRefreshData } from '@/lib/refresh';
+import { useNavigate } from 'react-router-dom';
 
 type Phase = 'checking' | 'success' | 'expired' | 'refused' | 'error';
 
@@ -16,7 +16,8 @@ const POLL_INTERVAL_MS = 2500;
 // App2App-ийн дараа eID апп-аас буцаж ирэх callback. session id-г хэдэн удаа
 // poll хийж, COMPLETE бол /me/dashboard (эсвэл next) руу шилжинэ.
 export default function EidVerify({ sessionId, next }: { sessionId: string; next: string }) {
-  const router = useRouter();
+  const refreshData = useRefreshData();
+  const navigate = useNavigate();
   const { T } = useT();
   const [phase, setPhase] = useState<Phase>('checking');
   const mounted = useRef(true);
@@ -30,15 +31,15 @@ export default function EidVerify({ sessionId, next }: { sessionId: string; next
 
     const tick = async () => {
       attempts += 1;
-      const res = await postJSON<{ state?: string }>('/api/auth/eid/poll', { session_id: sessionId });
+      const res = await postJSON<{ state?: string }>('/auth/eid/poll', { session_id: sessionId });
       if (!mounted.current) return;
 
       if (res.ok) {
         const state = res.data?.state;
         if (state === 'COMPLETE') {
           setPhase('success');
-          router.push(safeNext(target));
-          router.refresh();
+          navigate(safeNext(target));
+          void refreshData();
           return;
         }
         if (state === 'EXPIRED') {
@@ -64,7 +65,7 @@ export default function EidVerify({ sessionId, next }: { sessionId: string; next
       mounted.current = false;
       if (timer) clearTimeout(timer);
     };
-  }, [sessionId, next, router]);
+  }, [sessionId, next, navigate, refreshData]);
 
   return (
     <div className="form-grid" aria-live="polite">
@@ -92,7 +93,7 @@ export default function EidVerify({ sessionId, next }: { sessionId: string; next
         <button
           className="btn btn--primary btn--lg btn--block"
           type="button"
-          onClick={() => router.push('/login')}
+          onClick={() => navigate('/login')}
         >
           <RefreshCw size={18} strokeWidth={2} />
           <span>{T('auth.eid.retry')}</span>

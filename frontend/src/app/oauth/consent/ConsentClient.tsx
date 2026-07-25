@@ -46,7 +46,7 @@ export default function ConsentClient({ challenge }: { challenge: string }) {
     (async () => {
       try {
         const data = await getJSON<ConsentInfo>(
-          `/api/provider/consent?consent_challenge=${encodeURIComponent(challenge)}`,
+          `/provider/consent?consent_challenge=${encodeURIComponent(challenge)}`,
         );
         if (!mounted.current) return;
         if (data.Skip) {
@@ -67,7 +67,7 @@ export default function ConsentClient({ challenge }: { challenge: string }) {
 
   async function submit(action: 'accept' | 'reject', grantScope: string[]) {
     setBusy(true);
-    const path = action === 'accept' ? '/api/provider/consent/accept' : '/api/provider/consent/reject';
+    const path = action === 'accept' ? '/provider/consent/accept' : '/provider/consent/reject';
     const r = await postJSON<{ redirect_to?: string }>(path, {
       consent_challenge: challenge,
       grant_scope: grantScope,

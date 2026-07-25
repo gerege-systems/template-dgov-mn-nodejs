@@ -1,6 +1,5 @@
-"use client";
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Wallet, Inbox, Loader2, CheckCircle2 } from 'lucide-react';
 import { getJSON, postJSON } from '@/lib/client';
@@ -14,14 +13,14 @@ export default function GovPaymentsView() {
   const [paying, setPaying] = useState<string | null>(null);
   const [err, setErr] = useState('');
 
-  const q = useQuery({ queryKey: ['gov-payments'], queryFn: () => getJSON<GovPayment[]>('/api/gov/payments') });
+  const q = useQuery({ queryKey: ['gov-payments'], queryFn: () => getJSON<GovPayment[]>('/gov/payments') });
   const items = q.data ?? [];
   const unpaidTotal = items.filter((p) => p.status === 'pending').reduce((s, p) => s + p.amount, 0);
 
   const pay = async (p: GovPayment) => {
     if (!window.confirm(`${money(p.amount, p.currency)} төлбөрийг төлөх үү?`)) return;
     setPaying(p.id); setErr('');
-    const res = await postJSON(`/api/gov/payments/${p.id}/pay`, {});
+    const res = await postJSON(`/gov/payments/${p.id}/pay`, {});
     setPaying(null);
     if (res.ok) await qc.invalidateQueries({ queryKey: ['gov-payments'] });
     else setErr(res.message || 'Төлбөр төлөхөд алдаа гарлаа.');

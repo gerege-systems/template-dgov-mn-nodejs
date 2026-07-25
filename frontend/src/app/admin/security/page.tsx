@@ -1,17 +1,15 @@
-import React from 'react';
-import { redirect } from 'next/navigation';
 import PageHead from '@/components/PageHead';
 import SecurityViewer from '@/components/admin/SecurityViewer';
-import { fetchMe } from '@/lib/api';
 import { isAdminLevel } from '@/lib/types';
+import { useMe } from '@/lib/session';
+import { usePageTitle } from '@/lib/usePageTitle';
+import { Navigate } from 'react-router-dom';
 
-export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Аюулгүй байдал — Админ' };
 
-export default async function AdminSecurityPage() {
-  const me = await fetchMe();
-  if (!me) redirect('/login?next=/admin/security');
-  if (!isAdminLevel(me.roleId)) redirect('/');
+export default function AdminSecurityPage() {
+  usePageTitle('Аюулгүй байдал — Админ');
+  const me = useMe();
+  if (!isAdminLevel(me.roleId)) return <Navigate to='/' replace />;
 
   return (
     <>

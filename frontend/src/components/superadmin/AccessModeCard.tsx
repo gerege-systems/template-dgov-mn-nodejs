@@ -1,4 +1,3 @@
-"use client";
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -18,7 +17,7 @@ export default function AccessModeCard() {
 
   const modeQuery = useQuery({
     queryKey: ['access-mode'],
-    queryFn: () => getJSON<{ mode: AccessMode }>('/api/superadmin/access-mode'),
+    queryFn: () => getJSON<{ mode: AccessMode }>('/superadmin/access-mode'),
   });
   const mode = modeQuery.data?.mode;
 
@@ -26,7 +25,7 @@ export default function AccessModeCard() {
     if (saving || next === mode) return;
     setError('');
     setSaving(true);
-    const res = await sendJSON('/api/superadmin/access-mode', 'PUT', { mode: next });
+    const res = await sendJSON('/superadmin/access-mode', 'PUT', { mode: next });
     setSaving(false);
     if (res.ok) {
       await queryClient.invalidateQueries({ queryKey: ['access-mode'] });

@@ -1,17 +1,11 @@
-import React from 'react';
-import { redirect } from 'next/navigation';
 import PageHead from '@/components/PageHead';
 import CoreSearchView from '@/components/admin/CoreSearchView';
-import { fetchMe, fetchMyPermissions } from '@/lib/api';
 
-export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Core хайлт — Админ' };
+import { usePageTitle } from '@/lib/usePageTitle';
 
-export default async function AdminCorePage() {
-  const me = await fetchMe();
-  if (!me) redirect('/');
-  const perms = await fetchMyPermissions();
-  if (!perms.includes('users.manage')) redirect('/');
+
+export default function AdminCorePage() {
+  usePageTitle('Core хайлт — Админ');
   return (
     <>
       <PageHead eyebrowKey="sys.admin" titleKey="nav.coreSearch" subKey="core.search.sub" />
