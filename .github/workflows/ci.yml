@@ -83,6 +83,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
+      # gitleaks-action нь organization-ийн repo-д ТӨЛБӨРТЭЙ лиценз шаарддаг тул
+      # түүний оронд гүйцэтгэх файлыг шууд татаж ажиллуулна (Apache-2.0, үнэгүй).
+      - name: Install gitleaks
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_VERSION: 8.21.2
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
+
+      - name: Scan repository history
+        run: gitleaks detect --source . --redact --no-banner --exit-code 1
