@@ -16,6 +16,7 @@ import { newMemoryCache } from '../../../datasources/caches/memory.js';
 import { newRedisCache, type RedisCache } from '../../../datasources/caches/redis.js';
 import { newAuditRepository } from '../../../datasources/repositories/postgres/audit/audit_postgres.js';
 import { newRBACRepository } from '../../../datasources/repositories/postgres/rbac/rbac_postgres.js';
+import { newSecurityEventRepository } from '../../../datasources/repositories/postgres/security/security_postgres.js';
 import {
   newSiteRepository,
   newThemeRepository,
@@ -49,7 +50,9 @@ import { newGoogleClient } from '../../../pkg/google/google.js';
 import { newJWTServiceWithRefresh } from '../../../pkg/jwt/jwt.js';
 import { newAuditUsecase } from '../../../usecases/audit/audit_usecase.js';
 import { newAuthUsecase } from '../../../usecases/auth/auth_impl.js';
+import { newCoreUsecase } from '../../../usecases/core/core_impl.js';
 import { newRBACUsecase } from '../../../usecases/rbac/rbac_impl.js';
+import { newSecurityUsecase } from '../../../usecases/security/security_usecase.js';
 import { newSiteUsecase, newThemeUsecase } from '../../../usecases/site/site_usecase.js';
 import { newUsersUsecase } from '../../../usecases/users/users_impl.js';
 import * as logger from '../../../pkg/logger/logger.js';
@@ -238,6 +241,13 @@ export async function newApp(): Promise<App> {
   const siteUC = newSiteUsecase(newSiteRepository(db));
   const themeUC = newThemeUsecase(newThemeRepository(db));
 
+  // Gerege Core — иргэн/байгууллагын хайлт. CORE_API_TOKEN хоосон бол домэйн
+  // инерт (500 биш, тохируулаагүй гэсэн мессеж) — оператор дараа идэвхжүүлнэ.
+  const coreUC = newCoreUsecase(AppConfig.CORE_API_BASE, AppConfig.CORE_API_TOKEN);
+
+  // Security event — RASP-style ингест (хэрэглэгчийн RLS дор) + admin жагсаалт.
+  const securityUC = newSecurityUsecase(newSecurityEventRepository(db));
+
   const deps: Deps = {
     db,
     redisCache,
@@ -248,6 +258,8 @@ export async function newApp(): Promise<App> {
     auditUC,
     siteUC,
     themeUC,
+    coreUC,
+    securityUC,
     // SSO eID proxy нь SSO_EID_PROXY_BASE_URL тохируулагдсан үед идэвхжинэ.
     eidProxyEnabled: AppConfig.SSO_EID_PROXY_BASE_URL !== '',
     authMiddleware,

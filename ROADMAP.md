@@ -45,7 +45,7 @@ hash-ууд шалгагдсаар байна.
 | Infra | `backend/deploy/Dockerfile`, `docker-compose.yml` | distroless nodejs runtime, node healthcheck binary |
 | CI/CD | `.github/workflows/` | fmt · lint · typecheck · vitest · openapi drift · build · gitleaks → Deploy |
 
-**Тест:** 248 unit тест (apperror · config · jwt · validators · domain/users · migration · users usecase · eID client · auth usecase · auth DTO · route wiring · rbac usecase · audit hash-chain · audit usecase · site/theme usecase).
+**Тест:** 265 unit тест (apperror · config · jwt · validators · domain/users · migration · users usecase · eID client · auth usecase · auth DTO · route wiring · rbac usecase · audit hash-chain · audit usecase · site/theme usecase · core клиент · security usecase).
 
 ## ✅ Хийгдсэн — домэйн давхарга
 
@@ -55,6 +55,8 @@ hash-ууд шалгагдсаар байна.
 | `site` + `theme` | domain (accent/font/style enum + theme config валидац) · repository interface + postgres адаптер · usecase (TTL кэш) · response DTO · 9 route | 27 unit тест. `GET /site/appearance` ба `GET /themes/active` нь **НЭВТРЭЛТГҮЙ** (landing уншина); бусад нь `settings.manage`. Идэвхтэй theme устгагдахгүй. |
 | `audit` | `pkg/audit` hash-chain (Go-той **байт-нийцтэй** canonical JSON) · repository interface + postgres адаптер · usecase · response DTO · 2 route. `auth` болон `rbac` handler-ууд best-effort бичдэг. | 41 unit тест. Go хувилбараас гаргасан **5 эталон hash вектор**-оор байт-нийцлийг шалгасан — шилжилтийн үед Go/Node нэг DB хуваалцаж болно. |
 | `rbac` | repository interface + postgres адаптер · usecase (эрхийн resolve + процессийн кэш) · request/response DTO · 6 route | 26 unit тест. admin/superadmin нь каталогийн БҮХ эрхийг авна; ашиглагдаж буй эрх устгагдахгүй; `countUsersWithRole` нь RLS-тэй `users`-д "service" identity дор хүрнэ. `requirePermission`-ийн resolver нь ЭНЭ usecase өөрөө. |
+| `core` | usecase (Gerege Core REST клиент: 15с timeout, 4 MiB хязгаар, инерт режим) · handler · 2 route | 10 unit тест. Үндэсний бүртгэлийн PII-д хүрдэг тул `users.manage` эрхээр хамгаалагдсан. `CORE_API_TOKEN` тохируулаагүй бол домэйн **инерт**: 500 биш, тохируулах зааврыг `data.message`-д буцаана. Core-ийн эвдэрсэн/хэтэрхий том хариу `null` болно (апп 500 болохгүй). |
+| `security` | repository interface + postgres адаптер · usecase · response DTO · 2 route | 7 unit тест. `POST /security/events` нэвтэрсэн БҮХ хэрэглэгчид нээлттэй — `user_id`-г сервер JWT-ээс авдаг тул клиент өөрчилж чадахгүй, RLS бодлого нь бас `user_id = app.user_id`-г баталгаажуулна. `GET` нь admin-only (хэрэглэгчид уншуулах бодлого БАЙХГҮЙ). |
 | `auth` / eID | `pkg/eid` RP client (ACSP_V2 QR/push initiate + long-poll session, X.509 задлалт) · `pkg/google` OAuth · usecase (session mint/rotate, MFA gate, Google link) · request/response DTO · 7 route | 76 unit тест. Токен зөвхөн COMPLETE үед, refresh нэг л удаа (атом GetDel), super admin MFA-гүйгээр session авахгүй. **Route-ийн middleware хүрээг** тусад нь тесттэй (Express-ийн `router.use(subRouter)` нь chi-ийн `Group`-той адилгүй — middleware гоождог). |
 
 ---
@@ -75,7 +77,7 @@ hash-ууд шалгагдсаар байна.
 **Дараалал** (хамаарлын дарааллаар):
 
 1. `users` · `auth` (eID · Google · SSO consumer · refresh/logout) · `rbac`
-3. ~~`site`~~ ✅ · ~~`theme`~~ ✅ · `core` · `security`
+3. ~~`site`~~ ✅ · ~~`theme`~~ ✅ · ~~`core`~~ ✅ · ~~`security`~~ ✅
 4. `ai` (Gemini pipeline) · `assets`
 5. `org` · `applications` · `integrations` · `gspace`
 6. `gov` · `registry` · `relay` · `gateway`

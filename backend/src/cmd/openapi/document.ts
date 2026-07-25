@@ -183,6 +183,30 @@ export function openapiDocument(): OpenApiDocument {
           },
           required: ['name'],
         },
+        SecurityEvent: {
+          type: 'object',
+          description: 'RASP-style security event-ийн нэг мөр. Хоосон талбарууд хариунд ОРОХГҮЙ.',
+          properties: {
+            id: { type: 'integer', format: 'int64' },
+            received_at: { type: 'string', format: 'date-time' },
+            user_id: { type: 'string', format: 'uuid' },
+            kind: {
+              type: 'string',
+              maxLength: 80,
+              description: 'жишээ: rasp.jailbreak · integrity.tamper · anomaly.timing',
+            },
+            severity: { type: 'string', enum: ['low', 'medium', 'high', 'critical'] },
+            source: { type: 'string', maxLength: 80 },
+            user_agent: { type: 'string', description: 'серверийн тэмдэглэсэн User-Agent' },
+            ip: { type: 'string', description: 'trusted-proxy-aware клиент IP' },
+            detail: {
+              type: 'object',
+              additionalProperties: true,
+              description: 'PII-гүй нэмэлт нотолгоо',
+            },
+          },
+          required: ['id', 'received_at', 'kind'],
+        },
         Permission: {
           type: 'object',
           properties: {
@@ -809,6 +833,141 @@ export function openapiDocument(): OpenApiDocument {
             '403': { $ref: '#/components/responses/Error' },
             '404': { $ref: '#/components/responses/Error' },
             '422': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/core/users': {
+        get: {
+          summary: 'Gerege Core — иргэн хайх',
+          description:
+            'core.gerege.mn `/api/user/find` руу `search_text`-ээр (core_id эсвэл регистрийн дугаар) хайж, Core-ийн хариуг ДАМЖУУЛНА. ҮНДЭСНИЙ БҮРТГЭЛИЙН PII-д хүрдэг тул `users.manage` эрх шаардана. CORE_API_TOKEN тохируулаагүй бол домэйн инерт: 500 биш, `data.message`-д тохируулах зааврыг буцаана.',
+          tags: ['core'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'search_text',
+              in: 'query',
+              required: false,
+              schema: { type: 'string' },
+              description: 'core_id эсвэл регистрийн дугаар',
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'Core-ийн хариу (pass-through)',
+              content: {
+                'application/json': { schema: { $ref: '#/components/schemas/BaseResponse' } },
+              },
+            },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+            '500': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/core/organizations': {
+        get: {
+          summary: 'Gerege Core — байгууллага хайх',
+          description:
+            'core.gerege.mn `/api/organization/find` руу `search_text`-ээр (регистр эсвэл нэр) хайж, хариуг ДАМЖУУЛНА. `users.manage` эрх шаардана.',
+          tags: ['core'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'search_text',
+              in: 'query',
+              required: false,
+              schema: { type: 'string' },
+              description: 'регистр эсвэл байгууллагын нэр',
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'Core-ийн хариу (pass-through)',
+              content: {
+                'application/json': { schema: { $ref: '#/components/schemas/BaseResponse' } },
+              },
+            },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+            '500': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/security/events': {
+        post: {
+          summary: 'Security event илгээх',
+          description:
+            'Нэвтэрсэн хэрэглэгч RASP-style security event илгээнэ. `user_id`-г СЕРВЕР JWT-ээс авдаг тул клиент өөрчилж чадахгүй; RLS бодлого нь бас `user_id = app.user_id`-г баталгаажуулна. IP + User-Agent-г сервер тэмдэглэнэ.',
+          tags: ['security'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    kind: { type: 'string', minLength: 1, maxLength: 80 },
+                    severity: { type: 'string', enum: ['low', 'medium', 'high', 'critical'] },
+                    source: { type: 'string', maxLength: 80 },
+                    detail: { type: 'object', additionalProperties: true },
+                  },
+                  required: ['kind'],
+                },
+              },
+            },
+          },
+          responses: {
+            '202': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '422': { $ref: '#/components/responses/Error' },
+          },
+        },
+        get: {
+          summary: 'Security event жагсаах (admin)',
+          description:
+            'Event-үүдийг id БУУРАХААР (шинээс хуучин) хуудаслан буцаана. Зөвхөн admin — хэрэглэгчид уншихыг зөвшөөрөх RLS бодлого БАЙХГҮЙ.',
+          tags: ['security'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'limit',
+              in: 'query',
+              required: false,
+              schema: { type: 'integer', default: 50, maximum: 200 },
+            },
+            {
+              name: 'offset',
+              in: 'query',
+              required: false,
+              schema: { type: 'integer', default: 0 },
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'Security event-үүд',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/BaseResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'array',
+                            items: { $ref: '#/components/schemas/SecurityEvent' },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
           },
         },
       },

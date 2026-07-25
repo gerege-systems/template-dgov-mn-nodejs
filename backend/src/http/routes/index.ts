@@ -13,7 +13,9 @@ import type { Db } from '../../datasources/drivers/pg.js';
 import type { JWTService } from '../../pkg/jwt/jwt.js';
 import type { AuditUsecase } from '../../usecases/audit/audit_usecase.js';
 import type { AuthUsecase } from '../../usecases/auth/auth_usecase.js';
+import type { CoreUsecase } from '../../usecases/core/core_usecase.js';
 import type { RBACUsecase } from '../../usecases/rbac/rbac_usecase.js';
+import type { SecurityUsecase } from '../../usecases/security/security_usecase.js';
 import type { SiteUsecase, ThemeUsecase } from '../../usecases/site/site_usecase.js';
 import type { UsersUsecase } from '../../usecases/users/users_usecase.js';
 import type { RateLimiter } from '../middlewares/ratelimit.js';
@@ -21,7 +23,9 @@ import type { Middleware } from '../types.js';
 import { registerAuditRoutes } from './route_audit.js';
 import { registerAuthRoutes } from './route_auth.js';
 import { registerCoreRoutes } from './route_core.js';
+import { registerMetaRoutes } from './route_meta.js';
 import { registerRBACRoutes } from './route_rbac.js';
+import { registerSecurityRoutes } from './route_security.js';
 import { registerSiteRoutes } from './route_site.js';
 import { registerUsersRoutes } from './route_users.js';
 
@@ -51,6 +55,13 @@ export interface Deps {
   /** themeUC нь landing-ийн нэрлэсэн загварууд (CRUD + идэвхтэй сонголт). */
   themeUC: ThemeUsecase;
   /**
+   * coreUC нь Gerege Core (core.gerege.mn)-ийн иргэн/байгууллага хайлт. Үндэсний
+   * бүртгэлийн PII-д хүрдэг тул `users.manage` эрхээр хамгаалагдана.
+   */
+  coreUC: CoreUsecase;
+  /** securityUC нь RASP-style security event-ийн ингест + admin жагсаалт. */
+  securityUC: SecurityUsecase;
+  /**
    * eidProxyEnabled нь SSO eID proxy тохируулагдсан эсэх — /users/me хариунд
    * eid_proxy болж, frontend eID хуудсуудыг SSO хэрэглэгчид нээнэ.
    */
@@ -66,10 +77,12 @@ export interface Deps {
  * порт хийх бүрд энд нэг мөр нэмнэ.
  */
 export function registerRoutes(router: Router, deps: Deps): void {
-  registerCoreRoutes(router, deps);
+  registerMetaRoutes(router, deps);
   registerAuditRoutes(router, deps);
   registerAuthRoutes(router, deps);
+  registerCoreRoutes(router, deps);
   registerRBACRoutes(router, deps);
+  registerSecurityRoutes(router, deps);
   registerSiteRoutes(router, deps);
   registerUsersRoutes(router, deps);
 }
