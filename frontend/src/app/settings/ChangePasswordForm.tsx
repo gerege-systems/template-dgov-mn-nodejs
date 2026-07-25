@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { KeyRound } from 'lucide-react';
 import Alert from '@/components/Alert';
 import PasswordField from '@/components/PasswordField';
-import { postJSON } from '@/lib/client';
+import { putJSON } from '@/lib/client';
 
 export default function ChangePasswordForm() {
   const [current, setCurrent] = useState('');
@@ -20,16 +20,19 @@ export default function ChangePasswordForm() {
     setSuccess(false);
     setFieldErrors({});
 
-    const res = await postJSON('/auth/change-password', {
+    const res = await putJSON('/auth/password/change', {
       current_password: current,
       new_password: next,
     });
     setBusy(false);
 
     if (res.ok) {
+      // Backend нь цуцлалтын тасалбар тэмдэглэж session cookie-г цэвэрлэсэн тул
+      // энэ хуудсанд үлдвэл дараагийн хүсэлт бүр 401 болно — дахин нэвтрүүлнэ.
       setSuccess(true);
       setCurrent('');
       setNext('');
+      window.setTimeout(() => window.location.assign('/login'), 1500);
       return;
     }
     if (res.status === 422 && res.fieldErrors) {
@@ -41,7 +44,7 @@ export default function ChangePasswordForm() {
 
   return (
     <form className="form-grid" onSubmit={submit} noValidate>
-      {success && <Alert kind="success">Нууц үг амжилттай солигдлоо.</Alert>}
+      {success && <Alert kind="success">Нууц үг амжилттай солигдлоо. Дахин нэвтэрнэ үү…</Alert>}
       {error && <Alert kind="danger">{error}</Alert>}
 
       <PasswordField

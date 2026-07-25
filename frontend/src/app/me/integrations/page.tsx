@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import PageHead from '@/components/PageHead';
 import IntegrationsView from '@/components/me/IntegrationsView';
 import { getJSON } from '@/lib/client';
+import { useAppConfig } from '@/lib/appConfig';
 import { integrationStatuses } from '@/lib/integrations';
 import { useMe } from '@/lib/session';
 import { usePageTitle } from '@/lib/usePageTitle';
@@ -18,6 +19,7 @@ import { usePageTitle } from '@/lib/usePageTitle';
 export default function IntegrationsPage(): React.ReactElement {
   usePageTitle('Интеграци');
   const me = useMe();
+  const cfg = useAppConfig();
   const list = useQuery({
     queryKey: ['integrations'],
     queryFn: () => getJSON<{ provider: string }[]>('/integrations'),
@@ -25,7 +27,7 @@ export default function IntegrationsPage(): React.ReactElement {
   });
 
   const connected = new Set<string>((list.data ?? []).map((x) => x.provider));
-  const items = integrationStatuses(connected);
+  const items = integrationStatuses(connected, cfg.integrations);
   // Google Login нь токен биш, identity холболт (users.google_sub) — төлөв нь
   // session дээрх google блок.
   const google = {

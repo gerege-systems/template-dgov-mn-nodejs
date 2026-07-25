@@ -17,7 +17,7 @@ export default function EidDevicesView({ show }: { show: boolean }) {
   const [open, setOpen] = useState<Set<string>>(new Set());
   const q = useQuery({
     queryKey: ['eid-pki-devices'],
-    queryFn: () => pkiGet<{ devices: PkiDeviceItem[]; active_count: number; total: number }>('/me/eid/devices'),
+    queryFn: () => pkiGet<{ devices: PkiDeviceItem[]; active_count: number; total: number }>('/users/me/eid/devices'),
     enabled: show,
   });
 

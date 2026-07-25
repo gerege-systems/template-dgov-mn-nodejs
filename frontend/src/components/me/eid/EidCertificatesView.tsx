@@ -18,7 +18,7 @@ export default function EidCertificatesView({ show }: { show: boolean }) {
   const [filter, setFilter] = useState<Filter>('all');
   const q = useQuery({
     queryKey: ['eid-pki-certs'],
-    queryFn: () => pkiGet<{ certificates: PkiCertItem[] }>('/me/eid/certificates'),
+    queryFn: () => pkiGet<{ certificates: PkiCertItem[] }>('/users/me/eid/certificates'),
     enabled: show,
   });
 

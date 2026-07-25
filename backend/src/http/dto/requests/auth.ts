@@ -7,7 +7,7 @@
 
 import { z } from 'zod';
 
-import { nonEmpty, strictObject } from '../../../pkg/validators/validators.js';
+import { nonEmpty, strictObject, strongPassword } from '../../../pkg/validators/validators.js';
 
 /**
  * eidStartSchema нь POST /auth/eid/start-ийн body. Бүх талбар сонголттой —
@@ -74,3 +74,14 @@ export const logoutSchema = strictObject({
   access_token: z.string().max(4096).optional(),
 });
 export type LogoutBody = z.infer<typeof logoutSchema>;
+
+/**
+ * changePasswordSchema нь PUT /auth/password/change-ийн body. Шинэ нууц үгэд
+ * Go хувилбарын `min=12,max=72,strongpassword` шалгуур хэвээр — bcrypt нь 72
+ * байтаас хойшхыг үл тооцдог тул дээд хязгаар нь 72.
+ */
+export const changePasswordSchema = strictObject({
+  current_password: z.string().min(1).max(72),
+  new_password: strongPassword(12, 72),
+});
+export type ChangePasswordBody = z.infer<typeof changePasswordSchema>;

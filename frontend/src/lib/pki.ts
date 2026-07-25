@@ -4,6 +4,7 @@
 // eID PKI самбарын client-side туслахууд. getJSON нь HTTP статус алддаг тул
 // PKI_READ эрхгүй (403)-ыг "эрх хүлээгдэж байна" төлөв болгон ялгахын тулд
 // статусыг буцаадаг pkiGet-ийг эндээс хуваалцна (Dashboard + Profile хоёулаа).
+import { getResult } from '@/lib/client';
 import { formatTS } from '@/lib/format';
 
 export interface PkiSummary {
@@ -65,9 +66,12 @@ export function renderVal(k: string, v: unknown): string {
   return s;
 }
 
-/** pkiGet нь backend PKI endpoint-ыг дуудаж {status, data}-г бүрэн буцаана. */
+/**
+ * pkiGet нь backend-ийн PKI endpoint-ыг дуудаж {status, data}-г бүрэн буцаана.
+ * Дуудагч 403-ыг "PKI_READ эрх хүлээгдэж байна" төлөв болгон ялгадаг тул алдаа
+ * дээр ШИДЭХГҮЙ — getResult-ийн HTTP статусыг шууд дамжуулна.
+ */
 export async function pkiGet<T>(path: string): Promise<{ status: number; data: T | null }> {
-  const res = await fetch(path, { method: 'GET' });
-  const body = await res.json().catch(() => null);
-  return { status: body?.status ?? res.status, data: (body?.ok ? body.data : null) as T | null };
+  const res = await getResult<T>(path);
+  return { status: res.status, data: res.ok ? ((res.data ?? null) as T | null) : null };
 }

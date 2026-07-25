@@ -99,6 +99,13 @@ export interface LogoutRequest {
   accessToken: string;
 }
 
+/** ChangePasswordRequest нь нэвтэрсэн хэрэглэгчийн нууц үг солих оролт. */
+export interface ChangePasswordRequest {
+  userId: string;
+  currentPassword: string;
+  newPassword: string;
+}
+
 /** AuthUsecase нь HTTP handler-ийн харьцдаг оролтын хил (input boundary) юм. */
 /**
  * SSOTokenService нь хэрэглэгчийн хүчинтэй SSO access token-ыг (шаардвал refresh
@@ -138,6 +145,11 @@ export interface AuthUsecase {
   googleLogin(ctx: Ctx, code: string, redirectUri: string): Promise<GoogleLoginResponse>;
   /** unlinkGoogleFromUser нь нэвтэрсэн хэрэглэгчийн Google холболтыг арилгана. */
   unlinkGoogleFromUser(ctx: Ctx, userId: string): Promise<void>;
+  /**
+   * changePassword нь одоогийн нууц үгийг шалгаад шинээр сольж, цуцлалтын
+   * тасалбарыг тэмдэглэнэ — түүнээс өмнө олгогдсон токенууд татгалзагдана.
+   */
+  changePassword(ctx: Ctx, req: ChangePasswordRequest): Promise<void>;
   /** refresh нь refresh токеныг ЭРГҮҮЛНЭ: шинэ хос үүсгэж, хуучин jti-г хүчингүй болгоно. */
   refresh(ctx: Ctx, req: RefreshRequest): Promise<LoginResult>;
   /** logout нь refresh токены jti-г устгаж, (өгвөл) access токеныг deny-list-д нэмнэ. */

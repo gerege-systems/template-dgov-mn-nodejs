@@ -47,7 +47,7 @@ export default function OrgManagePanel({
   const [okMsg, setOkMsg] = useState('');
   const [addOpen, setAddOpen] = useState(false);
 
-  const base = `/me/eid/organizations/${encodeURIComponent(regNo)}`;
+  const base = `/users/me/eid/organizations/${encodeURIComponent(regNo)}`;
   const signersKey = ['eid-org-signers', regNo];
 
   const q = useQuery({

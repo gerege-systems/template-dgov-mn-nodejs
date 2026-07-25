@@ -33,12 +33,19 @@ npm test
 
 `BACKEND_URL` (өгөгдмөл `http://localhost:8080`) нь dev proxy-ийн зорилтот хаяг.
 
-## Мэдэгдэж буй цоорхой
+## Гуравдагч талын интеграци
 
-Гуравдагч талын интеграцийн (Google Drive · Dropbox · Meet) **холбох** урсгал нь
-client_secret-тэй token exchange шаарддаг байсныг өмнө BFF гүйцэтгэдэг байв. SPA
-статик тул нууц агуулж болохгүй — API талд `/integrations/:provider/connect|callback`
-нэмэгдэх хүртэл "холбох" товч харагдахгүй (жагсаах/салгах нь ажиллана).
+**Холбох** урсгал нь client_secret-тэй token exchange шаарддаг тул бүхэлдээ
+**API талд** байрлана. SPA нь зөвхөн `/api/v1/integrations/:provider/connect` руу
+шилжинэ; state шалгалт, code солилцоо, токен хадгалалт, файлын үйлдэл бүхнийг API
+хийнэ. Нууц энэ дүрсэнд огт ордоггүй.
+
+Аль провайдер холбох боломжтойг `GET /config` → `integrations` хэлнэ —
+тохируулаагүй бол карт "Удахгүй" төлөвтэй inert (товч дарж алдаа авахгүй).
+
+Файл дамжуулалт нь `lib/upload.ts`-ээр **base64 JSON**-оор явна (multipart биш):
+CSRF толгой, биеийн хязгаар, алдааны нэгдсэн дугтуй гурвуулан хэвээр үйлчилнэ.
+Дээд хэмжээ 10 MiB — түүнээс дээш бол сүлжээ рүү огт хандахгүй.
 
 > **Жишиг deployment:** **DAN-Government SSO** ([sso.dgov.mn](https://sso.dgov.mn))
 > — eID-д суурилсан үндэсний нэгдсэн нэвтрэлт (Single Sign-On) — нь энэ суурин дээр
@@ -280,11 +287,12 @@ subject-ыг өгнө.
 | `COOKIE_SECURE` | prod-д `true` | HTTPS дээр `true`. Заагаагүй бол production-д fail-closed Secure. |
 | `APP_ORIGIN` | хүсэлтийн origin | CSRF `Origin` шалгалт + integration redirect_uri суурь. Prod-д заавал. |
 | `GOOGLE_CLIENT_ID` | — | Google нэвтрэлтийн consent URL (нууц биш). Хоосон бол Google inert. |
-| `GOOGLE_DRIVE_CLIENT_ID` / `_SECRET` | — | Google Drive интеграцийн OAuth (BFF талд token exchange). |
+| `GOOGLE_DRIVE_CLIENT_ID` / `_SECRET` | — | Google Drive интеграцийн OAuth. **API талын** env (`backend/.env`) — SPA нууц агуулахгүй. |
 | `DROPBOX_CLIENT_ID` / `_SECRET` | — | Dropbox интеграцийн OAuth. |
 | `GOOGLE_MEET_CLIENT_ID` / `_SECRET` | — | Google Meet орон зай үүсгэх OAuth. |
 
-Интеграцийн `redirect_uri` = `${APP_ORIGIN}/api/integrations/<provider>/callback`.
+Интеграцийн `redirect_uri` = `${APP_ORIGIN}/api/v1/integrations/<provider>/callback`
+(API талд бүртгэнэ — `backend/.env.example`-ийг үз).
 OAuth тохируулаагүй интеграц нь "Удахгүй" төлөвтэй inert — тухайн хост руу хэзээ ч
 хандахгүй.
 

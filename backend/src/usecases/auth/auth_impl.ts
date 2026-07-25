@@ -15,9 +15,12 @@ import {
 } from '../../apperror/index.js';
 import { isCacheMiss, type RedisCache } from '../../datasources/caches/redis.js';
 import {
+  changePassword as domainChangePassword,
+  ErrEmptyPassword,
   isAdmin,
   isSuperAdmin,
   newEIDUser,
+  verifyPassword,
   type GoogleAccount,
   type User,
 } from '../../domain/users.js';
@@ -52,11 +55,18 @@ import type { GoogleClient, GoogleUser } from '../../pkg/google/google.js';
 import type { JWTService, TokenPair } from '../../pkg/jwt/jwt.js';
 import * as logger from '../../pkg/logger/logger.js';
 import type { UsersUsecase } from '../users/users_usecase.js';
-import { accessDenyKey, googleLinkKey, refreshKey, superadminMFAKey } from './redis_keys.js';
+import {
+  accessDenyKey,
+  googleLinkKey,
+  refreshKey,
+  superadminMFAKey,
+  tokenCutoffKey,
+} from './redis_keys.js';
 import { ErrSSOTokenNotFound } from './auth_usecase.js';
 import type {
   AuthUsecase,
   SSOTokenService,
+  ChangePasswordRequest,
   EIDPollRequest,
   EIDPollResponse,
   EIDStartResponse,
@@ -83,6 +93,11 @@ export interface AuthConfig {
    */
   ssoEidProxy?: SSOEidProxy | null;
   ssoTokens?: SSOTokenService | null;
+  /**
+   * bcryptCost нь нууц үг солих үед domain.changePassword руу дамжуулах
+   * ажлын хүчин чадал. 0 (эсвэл заагаагүй) бол domain-ийн анхдагчийг авна.
+   */
+  bcryptCost?: number;
 }
 
 // Тэмдэглэл: eID-ийн callback URL нь ТОХИРГООНООС биш, ХҮСЭЛТЭЭС ирдэг —
@@ -106,6 +121,15 @@ const googleLinkTTLSeconds = 15 * 60;
  * богино (5 мин) байх нь хулгайлагдсан токены ашиглах цонхыг нарийсгана.
  */
 const superadminMFATTLSeconds = 5 * 60;
+
+/**
+ * tokenCutoffTTLSeconds нь тасалбар (cutoff) дохионы амьдрах хугацаа. Access
+ * токенууд хамгийн ихдээ JWT_EXPIRED цагийн дараа дуусдаг тул 24ц нь дамжиж буй
+ * аливаа access токеноос тав тухтай удаан амьдардаг. Refresh токены хүчингүй
+ * болголт нь DB-д (users.password_changed_at) байрладаг бөгөөд энэ TTL-д
+ * хамаарахгүй.
+ */
+const tokenCutoffTTLSeconds = 24 * 60 * 60;
 
 const usecaseName = 'auth';
 const fileName = 'auth_impl.ts';
@@ -492,6 +516,73 @@ class AuthUsecaseImpl implements AuthUsecase {
 
   async unlinkGoogleFromUser(ctx: Ctx, userId: string): Promise<void> {
     await this.users.unlinkGoogle(ctx, userId);
+  }
+
+  /**
+   * changePassword нь баталгаажсан хэрэглэгчийн нууц үгийг одоогийнхыг нь
+   * шалгасны дараа солино. Шинэ passwordChangedAt нь хүчингүй болгох тасалбар
+   * цэг болж ажилладаг — түүнээс өмнө олгогдсон refresh токенууд /refresh дээр
+   * татгалзагдана; access токенуудыг мөн Redis дэх cutoff-оор хаана.
+   */
+  async changePassword(ctx: Ctx, req: ChangePasswordRequest): Promise<void> {
+    const { userId, currentPassword, newPassword } = req;
+    const method = 'changePassword';
+
+    if (newPassword === '') {
+      throw badRequest('new password is required');
+    }
+
+    const { user } = await this.users.getById(ctx, { id: userId });
+
+    if (!(await verifyPassword(user, currentPassword))) {
+      logger.errorWithContext(ctx, 'Change password failed: invalid current password', {
+        usecase: usecaseName,
+        method,
+        file: fileName,
+        step: 'verify_current_password',
+        user_id: userId,
+      });
+      throw unauthorized('current password is incorrect');
+    }
+
+    try {
+      await domainChangePassword(user, newPassword, this.cfg.bcryptCost ?? 0);
+    } catch (err) {
+      if (err === ErrEmptyPassword) throw badRequest(ErrEmptyPassword.message);
+      throw internalCause(new Error(`hash new password: ${logger.errText(err)}`));
+    }
+
+    await this.users.updatePassword(ctx, { user });
+
+    if (user.passwordChangedAt) {
+      await this.recordTokenCutoff(ctx, userId, user.passwordChangedAt);
+    }
+  }
+
+  /**
+   * recordTokenCutoff нь тухайн хэрэглэгчид олгогдсон access токенуудыг "энэ
+   * агшнаас өмнөх бол хүчингүй" гэж тэмдэглэнэ (auth middleware уншина). Redis
+   * алдаа NON-FATAL — нууц үг аль хэдийн солигдсон бөгөөд refresh нь DB дэх
+   * passwordChangedAt-аар давхар хамгаалагдсан.
+   */
+  private async recordTokenCutoff(ctx: Ctx, userId: string, when: Date): Promise<void> {
+    try {
+      await this.redisCache.setTTL(
+        ctx,
+        tokenCutoffKey(userId),
+        String(Math.floor(when.getTime() / 1000)),
+        tokenCutoffTTLSeconds,
+      );
+    } catch (err) {
+      logger.errorWithContext(ctx, 'auth: failed to write token cutoff (non-fatal)', {
+        usecase: usecaseName,
+        method: 'recordTokenCutoff',
+        file: fileName,
+        step: 'redis_set_token_cutoff',
+        error: logger.errText(err),
+        user_id: userId,
+      });
+    }
   }
 
   /**

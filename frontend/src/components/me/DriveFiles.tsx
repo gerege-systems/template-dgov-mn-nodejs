@@ -3,6 +3,7 @@ import React, { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { HardDrive, Upload, Eye, ExternalLink, Inbox, Loader2, RefreshCw, FolderOpen, Folder } from 'lucide-react';
 import { getJSON } from '@/lib/client';
+import { uploadFile } from '@/lib/upload';
 import {
   Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
@@ -60,18 +61,11 @@ export default function DriveFiles() {
     if (!file) return;
     setUploading(true); setErr('');
     try {
-      const fd = new FormData();
-      fd.append('file', file);
-      const res = await fetch('/integrations/google-drive/upload', {
-        method: 'POST',
-        headers: { 'x-dgov-csrf': '1' },
-        body: fd,
-      });
-      const body = await res.json().catch(() => null);
-      if (res.ok && body?.ok) await qc.invalidateQueries({ queryKey: ['drive-files'] });
-      else setErr(body?.message || 'Хуулахад алдаа гарлаа.');
+      const res = await uploadFile('/integrations/google-drive/upload', file);
+      if (res.ok) await qc.invalidateQueries({ queryKey: ['drive-files'] });
+      else setErr(res.message || 'Хуулахад алдаа гарлаа.');
     } catch {
-      setErr('Сүлжээний алдаа. Дахин оролдоно уу.');
+      setErr('Файл уншихад алдаа гарлаа. Дахин оролдоно уу.');
     } finally {
       setUploading(false);
     }

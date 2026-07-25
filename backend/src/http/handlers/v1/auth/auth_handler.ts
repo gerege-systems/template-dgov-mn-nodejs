@@ -10,6 +10,7 @@ import * as logger from '../../../../pkg/logger/logger.js';
 import { recordEventSafely, type AuditUsecase } from '../../../../usecases/audit/audit_usecase.js';
 import type { AuthUsecase } from '../../../../usecases/auth/auth_usecase.js';
 import {
+  changePasswordSchema,
   eidPollSchema,
   eidStartByNationalIdSchema,
   eidStartSchema,
@@ -172,6 +173,56 @@ export class AuthHandler {
     await this.usecase.unlinkGoogleFromUser(req.ctx, user.id);
     newSuccessResponse(req, res, 200, 'google account unlinked');
   };
+
+  /**
+   * changePassword нь одоогийн нууц үгийг шалгаж шинээр солино. Амжилтын дараа
+   * цуцлалтын тасалбар тэмдэглэгддэг тул ӨМНӨ олгогдсон бүх токен хүчингүй —
+   * cookie-д суурилсан session-ийг мөн цэвэрлэж, дахин нэвтрэхийг шаардана.
+   *
+   * PUT /auth/password/change · Bearer/cookie · 200 · 400 · 401 · 422
+   */
+  changePassword: AsyncHandler = async (req, res) => {
+    const user = currentUserFromRequest(req);
+    if (!user) {
+      newErrorResponse(req, res, 401, 'request is not authenticated');
+      return;
+    }
+    const body = decodeBody(req, changePasswordSchema);
+    try {
+      await this.usecase.changePassword(req.ctx, {
+        userId: user.id,
+        currentPassword: body.current_password,
+        newPassword: body.new_password,
+      });
+    } catch (err) {
+      await this.auditPassword(req, user.id, false);
+      throw err;
+    }
+    await this.auditPassword(req, user.id, true);
+    // Шинэ токен ЭНД олгохгүй — cutoff нь одоогийн session-ийг хүчингүй болгосон
+    // тул cookie-г цэвэрлэж, хэрэглэгчийг дахин нэвтрүүлнэ.
+    clearSessionCookies(res);
+    newSuccessResponse(req, res, 200, 'password changed');
+  };
+
+  /** auditPassword нь нууц үг солих оролдлогыг бүртгэнэ (BEST-EFFORT). */
+  private async auditPassword(req: Request, userId: string, success: boolean): Promise<void> {
+    await recordEventSafely(
+      this.auditUC,
+      withUser(req.ctx, userId),
+      success ? 'auth.password.change.ok' : 'auth.password.change.fail',
+      'auth',
+      userId,
+      { success },
+      (err) => {
+        logger.errorWithContext(
+          req.ctx,
+          'persisted audit write failed (non-fatal)',
+          logCtx('changePassword', { step: 'audit_record', error: logger.errText(err) }),
+        );
+      },
+    );
+  }
 
   /**
    * refresh нь refresh токеныг ЭРГҮҮЛНЭ: шинэ access+refresh хос олгож, хуучин

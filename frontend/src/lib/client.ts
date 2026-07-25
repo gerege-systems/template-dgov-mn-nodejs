@@ -151,6 +151,15 @@ export async function getJSON<T = unknown>(path: string): Promise<T> {
   return res.data as T;
 }
 
+/**
+ * getResult нь GET хүсэлтийг ШИДЭЛГҮЙ гүйцэтгэж бүтэн ClientResult буцаана —
+ * HTTP статус нь өөрөө утга агуулах үед (жишээ нь PKI самбар 403-ыг "эрх
+ * хүлээгдэж байна" төлөв болгон ялгадаг) getJSON-ий оронд үүнийг хэрэглэнэ.
+ */
+export function getResult<T = unknown>(path: string): Promise<ClientResult<T>> {
+  return request<T>(path, { method: 'GET' });
+}
+
 /** getRaw нь түүхий Response буцаана (файл татах — PDF, WAV г.м.). */
 export function getRaw(path: string): Promise<Response> {
   return fetch(apiUrl(path), { credentials: 'same-origin' });

@@ -61,5 +61,11 @@ export function registerAuthRoutes(router: Router, deps: Deps): void {
   // authMiddleware-тэй. ──
   auth.delete('/google/link', deps.authMiddleware, wrap(handler.googleUnlink));
 
+  // ── Нууц үг солих (нэвтэрсэн хэрэглэгч). Go эх хувилбарт handler + usecase
+  // бэлэн байсан ч route нь холбогдоогүй үлдсэн — frontend-ийн "Нууц үг солих"
+  // маягт үүнийг дуудаж 404 авдаг байсныг ЭНД холбож бүрэн болгов. Чанга
+  // limiter: нууц үг таах оролдлогыг IP тус бүрт ~5/мин-д барина. ──
+  auth.put('/password/change', deps.authMiddleware, strict, wrap(handler.changePassword));
+
   router.use('/auth', auth);
 }

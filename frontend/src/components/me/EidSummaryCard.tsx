@@ -28,7 +28,7 @@ export default function EidSummaryCard({ show }: { show: boolean }) {
   const { T } = useT();
   const q = useQuery({
     queryKey: ['eid-pki-summary'],
-    queryFn: () => pkiGet<PkiSummary>('/me/eid/summary'),
+    queryFn: () => pkiGet<PkiSummary>('/users/me/eid/summary'),
     enabled: show,
   });
 

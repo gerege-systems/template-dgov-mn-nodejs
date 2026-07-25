@@ -98,6 +98,7 @@ RLS identity.
 | POST | `/auth/eid/poll` | — | Long-poll the pending eID session (~25 s hold); returns `PENDING` or, on approval, the access + refresh token pair. Separate looser rate limiter. |
 | POST | `/auth/google` | — | Google OAuth callback — exchanges the auth `code`, then links the Google account to (or logs in as) the eID user. |
 | DELETE | `/auth/google/link` | 🔒 | Unlink the authenticated user's Google account (linking happens only via the login flow). |
+| PUT | `/auth/password/change` | 🔒 | Change the password. Verifies the current one, then records a revocation cutoff — every token issued before it is rejected — and clears the session cookies, so the user signs in again. New password: 12–72 chars with upper/lower/digit/special. |
 | POST | `/auth/refresh` | — | Rotate the token pair using a valid refresh token. Refresh **rotates** the token, so the old refresh token is invalidated. |
 | POST | `/auth/logout` | — | Revoke the supplied refresh token; if `access_token` is also supplied, its jti is added to a Redis deny-list so it stops working immediately. |
 
@@ -203,6 +204,38 @@ Tokens are stored encrypted per user (RLS).
 | POST | `/integrations/` | Connect a provider (OAuth). |
 | GET | `/integrations/{provider}/token` | Get a usable access token for a connected provider. |
 | DELETE | `/integrations/{provider}` | Disconnect a provider. |
+
+### Server-side provider operations
+
+The SPA is served as static files, so it can hold neither `client_secret` nor the
+user's OAuth token. The whole OAuth dance and every provider API call therefore
+run **here**, in the API. `GET /integrations/{provider}/token` stays an
+in-process concern — it must never reach a browser.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/integrations/{provider}/connect` | 302 to the provider's consent screen; CSRF state in a short-lived httpOnly cookie. |
+| GET | `/integrations/{provider}/callback` | Verify state → exchange code → store the token encrypted → 302 back to `/me/integrations`. |
+| GET | `/integrations/google-drive/files` | List the app's own «Gerege» folder (drive.file scope). |
+| POST | `/integrations/google-drive/upload` | Upload a file (base64 body, ≤10 MiB). |
+| POST | `/integrations/google-drive/image` | Upload an image and return a publicly viewable URL. |
+| PUT | `/integrations/google-drive/files/{id}` | Rename a file. |
+| DELETE | `/integrations/google-drive/files/{id}` | Delete a file. |
+| GET | `/integrations/dropbox/files` | List «/Gerege». |
+| GET | `/integrations/dropbox/preview` | Temporary direct link; `path` **must** be inside «/Gerege» (else 400). |
+| POST | `/integrations/dropbox/upload` | Upload a file (base64 body). |
+| POST | `/integrations/google-meet/create-space` | Create a meeting (accessType: TRUSTED). |
+
+A provider error of 401/403 is mapped to **400**, not 401: this API's 401 means
+"not signed in to the platform" and would bounce the user to the login screen for
+what is really an expired third-party grant.
+
+Saving a signature/stamp is a **two-step** flow — `POST /integrations/google-drive/image`
+returns a URL, then `PUT /me/signature` (or `/me/orgstamp/{regNo}`) stores it.
+That keeps the assets contract (which stores a URL) unchanged.
+
+Which providers can be connected is reported by `GET /config` → `integrations`
+(true only when both the client id and secret are configured).
 
 ## Assets — signature / latin name / org stamp (`/api/v1/me`) 🔒
 

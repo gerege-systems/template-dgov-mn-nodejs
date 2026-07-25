@@ -4,6 +4,7 @@
 import type { Router } from 'express';
 
 import { AppConfig, issuer } from '../../config/config.js';
+import { configuredProviders } from '../../pkg/oauthproviders/oauthproviders.js';
 import { newSuccessResponse, wrap } from '../response.js';
 import type { Deps } from './index.js';
 
@@ -44,6 +45,10 @@ export function registerMetaRoutes(router: Router, _deps: Deps): void {
           ai: AppConfig.GEMINI_API_KEY !== '',
           sign: AppConfig.EID_RP_UUID !== '',
         },
+        // Гуравдагч талын интеграцууд: аль нь ХОЛБОХ боломжтой (client id +
+        // secret хоёулаа тохируулагдсан) вэ. UI үүгээр "Холбох" товчийг
+        // харуулах/нуухаа шийднэ — тохируулаагүй үед дарж алдаа авахгүй.
+        integrations: configuredProviders(),
       });
     }),
   );

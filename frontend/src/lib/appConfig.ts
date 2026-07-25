@@ -14,12 +14,15 @@ export interface PublicConfig {
   google_client_id: string;
   issuer: string;
   features: { google_login: boolean; sso: boolean; ai: boolean; sign: boolean };
+  /** integrations нь аль гуравдагч талын үйлчилгээ ХОЛБОХ боломжтойг заана. */
+  integrations: Record<string, boolean>;
 }
 
 const fallback: PublicConfig = {
   google_client_id: '',
   issuer: '',
   features: { google_login: false, sso: false, ai: false, sign: false },
+  integrations: {},
 };
 
 /** useAppConfig нь нийтийн тохиргоог (кэштэй) буцаана. */

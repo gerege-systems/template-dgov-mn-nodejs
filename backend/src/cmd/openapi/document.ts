@@ -322,6 +322,20 @@ export function openapiDocument(): OpenApiDocument {
           schema: { type: 'string' },
           description: 'Байгууллагын улсын бүртгэлийн дугаар',
         },
+        GovAppId: {
+          name: 'id',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+          description: 'Төрийн үйлчилгээний хүсэлтийн UUID',
+        },
+        RegistryServiceId: {
+          name: 'id',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+          description: 'Бүртгэлийн үйлчилгээний UUID',
+        },
       },
       requestBodies: {
         RegistryService: {
@@ -425,6 +439,45 @@ export function openapiDocument(): OpenApiDocument {
             },
           },
         },
+        RegistryEvidence: {
+          required: true,
+          description: 'Нотлох баримтын мета мэдээлэл (ХУР-т байгаа эсэх + эзэмшигч байгууллага).',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  code: { type: 'string', maxLength: 64 },
+                  name: { type: 'string', minLength: 1, maxLength: 300 },
+                  description: { type: 'string', maxLength: 4000 },
+                  holder_agency: { type: 'string', maxLength: 300 },
+                  source_system: { type: 'string', maxLength: 300 },
+                  in_khur: { type: 'boolean' },
+                  khur_service_code: { type: 'string', maxLength: 120 },
+                },
+                required: ['name'],
+              },
+            },
+          },
+        },
+        Base64Upload: {
+          required: true,
+          description:
+            'Файлын агуулга base64-оор (`data:` угтваргүй). Дээд хэмжээ 10 MiB — түүнээс дээш бол 400.',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  data: { type: 'string', description: 'base64 агуулга' },
+                  mime: { type: 'string', maxLength: 255 },
+                  name: { type: 'string', maxLength: 255 },
+                },
+                required: ['data'],
+              },
+            },
+          },
+        },
       },
       responses: {
         Ok: {
@@ -475,6 +528,22 @@ export function openapiDocument(): OpenApiDocument {
       '/': {
         get: {
           summary: 'API-ийн мета мэдээлэл',
+          tags: ['core'],
+          responses: {
+            '200': {
+              description: 'OK',
+              content: {
+                'application/json': { schema: { $ref: '#/components/schemas/BaseResponse' } },
+              },
+            },
+          },
+        },
+      },
+      '/config': {
+        get: {
+          summary: 'Нийтийн (нууц БИШ) тохиргоо',
+          description:
+            'SPA-д ажиллах үед хэрэгтэй тохиргоо: Google-ийн client_id (угаасаа ил утга), issuer, идэвхтэй боломжууд, болон аль гуравдагч талын интеграц ХОЛБОХ боломжтой нь. Нууц утга ЭНД ХЭЗЭЭ Ч ОРОХГҮЙ. Нэвтрэлт шаардахгүй.',
           tags: ['core'],
           responses: {
             '200': {
@@ -742,6 +811,36 @@ export function openapiDocument(): OpenApiDocument {
             '400': { $ref: '#/components/responses/Error' },
             '422': { $ref: '#/components/responses/Error' },
             '500': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/auth/password/change': {
+        put: {
+          summary: 'Нууц үг солих',
+          description:
+            'Одоогийн нууц үгийг шалгаж шинээр сольж, цуцлалтын тасалбарыг тэмдэглэнэ — түүнээс ӨМНӨ олгогдсон бүх access/refresh токен татгалзагдана. Амжилтын дараа session cookie цэвэрлэгддэг тул хэрэглэгч дахин нэвтэрнэ. Шинэ нууц үг: 12–72 тэмдэгт, том/жижиг үсэг · цифр · тусгай тэмдэгт.',
+          tags: ['auth'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    current_password: { type: 'string', minLength: 1, maxLength: 72 },
+                    new_password: { type: 'string', minLength: 12, maxLength: 72 },
+                  },
+                  required: ['current_password', 'new_password'],
+                },
+              },
+            },
+          },
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '400': { $ref: '#/components/responses/Error' },
+            '401': { $ref: '#/components/responses/Error' },
+            '422': { $ref: '#/components/responses/Error' },
           },
         },
       },
@@ -2500,6 +2599,242 @@ export function openapiDocument(): OpenApiDocument {
           },
         },
       },
+      '/gov/life-events': {
+        get: {
+          summary: 'Амьдралын үйл явдлууд (иргэнд)',
+          description: 'Нийтлэгдсэн үйлчилгээг амьдралын үйл явдлаар бүлэглэж харуулна.',
+          tags: ['gov'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/gov/applications/{id}/cancel': {
+        post: {
+          summary: 'Хүсэлтээ цуцлах',
+          description:
+            'ЗӨВХӨН өөрийн хүсэлт (RLS + WHERE user_id). Аль хэдийн шийдвэрлэгдсэн хүсэлтийг цуцлах нь төлөвийн машины зөрчил — 409.',
+          tags: ['gov'],
+          security: [{ bearerAuth: [] }],
+          parameters: [{ $ref: '#/components/parameters/GovAppId' }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '404': { $ref: '#/components/responses/Error' },
+            '409': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/gov/notifications': {
+        get: {
+          summary: 'Мэдэгдлүүд',
+          tags: ['gov'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'limit', in: 'query', schema: { type: 'integer', default: 50, maximum: 200 } },
+            { name: 'offset', in: 'query', schema: { type: 'integer', default: 0 } },
+          ],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/gov/notifications/read-all': {
+        post: {
+          summary: 'Бүх мэдэгдлийг уншсанд тооцох',
+          tags: ['gov'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/gov/notifications/{id}/read': {
+        post: {
+          summary: 'Мэдэгдлийг уншсанд тооцох',
+          description: 'ИДЕМПОТЕНТ. ЗӨВХӨН өөрийн мэдэгдэл (RLS).',
+          tags: ['gov'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          ],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '404': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/gov/payments': {
+        get: {
+          summary: 'Төлбөрүүд',
+          tags: ['gov'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/gov/payments/{id}/pay': {
+        post: {
+          summary: 'Төлбөр төлөх (симуляц)',
+          description:
+            'ЗАГВАР төлбөр — бодит төлбөрийн систем холбогдоогүй. Аль хэдийн төлөгдсөн дээр 409.',
+          tags: ['gov'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          ],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '404': { $ref: '#/components/responses/Error' },
+            '409': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/gov/appointments': {
+        get: {
+          summary: 'Цаг захиалгууд',
+          tags: ['gov'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+          },
+        },
+        post: {
+          summary: 'Цаг захиалах',
+          tags: ['gov'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    service_id: { type: 'string', format: 'uuid' },
+                    scheduled_at: { type: 'string', description: 'ISO-8601' },
+                    location: { type: 'string', maxLength: 300 },
+                    note: { type: 'string', maxLength: 2000 },
+                  },
+                  required: ['scheduled_at'],
+                },
+              },
+            },
+          },
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '400': { $ref: '#/components/responses/Error' },
+            '401': { $ref: '#/components/responses/Error' },
+            '422': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/gov/appointments/{id}/cancel': {
+        post: {
+          summary: 'Цаг захиалгаа цуцлах',
+          description: 'ЗӨВХӨН өөрийн захиалга (RLS).',
+          tags: ['gov'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          ],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '404': { $ref: '#/components/responses/Error' },
+            '409': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/gov/officer/stats': {
+        get: {
+          summary: 'Дарааллын статистик',
+          description: '`gov.review` эрх + `officer` RLS үүрэг.',
+          tags: ['gov-officer'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/gov/officer/queue/{id}': {
+        get: {
+          summary: 'Дарааллын нэг хүсэлтийн дэлгэрэнгүй',
+          tags: ['gov-officer'],
+          security: [{ bearerAuth: [] }],
+          parameters: [{ $ref: '#/components/parameters/GovAppId' }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+            '404': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/gov/officer/queue/{id}/complete': {
+        post: {
+          summary: 'Хүсэлтийг дуусгах',
+          description:
+            'Зөвшөөрөгдсөн (approved) хүсэлтийг ГАРАЛТ хүргэгдсэний дараа дуусгана. Төлөвийн машин зөрчигдвөл 409.',
+          tags: ['gov-officer'],
+          security: [{ bearerAuth: [] }],
+          parameters: [{ $ref: '#/components/parameters/GovAppId' }],
+          requestBody: {
+            required: false,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: { note: { type: 'string', maxLength: 2000 } },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+            '409': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/gov/officer/queue/{id}/request-info': {
+        post: {
+          summary: 'Нэмэлт мэдээлэл шаардах',
+          description:
+            'Хүсэлтийг `info_requested` төлөвт оруулж иргэнд мэдэгдэнэ; иргэн `/gov/applications/{id}/provide-info`-оор хариулна.',
+          tags: ['gov-officer'],
+          security: [{ bearerAuth: [] }],
+          parameters: [{ $ref: '#/components/parameters/GovAppId' }],
+          requestBody: {
+            required: false,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: { note: { type: 'string', maxLength: 2000 } },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+            '409': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
       '/gov/services': {
         get: {
           summary: 'Иргэний үйлчилгээний каталог',
@@ -2835,6 +3170,177 @@ export function openapiDocument(): OpenApiDocument {
             '400': { $ref: '#/components/responses/Error' },
             '401': { $ref: '#/components/responses/Error' },
             '422': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/integrations/{provider}/connect': {
+        get: {
+          summary: 'OAuth холболтыг эхлүүлэх (302)',
+          description:
+            'Провайдерын зөвшөөрлийн хуудас руу 302 хийж, CSRF-ийн state-ийг богино настай httpOnly cookie-д тавина. Энэ нь JSON БИШ, top-level NAVIGATION — SPA нь энэ хаяг руу шууд шилжинэ. client_secret нь ЗӨВХӨН серверт үлдэнэ. Тохируулаагүй/танихгүй провайдер бол `/me/integrations?error=…` руу буцаана.',
+          tags: ['integrations'],
+          security: [{ bearerAuth: [] }],
+          parameters: [{ $ref: '#/components/parameters/IntegrationProvider' }],
+          responses: {
+            '302': { description: 'Провайдер руу эсвэл алдаатай буцах чиглүүлэлт' },
+            '401': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/integrations/{provider}/callback': {
+        get: {
+          summary: 'OAuth буцах цэг (302)',
+          description:
+            'state-ийг cookie-той тулгаж (CSRF), authorization code-ийг токен болгон солилцоод ШИФРЛҮҮЛЖ хадгална. Дараа нь `/me/integrations?connected=…` руу буцаана. Токен browser-т ХЭЗЭЭ Ч хүрэхгүй.',
+          tags: ['integrations'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { $ref: '#/components/parameters/IntegrationProvider' },
+            { name: 'code', in: 'query', schema: { type: 'string' } },
+            { name: 'state', in: 'query', schema: { type: 'string' } },
+            { name: 'error', in: 'query', schema: { type: 'string' } },
+          ],
+          responses: {
+            '302': { description: 'Холболтын хуудас руу буцах чиглүүлэлт' },
+            '401': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/integrations/google-drive/files': {
+        get: {
+          summary: 'Google Drive «Gerege» хавтасны файлууд',
+          description:
+            'Токеныг СЕРВЕР талд ашиглаж (шаардвал refresh хийж) файлуудыг жагсаана. drive.file scope тул зөвхөн апп-ын өөрийн үүсгэсэн файл харагдана.',
+          tags: ['integrations'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '400': { $ref: '#/components/responses/Error' },
+            '401': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/integrations/google-drive/upload': {
+        post: {
+          summary: 'Файлыг Google Drive руу хуулах',
+          description:
+            'Файл нь base64-оор (multipart БИШ) ирнэ — ингэснээр биеийн ерөнхий хязгаар, CSRF шалгалт, алдааны дугтуй хэвээр үйлчилнэ. Дээд хэмжээ 10 MiB.',
+          tags: ['integrations'],
+          security: [{ bearerAuth: [] }],
+          requestBody: { $ref: '#/components/requestBodies/Base64Upload' },
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '400': { $ref: '#/components/responses/Error' },
+            '401': { $ref: '#/components/responses/Error' },
+            '422': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/integrations/google-drive/image': {
+        post: {
+          summary: 'Зургийг Drive-д хуулж НИЙТЭД харагдах URL авах',
+          description:
+            'Гарын үсэг/тамганы зургийг хуулж, "холбоос бүхий хэн ч харах" эрхтэйгээр URL буцаана. Дуудагч тэр URL-ийг `PUT /me/signature` эсвэл `PUT /me/orgstamp/{regNo}` рүү хадгална — assets-ийн гэрээ өөрчлөгдөөгүй.',
+          tags: ['integrations'],
+          security: [{ bearerAuth: [] }],
+          requestBody: { $ref: '#/components/requestBodies/Base64Upload' },
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '400': { $ref: '#/components/responses/Error' },
+            '401': { $ref: '#/components/responses/Error' },
+            '422': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/integrations/google-drive/files/{id}': {
+        put: {
+          summary: 'Drive файлын нэрийг солих',
+          tags: ['integrations'],
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: { name: { type: 'string', maxLength: 255 } },
+                  required: ['name'],
+                },
+              },
+            },
+          },
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '400': { $ref: '#/components/responses/Error' },
+            '401': { $ref: '#/components/responses/Error' },
+            '422': { $ref: '#/components/responses/Error' },
+          },
+        },
+        delete: {
+          summary: 'Drive файлыг устгах',
+          tags: ['integrations'],
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '400': { $ref: '#/components/responses/Error' },
+            '401': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/integrations/dropbox/files': {
+        get: {
+          summary: 'Dropbox «/Gerege» хавтасны файлууд',
+          tags: ['integrations'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '400': { $ref: '#/components/responses/Error' },
+            '401': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/integrations/dropbox/preview': {
+        get: {
+          summary: 'Dropbox файлын түр линк',
+          description:
+            'Зам нь «/Gerege» хавтас доторх байх ЁСТОЙ — эс бөгөөс 400. Ингэснээр энэ endpoint хэрэглэгчийн бусад Dropbox файлын линкийг гаргахгүй.',
+          tags: ['integrations'],
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: 'path', in: 'query', required: true, schema: { type: 'string' } }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '400': { $ref: '#/components/responses/Error' },
+            '401': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/integrations/dropbox/upload': {
+        post: {
+          summary: 'Файлыг Dropbox руу хуулах',
+          tags: ['integrations'],
+          security: [{ bearerAuth: [] }],
+          requestBody: { $ref: '#/components/requestBodies/Base64Upload' },
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '400': { $ref: '#/components/responses/Error' },
+            '401': { $ref: '#/components/responses/Error' },
+            '422': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/integrations/google-meet/create-space': {
+        post: {
+          summary: 'Google Meet уулзалт үүсгэх',
+          description:
+            'accessType: TRUSTED — нэвтэрсэн хэрэглэгч шууд орно, бусад нь хост зөвшөөрөх хүртэл хүлээнэ. meetings.space.created scope нь зөвхөн АПП-ЫН үүсгэсэн уулзалтыг хөнддөг.',
+          tags: ['integrations'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '400': { $ref: '#/components/responses/Error' },
+            '401': { $ref: '#/components/responses/Error' },
           },
         },
       },
@@ -4447,6 +4953,212 @@ export function openapiDocument(): OpenApiDocument {
           },
         },
       },
+      '/registry/catalog': {
+        get: {
+          summary: 'Бүртгэлийн каталог',
+          description: 'Нийтлэгдсэн үйлчилгээний каталог (дотоод харагдац). `registry.view` эрх.',
+          tags: ['registry'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/registry/services/{id}/versions': {
+        get: {
+          summary: 'Үйлчилгээний хувилбарын түүх',
+          description:
+            'Нийтлэлт бүр дээр шинэ хувилбар үүсдэг — өөрчлөлтийг буцаан харах боломжтой.',
+          tags: ['registry'],
+          security: [{ bearerAuth: [] }],
+          parameters: [{ $ref: '#/components/parameters/RegistryServiceId' }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+            '404': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/registry/services/{id}/archive': {
+        post: {
+          summary: 'Үйлчилгээг архивлах',
+          description: 'Устгахын оронд архивлана — нийтлэгдсэн үйлчилгээний түүх хадгалагдана.',
+          tags: ['registry'],
+          security: [{ bearerAuth: [] }],
+          parameters: [{ $ref: '#/components/parameters/RegistryServiceId' }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+            '404': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/registry/services/{id}/evidences': {
+        put: {
+          summary: 'Үйлчилгээний нотлох баримтуудыг тогтоох',
+          description:
+            'Бүтэн ОРЛУУЛАЛТ (жагсаалт бүхэлдээ солигдоно). `from_citizen: true` нь иргэнээс дахин нэхэж буй баримт — once-only зөрчлийн шинжилгээ үүн дээр тулгуурладаг.',
+          tags: ['registry'],
+          security: [{ bearerAuth: [] }],
+          parameters: [{ $ref: '#/components/parameters/RegistryServiceId' }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    evidences: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          evidence_id: { type: 'string', format: 'uuid' },
+                          required: { type: 'boolean' },
+                          from_citizen: { type: 'boolean' },
+                          note: { type: 'string', maxLength: 4000 },
+                        },
+                        required: ['evidence_id'],
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+            '404': { $ref: '#/components/responses/Error' },
+            '422': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/registry/evidences': {
+        get: {
+          summary: 'Нотлох баримтуудыг жагсаах',
+          tags: ['registry'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+          },
+        },
+        post: {
+          summary: 'Нотлох баримт үүсгэх',
+          tags: ['registry'],
+          security: [{ bearerAuth: [] }],
+          requestBody: { $ref: '#/components/requestBodies/RegistryEvidence' },
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+            '409': { $ref: '#/components/responses/Error' },
+            '422': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/registry/evidences/{id}': {
+        put: {
+          summary: 'Нотлох баримтыг засах',
+          tags: ['registry'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          ],
+          requestBody: { $ref: '#/components/requestBodies/RegistryEvidence' },
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+            '404': { $ref: '#/components/responses/Error' },
+            '422': { $ref: '#/components/responses/Error' },
+          },
+        },
+        delete: {
+          summary: 'Нотлох баримтыг устгах',
+          description: 'Үйлчилгээнд ашиглагдаж байгаа баримтыг устгах нь 409.',
+          tags: ['registry'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          ],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+            '404': { $ref: '#/components/responses/Error' },
+            '409': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/registry/life-events': {
+        get: {
+          summary: 'Амьдралын үйл явдлуудыг жагсаах',
+          tags: ['registry'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+          },
+        },
+        post: {
+          summary: 'Амьдралын үйл явдал үүсгэх',
+          tags: ['registry'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    code: { type: 'string', maxLength: 64 },
+                    name: { type: 'string', minLength: 1, maxLength: 300 },
+                    kind: { type: 'string', enum: ['life', 'business'] },
+                    description: { type: 'string', maxLength: 4000 },
+                    lead_agency: { type: 'string', maxLength: 300 },
+                    eu_code: { type: 'string', maxLength: 32 },
+                    en_label: { type: 'string', maxLength: 300 },
+                    sort_order: { type: 'integer' },
+                  },
+                  required: ['code', 'name'],
+                },
+              },
+            },
+          },
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+            '409': { $ref: '#/components/responses/Error' },
+            '422': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/registry/life-events/{id}': {
+        delete: {
+          summary: 'Амьдралын үйл явдлыг устгах',
+          tags: ['registry'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          ],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+            '404': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
       '/registry/overview': {
         get: {
           summary: 'Регистрийн нэгтгэл (Ring R1)',
@@ -4510,7 +5222,7 @@ export function openapiDocument(): OpenApiDocument {
           summary: 'Паспорт харах (нотолгоотой)',
           tags: ['registry'],
           security: [{ bearerAuth: [] }],
-          parameters: [{ $ref: '#/components/parameters/RegistryId' }],
+          parameters: [{ $ref: '#/components/parameters/RegistryServiceId' }],
           responses: {
             '200': { $ref: '#/components/responses/Ok' },
             '401': { $ref: '#/components/responses/Error' },
@@ -4523,7 +5235,7 @@ export function openapiDocument(): OpenApiDocument {
           description: 'Архивласан паспорт ЗАСАГДАХГҮЙ (409). Код өөрчлөгддөггүй.',
           tags: ['registry'],
           security: [{ bearerAuth: [] }],
-          parameters: [{ $ref: '#/components/parameters/RegistryId' }],
+          parameters: [{ $ref: '#/components/parameters/RegistryServiceId' }],
           requestBody: { $ref: '#/components/requestBodies/RegistryService' },
           responses: {
             '200': { $ref: '#/components/responses/Ok' },
@@ -4541,7 +5253,7 @@ export function openapiDocument(): OpenApiDocument {
             'НИЙТЛЭГДСЭН паспорт устгагдахгүй (409) — түүхэн мөрдөлт (хувилбар, delta, once-only статистик) тасарна. Оронд нь архивлана.',
           tags: ['registry'],
           security: [{ bearerAuth: [] }],
-          parameters: [{ $ref: '#/components/parameters/RegistryId' }],
+          parameters: [{ $ref: '#/components/parameters/RegistryServiceId' }],
           responses: {
             '200': { $ref: '#/components/responses/Ok' },
             '401': { $ref: '#/components/responses/Error' },
@@ -4558,7 +5270,7 @@ export function openapiDocument(): OpenApiDocument {
             'Одоогийн төлөвийг шинэ хувилбар болгон бэхэлж, baseline-тай харьцуулсан delta-г хадгална (СӨРӨГ = сайжралт). ЭХНИЙ нийтлэлт нь өөрөө baseline. Зарласан проактив байдал нь БОДИТ once-only байдалтай зөрчилдвөл **409** — регистр өөрөө худал мэдээлэл агуулахгүй. Амжилттай бол иргэний порталын каталог руу автоматаар буудаг.',
           tags: ['registry'],
           security: [{ bearerAuth: [] }],
-          parameters: [{ $ref: '#/components/parameters/RegistryId' }],
+          parameters: [{ $ref: '#/components/parameters/RegistryServiceId' }],
           requestBody: {
             required: true,
             content: {
@@ -4586,7 +5298,7 @@ export function openapiDocument(): OpenApiDocument {
             'Иргэнээс шаардаж буй баримтуудаас ХУР-д АЛЬ ХЭДИЙН байгааг нь (=устгах боломжтой) илрүүлж, хүрч болох дээд проактив шатыг хэлнэ.',
           tags: ['registry'],
           security: [{ bearerAuth: [] }],
-          parameters: [{ $ref: '#/components/parameters/RegistryId' }],
+          parameters: [{ $ref: '#/components/parameters/RegistryServiceId' }],
           responses: {
             '200': { $ref: '#/components/responses/Ok' },
             '401': { $ref: '#/components/responses/Error' },
@@ -4605,6 +5317,19 @@ export function openapiDocument(): OpenApiDocument {
             '200': { $ref: '#/components/responses/Ok' },
             '401': { $ref: '#/components/responses/Error' },
             '403': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/catalog/life-events': {
+        get: {
+          summary: 'Нийтийн амьдралын үйл явдлууд (иргэн)',
+          description:
+            'ТУСГАЙ ЭРХ ШААРДАХГҮЙ — нэвтэрсэн дурын иргэн үзнэ. Зөвхөн НИЙТЛЭГДСЭН үйлчилгээтэй холбоотой үйл явдлууд буцна.',
+          tags: ['catalog'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
           },
         },
       },
@@ -4627,7 +5352,7 @@ export function openapiDocument(): OpenApiDocument {
           description: 'Нийтлэгдээгүй паспорт нь иргэнд ОГТ БАЙХГҮЙ мэт харагдана.',
           tags: ['catalog'],
           security: [{ bearerAuth: [] }],
-          parameters: [{ $ref: '#/components/parameters/RegistryId' }],
+          parameters: [{ $ref: '#/components/parameters/RegistryServiceId' }],
           responses: {
             '200': { $ref: '#/components/responses/Ok' },
             '400': { $ref: '#/components/responses/Error' },

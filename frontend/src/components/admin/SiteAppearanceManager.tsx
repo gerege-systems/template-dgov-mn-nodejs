@@ -48,7 +48,7 @@ export default function SiteAppearanceManager() {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const res = await sendJSON('/admin/site/appearance', 'PUT', { accent, font, style, theme });
+      const res = await sendJSON('/site/appearance', 'PUT', { accent, font, style, theme });
       if (!res.ok) throw new Error(res.message || T('site.appearance.saveError'));
     },
     onSuccess: () => {

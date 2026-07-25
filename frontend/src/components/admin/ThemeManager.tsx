@@ -23,19 +23,19 @@ export default function ThemeManager() {
   const [view, setView] = useState<View>({ kind: 'list' });
   const [error, setError] = useState('');
 
-  const q = useQuery({ queryKey: ['admin-themes'], queryFn: () => getJSON<Theme[]>('/admin/themes') });
+  const q = useQuery({ queryKey: ['admin-themes'], queryFn: () => getJSON<Theme[]>('/themes') });
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['admin-themes'] });
 
   const activate = async (t: Theme) => {
     setError('');
-    const res = await sendJSON(`/admin/themes/${t.id}/active`, 'PUT');
+    const res = await sendJSON(`/themes/${t.id}/active`, 'PUT');
     if (res.ok) refresh(); else setError(res.message || L('Идэвхжүүлэхэд алдаа.', 'Failed to activate.'));
   };
   const remove = async (t: Theme) => {
     setError('');
     if (!confirm(L(`"${t.name}" theme-ийг устгах уу?`, `Delete theme "${t.name}"?`))) return;
-    const res = await sendJSON(`/admin/themes/${t.id}`, 'DELETE');
+    const res = await sendJSON(`/themes/${t.id}`, 'DELETE');
     if (res.ok) refresh(); else setError(res.message || L('Устгахад алдаа.', 'Failed to delete.'));
   };
   const clone = (t: Theme): Theme => ({

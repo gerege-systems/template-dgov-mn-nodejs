@@ -92,6 +92,7 @@ import type { GovUsecase } from '../../../usecases/gov/gov_usecase.js';
 import { newRegistryUsecase } from '../../../usecases/registry/registry_usecase.js';
 import { newSSOTokenUsecase } from '../../../usecases/ssotoken/ssotoken_usecase.js';
 import { newSSOUsecase } from '../../../usecases/sso/sso_usecase.js';
+import { newProviderOps } from '../../../usecases/integrations/integrations_provider.js';
 import { newIntegrationsUsecase } from '../../../usecases/integrations/integrations_usecase.js';
 import { newOrgUsecase } from '../../../usecases/org/org_usecase.js';
 import { newRBACUsecase } from '../../../usecases/rbac/rbac_impl.js';
@@ -447,6 +448,7 @@ export async function newApp(): Promise<App> {
       eidDisplayText: AppConfig.EID_DISPLAY_TEXT,
       ssoEidProxy,
       ssoTokens: ssoEidProxy === null ? null : ssoTokenUC,
+      bcryptCost: AppConfig.BCRYPT_COST,
     },
   );
 
@@ -519,6 +521,10 @@ export async function newApp(): Promise<App> {
     AppConfig.INTEGRATION_ENC_KEY,
     AppConfig.ENVIRONMENT === 'production',
   );
+
+  // Гуравдагч талын API-ийн СЕРВЕР ТАЛЫН үйлдлүүд (Drive/Dropbox/Meet). SPA нь
+  // статик тул client_secret болон хэрэглэгчийн токен зөвхөн энд амьдарна.
+  const providerOps = newProviderOps(integrationsUC);
 
   // Applications — gateway consumer + SSO RP. OAuth2 client бүртгэл дээр
   // суурилдаг тул oauth_clients repo + service↔scope хөрвүүлэгчээс хамаарна.
@@ -639,6 +645,7 @@ export async function newApp(): Promise<App> {
     gatewayUC,
     applicationsUC,
     integrationsUC,
+    providerOps,
     // SSO eID proxy нь SSO_EID_PROXY_BASE_URL тохируулагдсан үед идэвхжинэ.
     eidProxyEnabled: AppConfig.SSO_EID_PROXY_BASE_URL !== '',
     authMiddleware,

@@ -22,7 +22,7 @@ export default function EditOrgNameLatin({ regNo, current }: { regNo: string; cu
 
   const save = useMutation({
     mutationFn: async () => {
-      const res = await sendJSON(`/me/eid/organizations/${encodeURIComponent(regNo)}/name-latin`, 'PUT', { name_latin: name.trim() });
+      const res = await sendJSON(`/me/org-name-latin/${encodeURIComponent(regNo)}`, 'PUT', { name_latin: name.trim() });
       if (!res.ok) throw new Error(res.message || T('me.latin.error'));
     },
     onSuccess: () => { setOk(true); void qc.invalidateQueries({ queryKey: ['eid-organizations'] }); },

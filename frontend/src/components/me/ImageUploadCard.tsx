@@ -7,7 +7,8 @@ import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/
 import { Upload, Trash2 } from 'lucide-react';
 import { useT } from '@/lib/lang';
 import type { DictKey } from '@/lib/i18n';
-import { getJSON, postJSON, sendJSON } from '@/lib/client';
+import { getJSON, sendJSON } from '@/lib/client';
+import { uploadFile } from '@/lib/upload';
 import Alert from '@/components/Alert';
 
 // driveImgSrc нь хадгалсан Google Drive URL-ийг <img>-д найдвартай харагдах
@@ -22,22 +23,15 @@ function driveImgSrc(url: string): string {
   return url;
 }
 
-// file → base64 (data: угтварыг хассан).
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const rd = new FileReader();
-    rd.onload = () => {
-      const s = String(rd.result);
-      resolve(s.slice(s.indexOf(',') + 1));
-    };
-    rd.onerror = () => reject(new Error('read'));
-    rd.readAsDataURL(file);
-  });
-}
-
 /**
  * ImageUploadCard нь зураг (гарын үсэг / тамга) оруулж, урьдчилан харж, устгах карт.
- * Зураг нь BFF талд хэрэглэгчийн Google Drive-д байршиж, DB-д зөвхөн URL хадгалагдана.
+ *
+ * ХОЁР АЛХАМТ ХАДГАЛАЛТ: зураг нь хэрэглэгчийн Google Drive-д байрлаж, DB-д
+ * зөвхөн URL хадгалагддаг. SPA нь Drive руу ШУУД хандаж чадахгүй (токен зөвхөн
+ * сервер талд) тул:
+ *   1) `POST /integrations/google-drive/image` — API нь Drive-д хуулж URL өгнө;
+ *   2) `PUT <path>` — тэр URL-ийг assets endpoint-д хадгална.
+ * Ингэснээр assets-ийн HTTP гэрээ (URL хадгалдаг) 1:1 хэвээр үлдэнэ.
  */
 export default function ImageUploadCard({
   titleKey,
@@ -66,10 +60,15 @@ export default function ImageUploadCard({
 
   const upload = useMutation({
     mutationFn: async (file: File) => {
-      const data = await fileToBase64(file);
-      const res = await postJSON<{ url: string }>(path, { data, mime: file.type, name: file.name });
-      if (!res.ok) throw new Error(res.message || T('me.assets.uploadError'));
-      return res.data ?? { url: '' };
+      // 1) Drive-д хуулна (токен сервер талд) → нийтэд харагдах URL.
+      const up = await uploadFile<{ url: string }>('/integrations/google-drive/image', file);
+      if (!up.ok || !up.data?.url) {
+        throw new Error(up.message || T('me.assets.uploadError'));
+      }
+      // 2) URL-ийг хадгална (assets гэрээ өөрчлөгдөөгүй).
+      const saved = await sendJSON<{ url: string }>(path, 'PUT', { url: up.data.url });
+      if (!saved.ok) throw new Error(saved.message || T('me.assets.uploadError'));
+      return saved.data ?? { url: up.data.url };
     },
     onSuccess: (d) => qc.setQueryData(queryKey, d),
   });

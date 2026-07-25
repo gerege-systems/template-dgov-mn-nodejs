@@ -33,7 +33,7 @@ export default function OrgManageView({ regNo }: { regNo: string }) {
 
   const q = useQuery({
     queryKey: ['eid-organizations'],
-    queryFn: () => getJSON<OrgRep[]>('/me/eid/organizations'),
+    queryFn: () => getJSON<OrgRep[]>('/users/me/eid/organizations'),
   });
   const rep = q.data?.find((o) => o.org_register === regNo);
 
@@ -85,7 +85,7 @@ export default function OrgManageView({ regNo }: { regNo: string }) {
         <ImageUploadCard
           titleKey="me.assets.stampTitle"
           hintKey="me.assets.stampHint"
-          path={`/me/eid/organizations/${encodeURIComponent(regNo)}/stamp`}
+          path={`/me/orgstamp/${encodeURIComponent(regNo)}`}
           queryKey={['org-stamp', regNo]}
           canEdit={rep.right_type === 'ADMIN'}
           aspect="1 / 1"

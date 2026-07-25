@@ -36,7 +36,7 @@ export default function EidLogsView({ show }: { show: boolean }) {
 
   const q = useQuery({
     queryKey: ['eid-pki-logs', limit],
-    queryFn: () => pkiGet<ActResponse>(`/me/eid/activity?limit=${limit}&offset=0`),
+    queryFn: () => pkiGet<ActResponse>(`/users/me/eid/activity?limit=${limit}&offset=0`),
     enabled: show,
   });
 

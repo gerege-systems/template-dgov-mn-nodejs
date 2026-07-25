@@ -97,6 +97,7 @@
 | POST | `/auth/eid/poll` | — | Хүлээгдэж буй eID session-ийг long-poll хийнэ (~25 с барина); `PENDING` эсвэл зөвшөөрсний дараа access + refresh токен хос буцаана. Тусдаа сул limiter. |
 | POST | `/auth/google` | — | Google OAuth callback — `code`-ыг солиод, Google аккаунтыг eID хэрэглэгчид холбоно (эсвэл нэвтрүүлнэ). |
 | DELETE | `/auth/google/link` | 🔒 | Нэвтэрсэн хэрэглэгчийн Google аккаунтыг САЛГАХ (холбох нь зөвхөн login урсгалаар). |
+| PUT | `/auth/password/change` | 🔒 | Нууц үг солих. Одоогийнхыг шалгаад цуцлалтын тасалбар тэмдэглэнэ — түүнээс өмнө олгогдсон бүх токен татгалзагдана — session cookie цэвэрлэгдэж хэрэглэгч дахин нэвтэрнэ. Шинэ нууц үг: 12–72 тэмдэгт, том/жижиг үсэг · цифр · тусгай тэмдэгт. |
 | POST | `/auth/refresh` | — | Хүчинтэй refresh токеноор токен хосыг эргүүлнэ. Refresh нь токеныг **эргүүлдэг** тул хуучин refresh токен хүчингүй болно. |
 | POST | `/auth/logout` | — | Өгсөн refresh токеныг цуцлана; `access_token`-ыг мөн өгвөл түүний jti-г Redis deny-list-д нэмж шууд ажиллагаагүй болгоно. |
 
@@ -202,6 +203,38 @@ Dropbox). Токенийг per-user шифрлэн хадгална (RLS).
 | POST | `/integrations/` | Провайдер холбох (OAuth). |
 | GET | `/integrations/{provider}/token` | Холбогдсон провайдерийн ашиглах боломжтой токен авах. |
 | DELETE | `/integrations/{provider}` | Провайдер салгах. |
+
+### Сервер талын провайдерын үйлдлүүд
+
+SPA нь статикаар түгээгддэг тул `client_secret`-ийг ч, хэрэглэгчийн OAuth
+токеныг ч агуулж чадахгүй. Иймд OAuth-ийн бүх урсгал болон провайдерын API-ийн
+дуудлага бүхэн **энд**, API дээр ажиллана. `GET /integrations/{provider}/token`
+нь процессын дотоод хэрэглээ хэвээр — browser руу ХЭЗЭЭ Ч гарах ёсгүй.
+
+| Method | Path | Тайлбар |
+|--------|------|-------------|
+| GET | `/integrations/{provider}/connect` | Провайдерын зөвшөөрлийн хуудас руу 302; CSRF state нь богино настай httpOnly cookie. |
+| GET | `/integrations/{provider}/callback` | state тулгах → code солилцох → токеныг шифрлэн хадгалах → `/me/integrations` руу 302. |
+| GET | `/integrations/google-drive/files` | Апп-ын өөрийн «Gerege» хавтсыг жагсаах (drive.file scope). |
+| POST | `/integrations/google-drive/upload` | Файл хуулах (base64 бие, ≤10 MiB). |
+| POST | `/integrations/google-drive/image` | Зураг хуулж, нийтэд харагдах URL буцаах. |
+| PUT | `/integrations/google-drive/files/{id}` | Файлын нэр солих. |
+| DELETE | `/integrations/google-drive/files/{id}` | Файл устгах. |
+| GET | `/integrations/dropbox/files` | «/Gerege» хавтсыг жагсаах. |
+| GET | `/integrations/dropbox/preview` | Түр хугацааны шууд линк; `path` нь «/Gerege» доторх байх **ЁСТОЙ** (эс бөгөөс 400). |
+| POST | `/integrations/dropbox/upload` | Файл хуулах (base64 бие). |
+| POST | `/integrations/google-meet/create-space` | Уулзалт үүсгэх (accessType: TRUSTED). |
+
+Провайдерын 401/403 нь **400** болж буулгагдана (401 БИШ): энэ API-ийн 401 нь
+"платформд нэвтрээгүй" гэсэн утгатай бөгөөд SPA хэрэглэгчийг login руу шидэх тул
+гуравдагч талын хугацаа дууссан зөвшөөрлийг тэр урсгалд оруулах нь буруу.
+
+Гарын үсэг/тамга хадгалах нь **хоёр алхамтай** — `POST /integrations/google-drive/image`
+URL буцаана, дараа нь `PUT /me/signature` (эсвэл `/me/orgstamp/{regNo}`) хадгална.
+Ингэснээр assets-ийн гэрээ (URL хадгалдаг) өөрчлөгдөхгүй.
+
+Аль провайдер холбох боломжтойг `GET /config` → `integrations` мэдээлнэ
+(client id + secret хоёулаа тохируулсан үед л true).
 
 ## Assets — гарын үсэг / латин нэр / тамга (`/api/v1/me`) 🔒
 

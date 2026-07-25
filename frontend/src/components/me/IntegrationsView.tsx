@@ -3,7 +3,7 @@ import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { HardDrive, Box, Video, CheckCircle2, AlertCircle, Clock, Plus, Check } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { postJSON } from '@/lib/client';
+import { apiUrl, deleteJSON } from '@/lib/client';
 import type { IntegrationStatus, IntegrationID } from '@/lib/integrations';
 import DriveFiles from './DriveFiles';
 import DropboxFiles from './DropboxFiles';
@@ -46,7 +46,7 @@ export default function EidIntegrationsView({ items, google }: { items: Integrat
     if (!window.confirm('Энэ холболтыг салгах уу?')) return;
     setPending(id);
     setActionErr('');
-    const res = await postJSON(`/integrations/${id}/disconnect`, {});
+    const res = await deleteJSON(`/integrations/${id}`);
     setPending(null);
     if (res.ok) void refreshData();
     else setActionErr(res.message || 'Салгахад алдаа гарлаа. Дахин оролдоно уу.');
@@ -56,7 +56,8 @@ export default function EidIntegrationsView({ items, google }: { items: Integrat
     if (!window.confirm('Google холболтыг салгах уу? Дараа нь Google-ээр нэвтрэх боломжгүй болно.')) return;
     setGoogleBusy(true);
     setActionErr('');
-    const res = await postJSON('/integrations/google-login/disconnect', {});
+    // Google нь токен биш IDENTITY холболт — өөрийн endpoint-той.
+    const res = await deleteJSON('/auth/google/link');
     setGoogleBusy(false);
     if (res.ok) void refreshData();
     else setActionErr(res.message || 'Салгахад алдаа гарлаа. Дахин оролдоно уу.');
@@ -242,7 +243,7 @@ function ActionButton({
   if (status.configured) {
     return (
       <a
-        href={`/integrations/${status.id}/connect`}
+        href={apiUrl(`/integrations/${status.id}/connect`)}
         title="Холбох"
         aria-label="Холбох"
         className="int-card__action"

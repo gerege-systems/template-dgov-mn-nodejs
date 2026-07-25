@@ -12,7 +12,7 @@ import { pkiGet, type PkiSummary } from '@/lib/pki';
 // (тохиргоо өөрчилдөггүй — зөвхөн төлөв харуулна).
 export default function EidSecurityView({ show }: { show: boolean }) {
   const { T } = useT();
-  const q = useQuery({ queryKey: ['eid-pki-summary'], queryFn: () => pkiGet<PkiSummary>('/me/eid/summary'), enabled: show });
+  const q = useQuery({ queryKey: ['eid-pki-summary'], queryFn: () => pkiGet<PkiSummary>('/users/me/eid/summary'), enabled: show });
 
   if (!show) return null;
   const forbidden = q.data?.status === 403;

@@ -116,6 +116,48 @@ export function clearSessionCookies(res: Response): void {
   }
 }
 
+/**
+ * oauthStateCookie нь гуравдагч талын OAuth урсгалын CSRF state cookie-ийн нэр.
+ * Провайдер тус бүрд тусдаа — хэрэглэгч зэрэг хоёр холболт эхлүүлбэл нэг нь
+ * нөгөөгийнхөө state-ийг дардаггүй байх ёстой.
+ */
+export const oauthStateCookie = (provider: string): string => `dgov_oauth_${provider}`;
+
+/**
+ * oauthStateMaxAgeSeconds нь state cookie-ийн нас — OAuth round-trip хийхэд
+ * хангалттай ч алдагдсан утгын ашиглах цонхыг богино байлгана.
+ */
+const oauthStateMaxAgeSeconds = 10 * 60;
+
+/** setOAuthStateCookie нь богино настай httpOnly state cookie тавина. */
+export function setOAuthStateCookie(res: Response, provider: string, state: string): void {
+  appendCookie(
+    res,
+    serialize(oauthStateCookie(provider), state, {
+      httpOnly: true,
+      secure: secureCookies(),
+      // lax — провайдер буцаах нь top-level GET navigation тул cookie явна.
+      sameSite: 'lax',
+      path: '/',
+      maxAge: oauthStateMaxAgeSeconds,
+    }),
+  );
+}
+
+/** clearOAuthStateCookie нь state cookie-г устгана (нэг удаад л хэрэглэнэ). */
+export function clearOAuthStateCookie(res: Response, provider: string): void {
+  appendCookie(
+    res,
+    serialize(oauthStateCookie(provider), '', {
+      httpOnly: true,
+      secure: secureCookies(),
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 0,
+    }),
+  );
+}
+
 /** readCookies нь хүсэлтийн Cookie толгойг задална (parse алдаа → хоосон). */
 export function readCookies(req: Request): Record<string, string | undefined> {
   const header = req.get('cookie');

@@ -107,6 +107,7 @@ beforeEach(async () => {
   // eID профайлын method-ууд энэ route-ийн тестэд дуудагддаггүй тул stub.
   const notUsed = () => Promise.reject(new Error('not stubbed'));
   authUC = {
+    changePassword: vi.fn(notUsed),
     eidRepresentations: vi.fn(notUsed),
     registerEidOrganization: vi.fn(notUsed),
     unlinkEidOrganization: vi.fn(notUsed),

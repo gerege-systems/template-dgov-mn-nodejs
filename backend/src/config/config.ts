@@ -126,6 +126,23 @@ export interface Config {
   // хадгалахын өмнө AES-256-GCM-ээр шифрлэх нууц түлхүүр.
   INTEGRATION_ENC_KEY: string;
 
+  // APP_ORIGIN нь нийтэд харагдах SPA-ийн origin (жишээ нь
+  // https://node.template.dgov.mn). Гуравдагч талын OAuth-ийн redirect_uri-г
+  // ҮҮНЭЭС угсарна: урвуу proxy-ийн цаана хүсэлтийн Host нь дотоод хаяг байж
+  // болзошгүй ба redirect_uri нь провайдерт БҮРТГЭСЭНТЭЙ ЯГ таарах ёстой.
+  // Хоосон бол ALLOWED_ORIGINS-ийн эхнийхийг авна.
+  APP_ORIGIN: string;
+
+  // Гуравдагч талын интеграцийн OAuth эрхийн мэдээлэл. Client ID нь ил (consent
+  // дэлгэц дээр харагддаг); SECRET нь ЗӨВХӨН сервер талд — code солилцоо болон
+  // токен шинэчлэлт хоёулаа энэ процессод хийгддэг.
+  GOOGLE_DRIVE_CLIENT_ID: string;
+  GOOGLE_DRIVE_CLIENT_SECRET: string;
+  DROPBOX_CLIENT_ID: string;
+  DROPBOX_CLIENT_SECRET: string;
+  GOOGLE_MEET_CLIENT_ID: string;
+  GOOGLE_MEET_CLIENT_SECRET: string;
+
   // Gerege Core (core.gerege.mn) — user/organization find.
   CORE_API_BASE: string;
   CORE_API_TOKEN: string;
@@ -216,6 +233,13 @@ function blankConfig(): Config {
     ALLOWED_ORIGINS: '',
     TRUSTED_PROXIES: '',
     INTEGRATION_ENC_KEY: '',
+    APP_ORIGIN: '',
+    GOOGLE_DRIVE_CLIENT_ID: '',
+    GOOGLE_DRIVE_CLIENT_SECRET: '',
+    DROPBOX_CLIENT_ID: '',
+    DROPBOX_CLIENT_SECRET: '',
+    GOOGLE_MEET_CLIENT_ID: '',
+    GOOGLE_MEET_CLIENT_SECRET: '',
     CORE_API_BASE: '',
     CORE_API_TOKEN: '',
     SUPERADMIN_EMAIL: '',
@@ -273,6 +297,19 @@ export function allowedOriginsList(): string[] {
     return ['*'];
   }
   return splitCSVConfig(AppConfig.ALLOWED_ORIGINS);
+}
+
+/**
+ * appOrigin нь нийтэд харагдах SPA-ийн origin — гуравдагч талын OAuth-ийн
+ * redirect_uri болон буцах redirect-д ашиглагдана. APP_ORIGIN-г эрхэмлэж,
+ * заагаагүй бол ALLOWED_ORIGINS-ийн эхнийхийг авна ('*' бол тооцохгүй).
+ * Хоосон бол дуудагч (connect/callback) тохируулаагүй гэж үзэж алдаа өгнө.
+ */
+export function appOrigin(): string {
+  const explicit = AppConfig.APP_ORIGIN.trim().replace(/\/$/, '');
+  if (explicit !== '') return explicit;
+  const first = allowedOriginsList()[0] ?? '';
+  return first === '*' ? '' : first.replace(/\/$/, '');
 }
 
 /**
@@ -498,6 +535,13 @@ export function initializeAppConfig(): void {
   AppConfig.ALLOWED_ORIGINS = str(src, 'ALLOWED_ORIGINS');
   AppConfig.TRUSTED_PROXIES = str(src, 'TRUSTED_PROXIES');
   AppConfig.INTEGRATION_ENC_KEY = str(src, 'INTEGRATION_ENC_KEY');
+  AppConfig.APP_ORIGIN = str(src, 'APP_ORIGIN');
+  AppConfig.GOOGLE_DRIVE_CLIENT_ID = str(src, 'GOOGLE_DRIVE_CLIENT_ID');
+  AppConfig.GOOGLE_DRIVE_CLIENT_SECRET = str(src, 'GOOGLE_DRIVE_CLIENT_SECRET');
+  AppConfig.DROPBOX_CLIENT_ID = str(src, 'DROPBOX_CLIENT_ID');
+  AppConfig.DROPBOX_CLIENT_SECRET = str(src, 'DROPBOX_CLIENT_SECRET');
+  AppConfig.GOOGLE_MEET_CLIENT_ID = str(src, 'GOOGLE_MEET_CLIENT_ID');
+  AppConfig.GOOGLE_MEET_CLIENT_SECRET = str(src, 'GOOGLE_MEET_CLIENT_SECRET');
 
   AppConfig.CORE_API_BASE = str(src, 'CORE_API_BASE');
   AppConfig.CORE_API_TOKEN = str(src, 'CORE_API_TOKEN');

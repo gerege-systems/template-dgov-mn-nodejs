@@ -37,7 +37,7 @@ export default function EidSignView() {
   // Төлөөлдөг байгууллагууд — байгаа бол "нэрийн өмнөөс зурах" сонголт харуулна.
   const orgsQ = useQuery({
     queryKey: ['eid-organizations'],
-    queryFn: () => getJSON<OrgRep[]>('/me/eid/organizations'),
+    queryFn: () => getJSON<OrgRep[]>('/users/me/eid/organizations'),
   });
   const orgs = orgsQ.data ?? [];
   const orgLabel = (o: OrgRep) => (lang === 'en' && o.org_name_en ? o.org_name_en : o.org_name);

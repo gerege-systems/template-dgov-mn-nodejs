@@ -20,6 +20,7 @@ import type { CoreUsecase } from '../../usecases/core/core_usecase.js';
 import type { GatewayUsecase } from '../../usecases/gateway/gateway_usecase.js';
 import type { GovUsecase } from '../../usecases/gov/gov_usecase.js';
 import type { GSpaceUsecase } from '../../usecases/gspace/gspace_usecase.js';
+import type { ProviderOps } from '../../usecases/integrations/integrations_provider.js';
 import type { IntegrationsUsecase } from '../../usecases/integrations/integrations_usecase.js';
 import type { OrgUsecase } from '../../usecases/org/org_usecase.js';
 import type { ProviderUsecase } from '../../usecases/provider/provider_usecase.js';
@@ -142,6 +143,11 @@ export interface Deps {
   orgUC: OrgUsecase;
   /** integrationsUC нь хэрэглэгчийн гуравдагч талын OAuth токен (шифрлэгдсэн). */
   integrationsUC: IntegrationsUsecase;
+  /**
+   * providerOps нь тэр токенуудыг ашиглан гуравдагч талын API руу СЕРВЕР талаас
+   * хандах давхарга (Drive · Dropbox · Meet) — статик SPA нууц агуулж чадахгүй.
+   */
+  providerOps: ProviderOps;
   /** gspaceUC нь хэрэглэгчийн өөрийн файлын SFTP хадгалалт (квоттой). */
   gspaceUC: GSpaceUsecase;
   /** govUC нь иргэний портал + менежерийн дараалал (хүсэлт, лавлагаа, төлбөр). */

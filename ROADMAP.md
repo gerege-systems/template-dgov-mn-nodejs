@@ -126,13 +126,35 @@ Next.js 15 BFF апп нь **Vite + React Router SPA** болж хөрвөв. Г
 - **Нийтийн тохиргоо** `GET /config`-оос ажиллах үед уншигдана (build үед
   шигтгэсэн env-ийн оронд) — нэг дүрсийг олон орчинд.
 
-### Мэдэгдэж буй цоорхой
+### BFF-ээс API руу нүүсэн үйлдлүүд
 
-- **Гуравдагч талын интеграци (Google Drive · Dropbox · Meet)** — "холбох"
-  урсгал нь client_secret-тэй token exchange шаарддаг байсан бөгөөд түүнийг
-  BFF гүйцэтгэдэг байв. SPA статик тул нууц агуулж БОЛОХГҮЙ; API талд
-  `/integrations/:provider/connect|callback` нэмэгдэх хүртэл холбох товч
-  харагдахгүй. Жагсаах/салгах нь API-аар ажилласаар байна.
+SPA нь статикаар түгээгддэг тул client_secret болон хэрэглэгчийн OAuth токен
+агуулж чадахгүй. Хуучин BFF-д байсан эдгээр үйлдлүүд **API руу нүүлээ** —
+`pkg/oauthproviders` (authorize/token солилцоо, refresh) + `pkg/cloudfiles`
+(Drive · Dropbox · Meet REST) + `usecases/integrations/provider`:
+
+| Шинэ endpoint | Үүрэг |
+| --- | --- |
+| `GET /integrations/:provider/connect` | Зөвшөөрлийн хуудас руу 302; CSRF state нь богино настай httpOnly cookie |
+| `GET /integrations/:provider/callback` | state тулгах → code солилцох → токеныг ШИФРЛҮҮЛЖ хадгалах → `/me/integrations` руу буцах |
+| `GET/POST/PUT/DELETE /integrations/google-drive/files[/:id]`, `…/upload`, `…/image` | «Gerege» хавтасны файл + зураг хуулах |
+| `GET /integrations/dropbox/files`, `…/preview`, `POST …/upload` | «/Gerege» хавтас (зам нь тэр хавтсаар ХЯЗГААРЛАГДАНА) |
+| `POST /integrations/google-meet/create-space` | Уулзалт үүсгэх (accessType: TRUSTED) |
+
+Файл нь **base64 JSON**-оор дамжина (multipart биш) — биеийн ерөнхий хязгаар,
+CSRF шалгалт, алдааны нэгдсэн дугтуй гурвуулан хэвээр үйлчилнэ; дээд хэмжээ
+10 MiB. Гарын үсэг/тамга хадгалах нь **хоёр алхамтай** болов: эхлээд
+`POST /integrations/google-drive/image` → URL, дараа нь `PUT /me/signature`
+(эсвэл `/me/orgstamp/:regNo`) — ингэснээр assets-ийн HTTP гэрээ 1:1 хэвээр.
+
+Аль провайдер холбох боломжтойг `GET /config` → `integrations` мэдээлнэ
+(client id + secret хоёулаа тохируулсан үед л); тохируулаагүй бол UI "Удахгүй"
+төлөвтэй inert хэвээр.
+
+Мөн Go эх хувилбарт handler + usecase нь бэлэн байсан ч ямар ч route-д
+холбогдоогүй үлдсэн **`PUT /auth/password/change`** энд холбогдлоо (frontend-ийн
+"Нууц үг солих" маягт өмнө нь 404 авдаг байв). Амжилтын дараа цуцлалтын
+тасалбар тэмдэглэгдэж session cookie цэвэрлэгдэнэ — хэрэглэгч дахин нэвтэрнэ.
 
 ## Дараа нь (порт дууссаны дараа)
 

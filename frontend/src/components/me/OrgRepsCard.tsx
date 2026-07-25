@@ -38,13 +38,13 @@ export default function OrgRepsCard({ show }: { show: boolean }) {
 
   const q = useQuery({
     queryKey: ['eid-organizations'],
-    queryFn: () => getJSON<OrgRep[]>('/me/eid/organizations'),
+    queryFn: () => getJSON<OrgRep[]>('/users/me/eid/organizations'),
     enabled: show,
   });
 
   const add = useMutation({
     mutationFn: async (reg: string) => {
-      const res = await postJSON<OrgRep[]>('/me/eid/organizations', { reg_no: reg });
+      const res = await postJSON<OrgRep[]>('/users/me/eid/organizations', { reg_no: reg });
       if (!res.ok) throw new Error(res.message || T('me.orgs.add.error'));
       return res.data ?? [];
     },

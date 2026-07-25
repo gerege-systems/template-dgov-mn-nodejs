@@ -83,8 +83,8 @@ export default function ThemeEditor({ theme, onDone }: Props) {
     const config: ThemeConfig = { appearance, landing };
     // theme.id хоосон биш бол засвар (PUT); шинэ/clone бол үүсгэх (POST).
     const res = theme?.id
-      ? await sendJSON(`/admin/themes/${theme.id}`, 'PUT', { name, config })
-      : await sendJSON('/admin/themes', 'POST', { name, config });
+      ? await sendJSON(`/themes/${theme.id}`, 'PUT', { name, config })
+      : await sendJSON('/themes', 'POST', { name, config });
     setBusy(false);
     if (res.ok) { onDone(); return; }
     setError(res.message || L('Хадгалахад алдаа гарлаа.', 'Failed to save.'));
