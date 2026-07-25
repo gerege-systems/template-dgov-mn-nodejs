@@ -22,7 +22,7 @@ usecases/ai ──────────────► pkg/gemini ───�
    │   ▲                      (429/5xx/сүлжээн дээр 3× retry + backoff)
    │   └─ functionResponse
    ▼
-ToolDef.Execute()  ← хүсэлтийн context-оор BACKEND ДЭЭР ажиллана
+ToolDef.execute()  ← хүсэлтийн context-оор BACKEND ДЭЭР ажиллана
    ├─ search_knowledge → repositories/postgres/ai → ai_knowledge хүснэгт
    └─ get_server_time  → жишээ tool
 ```
@@ -33,15 +33,15 @@ Model хэзээ ч код ажиллуулахгүй; tool-ууд хүсэлт�
 
 ## Чатын урсгал (function-calling давталт)
 
-`usecases/ai.Run()` (`ai_impl.go`):
+`usecases/ai` → `run()` (`ai_impl.ts`):
 
 1. History (≤ 20 ээлж) + шинэ prompt-оос `contents` угсарна. Дуут мессеж
    inline base64 audio хэсгээр ирдэг — Gemini шууд ойлгоно, STT алхам
    хэрэггүй.
 2. Давхаргат system instruction + tool зарлалуудтайгаар Gemini-г дуудна.
 3. Хариу **function дуудлага** агуулж байвал: tool бүрийг гүйцэтгэж, model-ийн
-   ээлж + `functionResponse` ээлжийг нэмээд давтана (дээд тал нь `MaxSteps`,
-   өгөгдмөл 4). Гүйцэтгэсэн дуудлага бүр `Step{Tool, Args, Result}` болж
+   ээлж + `functionResponse` ээлжийг нэмээд давтана (дээд тал нь `maxSteps`,
+   өгөгдмөл 4). Гүйцэтгэсэн дуудлага бүр `Step { tool, args, result }` болж
    клиентэд буцдаг — UI "AI юу хийснийг" харуулдаг.
 4. Хариу **текст** бол: буцаана.
 
@@ -54,7 +54,7 @@ retry-ийн дараа ч) 5xx болохгүй — хэрэглэгч Монг
 
 ## Prompt давхаргууд
 
-System prompt хүсэлт бүрд гурван давхаргаас угсрагдана (`ai_prompts.go`):
+System prompt хүсэлт бүрд гурван давхаргаас угсрагдана (`ai_prompts.ts`):
 
 | Давхарга | Эх сурвалж | Засварлагдах | Зориулалт |
 |----------|------------|--------------|-----------|
@@ -64,9 +64,9 @@ System prompt хүсэлт бүрд гурван давхаргаас угсра
 
 - Админ UI: **Админ → Тохиргоо**; API: `GET/PUT /api/v1/admin/ai/prompts/{key}`
   (`settings.manage` эрх).
-- Prompt 60 секунд кэшлэгддэг; `SetPrompt` кэшийг хүчингүй болгодог тул
+- Prompt 60 секунд кэшлэгддэг; `setPrompt` кэшийг хүчингүй болгодог тул
   өөрчлөлт бичсэн instance дээр шууд үйлчилнэ.
-- `SetPrompt` нь migration 11-д seed хийгдсэн key-үүд (`scope`,
+- `setPrompt` нь migration 11-д seed хийгдсэн key-үүд (`scope`,
   `instructions`) дээр **зөвхөн UPDATE** хийдэг — API-аар prompt-ийн гадаргуу
   өргөжихгүй.
 - DB уншилт унавал env/default хүрээ рүү fail-open болно (prompt уншилт
@@ -74,26 +74,30 @@ System prompt хүсэлт бүрд гурван давхаргаас угсра
 
 ## Tools
 
-Tool гэдэг нь `ai.ToolDef`: Gemini function declaration + Go функц:
+Tool гэдэг нь `ToolDef`: Gemini function declaration + backend функц:
 
-```go
-ai.ToolDef{
-    Declaration: gemini.FunctionDeclaration{
-        Name:        "my_tool",
-        Description: "Model хэзээ дуудахыг эндээс ойлгоно…",
-        Parameters:  map[string]any{ /* JSON Schema */ },
-    },
-    Execute: func(ctx context.Context, args map[string]any) (map[string]any, error) {
-        // backend дээр ажиллана; ctx нь хүсэлтийн identity-тэй (RLS үйлчилнэ)
-        return map[string]any{"result": "…"}, nil
-    },
-}
+```ts
+const myTool: ToolDef = {
+  declaration: {
+    name: 'my_tool',
+    description: 'Model хэзээ дуудахыг эндээс ойлгоно…',
+    parameters: { type: 'object', properties: { /* JSON Schema */ } },
+  },
+  execute: async (ctx, args) => {
+    // backend дээр ажиллана; ctx нь хүсэлтийн identity-тэй (RLS үйлчилнэ)
+    return { result: '…' };
+  },
+};
 ```
 
-`cmd/api/server/server.go`-д бүртгэнэ:
+`src/cmd/api/server/server.ts`-д бүртгэнэ:
 
-```go
-aiTools := append(ai.DefaultTools(), ai.KnowledgeSearchTool(aiRepo), myTool)
+```ts
+const aiUC = newAIUsecase(chatClient, ttsClient, aiRepo, [
+  ...defaultTools(),
+  knowledgeSearchTool(aiRepo),
+  myTool,
+], { voice: AppConfig.GEMINI_VOICE, scopePrompt: AppConfig.AI_SCOPE_PROMPT });
 ```
 
 Хавсарга tool-ууд:
@@ -112,7 +116,7 @@ aiTools := append(ai.DefaultTools(), ai.KnowledgeSearchTool(aiRepo), myTool)
 |--------|----------|------------------|
 | Дуут чат мессеж | `POST /ai/chat` + `audio` | audio нь user ээлжид inline орж явна — чат model нь multimodal |
 | Яриа→текст | `POST /ai/stt` | "яг сонссоноо буцаа" гэсэн чанд заавартай нэг удаагийн Gemini дуудлага; хоосон текст = яриа илрээгүй |
-| Текст→яриа | `POST /ai/tts` | тусдаа TTS model (`GEMINI_TTS_MODEL`), `responseModalities: ["AUDIO"]`; түүхий PCM (L16/24kHz)-ийг WAV толгойгоор ороодог (`pkg/gemini/wav.go`) тул browser шууд тоглуулна |
+| Текст→яриа | `POST /ai/tts` | тусдаа TTS model (`GEMINI_TTS_MODEL`), `responseModalities: ["AUDIO"]`; түүхий PCM (L16/24kHz)-ийг WAV толгойгоор ороодог (`pkg/gemini/wav.ts`) тул browser шууд тоглуулна |
 | Шууд орчуулга | `POST /ai/translate` | текст → орчуулга; audio → **хоёр алхамт** STT→орчуулга (найдвартай, structured output задлах шаардлагагүй); `speak: true` бол орчуулгын TTS хувилбар нэмэгдэнэ. TTS унавал текст хэвээр буцна |
 
 **Live орчуулгын UX** (frontend `LiveTranslateView`): микрофон ~7 секундын
@@ -137,18 +141,18 @@ AI_SCOPE_PROMPT=    # DB давхарга хоосон үеийн хүрээни
 ```
 
 Rate limit: `/ai/*` нь тусдаа IP-тус-бүрийн limiter-тэй (~20 хүсэлт/мин,
-burst 5) — live орчуулгын ~8 chunk/мин урсгалд зайтай багтана.
+burst 10) — live орчуулгын ~8 chunk/мин урсгалд зайтай багтана.
 
 ## Тест
 
 Бүгд Gemini-гүйгээр тестлэгдэнэ:
 
-- `gemini.Generator` нь interface — usecase тестүүд бэлтгэсэн хариу буцаадаг
-  `fakeGenerator` ашигладаг (`ai_impl_test.go`, `ai_speech_test.go`).
-- `repointerface.AIRepository`-г prompt/tool тестэд fake-ээр сольдог
-  (`ai_prompts_test.go`).
-- HTTP client өөрөө `httptest` серверийн эсрэг тестлэгддэг (retry/backoff,
-  4xx no-retry, function-call parsing — `pkg/gemini/gemini_test.go`).
+- `Generator` нь interface — usecase тестүүд бэлтгэсэн хариу буцаадаг
+  `fakeGenerator` ашигладаг (`ai_impl.test.ts`, `ai_speech.test.ts`).
+- `AIRepository`-г prompt/tool тестэд fake-ээр сольдог
+  (`ai_impl.test.ts`).
+- HTTP client өөрөө stub хийсэн глобал `fetch`-ийн эсрэг тестлэгддэг (retry/backoff,
+  4xx no-retry, function-call parsing — `pkg/gemini/gemini.test.ts`).
 
 ## Асуудал шийдэх (Troubleshooting)
 
@@ -159,7 +163,7 @@ burst 5) — live орчуулгын ~8 chunk/мин урсгалд зайтай
 | Чат ажиллаад TTS унадаг | `GEMINI_TTS_MODEL` нь **preview** model — Google нэрийг нь солих юм бол env var-аар override хий |
 | Хүрээний доторх асуултад татгалзана | `scope` давхарга хэт нарийн — Админ → Тохиргооноос засна |
 | `search_knowledge` юу ч олдоггүй | `ai_knowledge`-д зөвхөн 3 жишээ мөр seed хийгдсэн — өөрийн агуулгаа нэм |
-| Live орчуулгад 429 | Сегментийн давтамж `/ai` rate limit-ээс хэтэрсэн — `server.go`-ийн limiter-ийг өсгөх эсвэл `SEGMENT_MS`-ийг уртасга |
+| Live орчуулгад 429 | Сегментийн давтамж `/ai` rate limit-ээс хэтэрсэн — `server.ts`-ийн limiter-ийг өсгөх эсвэл `SEGMENT_MS`-ийг уртасга |
 
 ---
 

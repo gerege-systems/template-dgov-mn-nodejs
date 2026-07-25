@@ -108,6 +108,62 @@ export function openapiDocument(): OpenApiDocument {
       },
       schemas: {
         BaseResponse: baseResponseSchema,
+        AIAudioIn: {
+          type: 'object',
+          description:
+            'Base64 кодлогдсон оролтын дуу (browser MediaRecorder chunk). ~700 KB base64 ≈ 30 секунд opus.',
+          properties: {
+            mime: {
+              type: 'string',
+              enum: [
+                'audio/webm',
+                'audio/ogg',
+                'audio/wav',
+                'audio/mpeg',
+                'audio/mp3',
+                'audio/mp4',
+                'audio/m4a',
+                'audio/aac',
+                'audio/flac',
+              ],
+            },
+            data: { type: 'string', maxLength: 716800, description: 'base64' },
+          },
+          required: ['mime', 'data'],
+        },
+        AIAudioOut: {
+          type: 'object',
+          description: 'Base64 кодлогдсон дуут гаралт (ихэвчлэн audio/wav).',
+          properties: {
+            mime: { type: 'string' },
+            data: { type: 'string', description: 'base64' },
+          },
+          required: ['mime', 'data'],
+        },
+        AIChatResult: {
+          type: 'object',
+          properties: {
+            reply: { type: 'string' },
+            steps: {
+              type: 'array',
+              description: 'Backend дээр гүйцэтгэсэн tool дуудлагуудын ул мөр.',
+              items: {
+                type: 'object',
+                properties: {
+                  tool: { type: 'string' },
+                  args: { type: 'object', additionalProperties: true },
+                  result: { type: 'object', additionalProperties: true },
+                },
+                required: ['tool'],
+              },
+            },
+            degraded: {
+              type: 'boolean',
+              description: 'Gemini унасан тул fallback мессеж буцсаныг заана.',
+            },
+          },
+          required: ['reply'],
+        },
         UserResponse: userResponseSchema,
         Role: {
           type: 'object',
@@ -1654,6 +1710,244 @@ export function openapiDocument(): OpenApiDocument {
             '401': { $ref: '#/components/responses/Error' },
             '403': { $ref: '#/components/responses/Error' },
             '404': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/ai/chat': {
+        post: {
+          summary: 'AI туслахтай чатлах (текст/дуут мессеж)',
+          description:
+            'Хэрэглэгчийн мессежийг (текст эсвэл audio — дуут мессежийг AI шууд ойлгоно) Gemini pipeline-аар боловсруулж Монгол хариулт буцаана. AI шаардлагатай үед backend tool-уудыг (function calling) ашигладаг — гүйцэтгэлийг СЕРВЕР хийнэ, model зөвхөн сонголт хийнэ; алхмууд `steps`-д ил гарна. AI үйлчилгээ түр унавал `degraded=true` + fallback мессеж буцаана (5xx БИШ). Rate limit ~20 req/мин.',
+          tags: ['ai'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    message: { type: 'string', maxLength: 4000 },
+                    audio: { $ref: '#/components/schemas/AIAudioIn' },
+                    history: {
+                      type: 'array',
+                      maxItems: 20,
+                      items: {
+                        type: 'object',
+                        properties: {
+                          role: { type: 'string', enum: ['user', 'model'] },
+                          text: { type: 'string', maxLength: 4000 },
+                        },
+                        required: ['role', 'text'],
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              description: 'AI хариулт',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/BaseResponse' },
+                      {
+                        type: 'object',
+                        properties: { data: { $ref: '#/components/schemas/AIChatResult' } },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '400': { $ref: '#/components/responses/Error' },
+            '401': { $ref: '#/components/responses/Error' },
+            '422': { $ref: '#/components/responses/Error' },
+            '429': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/ai/stt': {
+        post: {
+          summary: 'Яриаг текст болгох (STT)',
+          description:
+            'Base64 кодлогдсон audio (webm/ogg/wav/mp3 г.м.)-г Gemini-ээр текст болгоно. Яриа илрээгүй бол хоосон `text` буцаана.',
+          tags: ['ai'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: { audio: { $ref: '#/components/schemas/AIAudioIn' } },
+                  required: ['audio'],
+                },
+              },
+            },
+          },
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '400': { $ref: '#/components/responses/Error' },
+            '401': { $ref: '#/components/responses/Error' },
+            '422': { $ref: '#/components/responses/Error' },
+            '429': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/ai/tts': {
+        post: {
+          summary: 'Текстийг яриа болгох (TTS)',
+          description:
+            'Текстийг Gemini TTS model-ээр дуут (audio/wav, base64) болгоно. Түүхий PCM гаралтад WAV толгой сервер талд нэмэгддэг тул browser шууд тоглуулна. `voice` нь сонголттой prebuilt дуу хоолой (өгөгдмөл: Kore).',
+          tags: ['ai'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    text: { type: 'string', minLength: 1, maxLength: 2000 },
+                    voice: { type: 'string', maxLength: 40, pattern: '^[a-zA-Z0-9]*$' },
+                  },
+                  required: ['text'],
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              description: 'WAV audio (base64)',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/BaseResponse' },
+                      {
+                        type: 'object',
+                        properties: { data: { $ref: '#/components/schemas/AIAudioOut' } },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '400': { $ref: '#/components/responses/Error' },
+            '401': { $ref: '#/components/responses/Error' },
+            '422': { $ref: '#/components/responses/Error' },
+            '429': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/ai/translate': {
+        post: {
+          summary: 'Шууд (live) орчуулга',
+          description:
+            'Текст эсвэл audio-г зорилтот хэл рүү орчуулна. Audio өгвөл ЭХЛЭЭД STT хийгээд орчуулдаг; `speak=true` бол орчуулгын дуут (TTS) хувилбарыг хамт буцаана. Live орчуулга = богино audio chunk-уудыг энэ endpoint руу дараалан илгээх урсгал. Чимээгүй chunk-д хоосон үр дүн (алдаа БИШ) буцна.',
+          tags: ['ai'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    text: { type: 'string', maxLength: 4000 },
+                    audio: { $ref: '#/components/schemas/AIAudioIn' },
+                    target_lang: { type: 'string', minLength: 2, maxLength: 20 },
+                    speak: { type: 'boolean' },
+                  },
+                  required: ['target_lang'],
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              description: 'Орчуулга',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/BaseResponse' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'object',
+                            properties: {
+                              source_text: { type: 'string' },
+                              translated: { type: 'string' },
+                              audio: { $ref: '#/components/schemas/AIAudioOut' },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            '400': { $ref: '#/components/responses/Error' },
+            '401': { $ref: '#/components/responses/Error' },
+            '422': { $ref: '#/components/responses/Error' },
+            '429': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/admin/ai/prompts': {
+        get: {
+          summary: 'AI prompt давхаргуудыг жагсаах',
+          description:
+            'Тохируулдаг prompt давхаргуудыг (`scope` — хамрах хүрээ, `instructions` — нэмэлт заавар) буцаана. Suurь (base) дүрэм — хэл, хамрах хүрээний сахилт, prompt-injection эсэргүүцэл — КОДОД хатуу бичигдсэн тул энд харагдахгүй, ХЭЗЭЭ Ч өөрчлөгдөхгүй.',
+          tags: ['admin'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+          },
+        },
+      },
+      '/admin/ai/prompts/{key}': {
+        put: {
+          summary: 'AI prompt давхаргыг шинэчлэх',
+          description:
+            'Нэг давхаргын (`scope` | `instructions`) агуулгыг солино. Өөрчлөлт нэн даруй үйлчилнэ (prompt кэш хүчингүй болдог). Танихгүй key нь 400 — давхаргын жагсаалт хаалттай (migration-д seed хийгдсэн мөрүүд л шинэчлэгдэнэ).',
+          tags: ['admin'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'key',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', enum: ['scope', 'instructions'] },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: { content: { type: 'string', maxLength: 4000 } },
+                  required: ['content'],
+                },
+              },
+            },
+          },
+          responses: {
+            '200': { $ref: '#/components/responses/Ok' },
+            '400': { $ref: '#/components/responses/Error' },
+            '401': { $ref: '#/components/responses/Error' },
+            '403': { $ref: '#/components/responses/Error' },
+            '422': { $ref: '#/components/responses/Error' },
           },
         },
       },

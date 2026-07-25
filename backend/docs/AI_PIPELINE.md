@@ -15,14 +15,14 @@ Browser (/me/ai, /me/translate)
 Next.js BFF  /api/ai/{chat,stt,tts,translate}     ← validates shape, attaches JWT
    │  server→server
    ▼
-Go API  /api/v1/ai/*  (JWT + rate limit ~20/min)
+Node API  /api/v1/ai/*  (JWT + rate limit ~20/min)
    │
    ▼
 usecases/ai ──────────────► pkg/gemini ──────► Gemini REST API
    │   ▲                      (retry 3× backoff on 429/5xx/network)
    │   └─ functionResponse
    ▼
-ToolDef.Execute()  ← runs ON THE BACKEND with the request context
+ToolDef.execute()  ← runs ON THE BACKEND with the request context
    ├─ search_knowledge → repositories/postgres/ai → ai_knowledge table
    └─ get_server_time  → demo tool
 ```
@@ -33,15 +33,15 @@ context (so RLS and timeouts apply to anything they touch).
 
 ## Chat flow (function-calling loop)
 
-`usecases/ai.Run()` (see `ai_impl.go`):
+`usecases/ai` → `run()` (see `ai_impl.ts`):
 
 1. Build `contents` from history (≤ 20 turns) + the new prompt. A voice
    message arrives as an inline base64 audio part — Gemini understands it
    directly, no STT step needed.
 2. Call Gemini with the layered system instruction + tool declarations.
 3. If the reply contains **function calls**: execute each tool, append the
-   model turn + a `functionResponse` turn, and loop (max `MaxSteps`, default
-   4). Each executed call is recorded as a `Step{Tool, Args, Result}` —
+   model turn + a `functionResponse` turn, and loop (max `maxSteps`, default
+   4). Each executed call is recorded as a `Step { tool, args, result }` —
    returned to the client so the UI can show "what the AI did".
 4. If the reply is **text**: return it.
 
@@ -55,7 +55,7 @@ reach the client directly.
 ## Prompt layers
 
 The system prompt is assembled per request from three layers
-(`ai_prompts.go`):
+(`ai_prompts.ts`):
 
 | Layer | Source | Editable | Purpose |
 |-------|--------|----------|---------|
@@ -65,35 +65,39 @@ The system prompt is assembled per request from three layers
 
 - Admin UI: **Admin → Settings**; API: `GET/PUT /api/v1/admin/ai/prompts/{key}`
   (`settings.manage` permission).
-- Prompts are cached for 60s; `SetPrompt` invalidates the cache, so changes
+- Prompts are cached for 60s; `setPrompt` invalidates the cache, so changes
   apply immediately on the instance that received the write.
-- `SetPrompt` is **UPDATE-only** against the keys seeded by migration 11
+- `setPrompt` is **UPDATE-only** against the keys seeded by migration 11
   (`scope`, `instructions`) — the prompt surface cannot grow from the API.
 - DB read failures fail **open** to the env/default scope (a prompt lookup
   must never take chat down).
 
 ## Tools
 
-A tool is an `ai.ToolDef`: a Gemini function declaration + a Go func:
+A tool is a `ToolDef`: a Gemini function declaration + a backend function:
 
-```go
-ai.ToolDef{
-    Declaration: gemini.FunctionDeclaration{
-        Name:        "my_tool",
-        Description: "When the model should call this…",
-        Parameters:  map[string]any{ /* JSON Schema */ },
-    },
-    Execute: func(ctx context.Context, args map[string]any) (map[string]any, error) {
-        // runs on the backend; ctx carries the request identity (RLS applies)
-        return map[string]any{"result": "…"}, nil
-    },
-}
+```ts
+const myTool: ToolDef = {
+  declaration: {
+    name: 'my_tool',
+    description: 'When the model should call this…',
+    parameters: { type: 'object', properties: { /* JSON Schema */ } },
+  },
+  execute: async (ctx, args) => {
+    // runs on the backend; ctx carries the request identity (RLS applies)
+    return { result: '…' };
+  },
+};
 ```
 
-Register it in `cmd/api/server/server.go`:
+Register it in `src/cmd/api/server/server.ts`:
 
-```go
-aiTools := append(ai.DefaultTools(), ai.KnowledgeSearchTool(aiRepo), myTool)
+```ts
+const aiUC = newAIUsecase(chatClient, ttsClient, aiRepo, [
+  ...defaultTools(),
+  knowledgeSearchTool(aiRepo),
+  myTool,
+], { voice: AppConfig.GEMINI_VOICE, scopePrompt: AppConfig.AI_SCOPE_PROMPT });
 ```
 
 Shipped tools:
@@ -103,7 +107,7 @@ Shipped tools:
   *before* answering platform questions and to say "I don't know" rather than
   guess when nothing is found. Grow the corpus by inserting rows
   (title/content/tags); swap the single query in
-  `repositories/postgres/ai` for tsvector or pgvector when it gets large.
+  `datasources/repositories/postgres/ai` for tsvector or pgvector when it gets large.
 - **`get_server_time`** — minimal demo (Ulaanbaatar time), zero dependencies.
 
 ## Voice
@@ -112,7 +116,7 @@ Shipped tools:
 |------------|----------|--------------|
 | Voice chat message | `POST /ai/chat` with `audio` | audio goes straight into the user turn as inline data — the chat model is multimodal |
 | Speech-to-text | `POST /ai/stt` | one-shot Gemini call with a strict "transcribe verbatim" instruction; empty text = no speech |
-| Text-to-speech | `POST /ai/tts` | separate TTS model (`GEMINI_TTS_MODEL`) with `responseModalities: ["AUDIO"]`; the raw PCM (L16/24kHz) is wrapped into a WAV header (`pkg/gemini/wav.go`) so browsers can play it directly |
+| Text-to-speech | `POST /ai/tts` | separate TTS model (`GEMINI_TTS_MODEL`) with `responseModalities: ["AUDIO"]`; the raw PCM (L16/24kHz) is wrapped into a WAV header (`pkg/gemini/wav.ts`) so browsers can play it directly |
 | Live translation | `POST /ai/translate` | text → translate; audio → **two-step** STT→translate (reliable, no structured-output parsing); `speak: true` adds a TTS rendering of the translation. TTS failure degrades silently (text still returned) |
 
 **Live translation UX** (frontend `LiveTranslateView`): the mic records ~7s
@@ -136,19 +140,18 @@ GEMINI_API_BASE=    # override for proxies/testing
 AI_SCOPE_PROMPT=    # scope fallback when the DB layer is empty
 ```
 
-Rate limit: `/ai/*` shares a dedicated per-IP limiter (~20 req/min, burst 5)
+Rate limit: `/ai/*` shares a dedicated per-IP limiter (~20 req/min, burst 10)
 sized so live translation (~8 chunks/min) fits with headroom.
 
 ## Testing
 
 Everything is testable without Gemini:
 
-- `gemini.Generator` is an interface — usecase tests use a `fakeGenerator`
-  returning scripted responses (`ai_impl_test.go`, `ai_speech_test.go`).
-- `repointerface.AIRepository` is faked for prompt/tool tests
-  (`ai_prompts_test.go`).
-- The HTTP client itself is tested against `httptest` servers
-  (retry/backoff, 4xx no-retry, function-call parsing — `pkg/gemini/gemini_test.go`).
+- `Generator` is an interface — usecase tests use a `fakeGenerator` returning
+  scripted responses (`ai_impl.test.ts`, `ai_speech.test.ts`).
+- `AIRepository` is faked for prompt/tool tests (`ai_impl.test.ts`).
+- The HTTP client itself is tested against a stubbed global `fetch`
+  (retry/backoff, 4xx no-retry, function-call parsing — `pkg/gemini/gemini.test.ts`).
 
 ## Troubleshooting
 
@@ -159,7 +162,7 @@ Everything is testable without Gemini:
 | TTS fails while chat works | `GEMINI_TTS_MODEL` is a **preview** model — if Google renames it, override the env var |
 | Assistant refuses an on-topic question | The `scope` prompt layer is too narrow — edit it in Admin → Settings |
 | `search_knowledge` finds nothing | The `ai_knowledge` table only has the 3 seeded demo rows — insert your own content |
-| 429 on live translation | Segment cadence vs the `/ai` rate limit — raise the limiter in `server.go` or lengthen `SEGMENT_MS` |
+| 429 on live translation | Segment cadence vs the `/ai` rate limit — raise the limiter in `server.ts` or lengthen `SEGMENT_MS` |
 
 ---
 

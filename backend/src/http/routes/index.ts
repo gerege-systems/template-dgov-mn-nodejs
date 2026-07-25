@@ -11,6 +11,7 @@ import type { Router } from 'express';
 import type { RedisCache } from '../../datasources/caches/redis.js';
 import type { Db } from '../../datasources/drivers/pg.js';
 import type { JWTService } from '../../pkg/jwt/jwt.js';
+import type { AIUsecase } from '../../usecases/ai/ai_usecase.js';
 import type { AuditUsecase } from '../../usecases/audit/audit_usecase.js';
 import type { ApplicationsUsecase } from '../../usecases/applications/applications_usecase.js';
 import type { AssetsUsecase } from '../../usecases/assets/assets_usecase.js';
@@ -29,6 +30,7 @@ import type { SiteUsecase, ThemeUsecase } from '../../usecases/site/site_usecase
 import type { UsersUsecase } from '../../usecases/users/users_usecase.js';
 import type { RateLimiter } from '../middlewares/ratelimit.js';
 import type { Middleware } from '../types.js';
+import { registerAIRoutes } from './route_ai.js';
 import { registerApplicationsRoutes } from './route_applications.js';
 import { registerAssetsRoutes } from './route_assets.js';
 import { registerAuditRoutes } from './route_audit.js';
@@ -55,6 +57,11 @@ export interface Deps {
   jwtService: JWTService;
   /** authMiddleware нь Bearer токен шаардах route-уудад суудаг. */
   authMiddleware: Middleware;
+  /**
+   * aiUC нь Gemini AI pipeline (чат · STT · TTS · орчуулга) болон түүний
+   * тохируулдаг prompt давхаргууд.
+   */
+  aiUC: AIUsecase;
   /** usersUC нь хэрэглэгчийн профайл / admin удирдлагын usecase. */
   usersUC: UsersUsecase;
   /** authUC нь eID/Google нэвтрэлт + session-ийн амьдралын мөчлөг. */
@@ -127,6 +134,7 @@ export interface Deps {
  */
 export function registerRoutes(router: Router, deps: Deps): void {
   registerMetaRoutes(router, deps);
+  registerAIRoutes(router, deps);
   registerApplicationsRoutes(router, deps);
   registerAssetsRoutes(router, deps);
   registerAuditRoutes(router, deps);

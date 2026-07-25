@@ -14,6 +14,7 @@ import {
 } from '../../../constants/index.js';
 import { newMemoryCache } from '../../../datasources/caches/memory.js';
 import { newRedisCache, type RedisCache } from '../../../datasources/caches/redis.js';
+import { newAIRepository } from '../../../datasources/repositories/postgres/ai/ai_postgres.js';
 import { newAuditRepository } from '../../../datasources/repositories/postgres/audit/audit_postgres.js';
 import { newGatewayRepository } from '../../../datasources/repositories/postgres/gateway/gateway_postgres.js';
 import { newOAuthClientRepository } from '../../../datasources/repositories/postgres/oauth/oauth_clients_postgres.js';
@@ -53,6 +54,7 @@ import {
 } from '../../../http/middlewares/metrics.js';
 import { observabilityGate } from '../../../http/middlewares/observability_gate.js';
 import { newRateLimiter, type RateLimiter } from '../../../http/middlewares/ratelimit.js';
+import { newGeminiClient } from '../../../pkg/gemini/gemini.js';
 import { recovererMiddleware } from '../../../http/middlewares/recoverer.js';
 import { requestIDMiddleware } from '../../../http/middlewares/requestid.js';
 import { securityHeadersMiddleware } from '../../../http/middlewares/security.js';
@@ -69,6 +71,8 @@ import { newXypClient } from '../../../pkg/xyp/xyp.js';
 import { newAuditUsecase } from '../../../usecases/audit/audit_usecase.js';
 import { newAuthUsecase } from '../../../usecases/auth/auth_impl.js';
 import { newApplicationsUsecase } from '../../../usecases/applications/applications_usecase.js';
+import { newAIUsecase } from '../../../usecases/ai/ai_impl.js';
+import { defaultTools, knowledgeSearchTool } from '../../../usecases/ai/ai_tools.js';
 import { newAssetsUsecase } from '../../../usecases/assets/assets_usecase.js';
 import { newCoreUsecase } from '../../../usecases/core/core_impl.js';
 import { newGatewayUsecase } from '../../../usecases/gateway/gateway_usecase.js';
@@ -242,13 +246,16 @@ export async function newApp(): Promise<App> {
     res.type('application/json').send(JSON.stringify(openapiDocument()));
   });
 
-  // Rate limiter-ууд. Тоонууд нь Go хувилбартай ижил: auth ~5 req/min,
-  // ai ~20 req/min (live орчуулга минутад ~8 chunk урсгадаг), poll болон
-  // gov бичилтийн тусдаа bucket-ууд.
+  // Rate limiter-ууд (rate = токен/секунд, burst = хувингийн багтаамж).
+  // Тоонууд нь Go хувилбарын `middlewares.NewRateLimiter` дуудлагуудтай ЯГ
+  // ижил — хязгаар нь аюулгүй байдлын зан үйл тул портод 1:1 хадгалагдана:
+  //   auth 5/мин burst 5 · ai 20/мин burst 10 (live орчуулга ~8 chunk/мин
+  //   урсгадаг) · poll 1/сек burst 30 (eID long-poll ~2.5с тутам) ·
+  //   gov бичилт 30/мин burst 15.
   const authRateLimiter = newRateLimiter(5 / 60, 5);
-  const aiRateLimiter = newRateLimiter(20 / 60, 20);
-  const pollRateLimiter = newRateLimiter(120 / 60, 120);
-  const govWriteRateLimiter = newRateLimiter(30 / 60, 30);
+  const aiRateLimiter = newRateLimiter(20 / 60, 10);
+  const pollRateLimiter = newRateLimiter(1, 30);
+  const govWriteRateLimiter = newRateLimiter(30 / 60, 15);
 
   const authMiddleware = newAuthMiddleware(jwtService, redisCache, false);
 
@@ -392,10 +399,29 @@ export async function newApp(): Promise<App> {
   // Гарын үсэг / байгууллагын тамга — байгууллагын эрхийг eID-ээр шалгана.
   const assetsUC = newAssetsUsecase(usersUC, userRepo, newOrgStampRepository(db), eidClient);
 
+  // AI pipeline (Gemini · SDK-гүй REST). Чат ба TTS нь ӨӨР ӨӨР model —
+  // чат model audio гаргадаггүй. GEMINI_API_KEY хоосон бол /ai/* нь 500
+  // өгнө (тохиргооны алдаа), бусад домэйн хэвийн ажиллана.
+  const aiRepo = newAIRepository(db);
+  const aiUC = newAIUsecase(
+    newGeminiClient(AppConfig.GEMINI_API_BASE, AppConfig.GEMINI_API_KEY, AppConfig.GEMINI_MODEL),
+    newGeminiClient(
+      AppConfig.GEMINI_API_BASE,
+      AppConfig.GEMINI_API_KEY,
+      AppConfig.GEMINI_TTS_MODEL,
+    ),
+    aiRepo,
+    // Tool-ууд backend дээр СЕРВЕРИЙН эрхээр ажиллана — model зөвхөн ямар
+    // функц дуудахаа шийднэ, гүйцэтгэлийг ХЭЗЭЭ Ч өөрөө хийхгүй.
+    [...defaultTools(), knowledgeSearchTool(aiRepo)],
+    { voice: AppConfig.GEMINI_VOICE, scopePrompt: AppConfig.AI_SCOPE_PROMPT },
+  );
+
   const deps: Deps = {
     db,
     redisCache,
     jwtService,
+    aiUC,
     usersUC,
     authUC,
     rbacUC,
