@@ -3695,6 +3695,165 @@
         }
       }
     },
+    "/sso/start": {
+      "post": {
+        "summary": "SSO нэвтрэлт эхлүүлэх",
+        "description": "Гадаад SSO provider (OIDC)-ийн authorize URL-ийг state-тэй буцаана. State нь Redis-д 10 минутын НЭГ УДААГИЙН түлхүүрээр хадгалагдаж, callback дээр устгагдана (CSRF/replay хаалт).",
+        "tags": [
+          "sso"
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/sso/callback": {
+      "post": {
+        "summary": "SSO callback (authorization code)",
+        "description": "state+code-ийг шалгаж, code-ийг токен болгож солин, иргэнийг `civil_id` (иргэний дугаар) эсвэл pairwise `sub`-ээр upsert хийж, ӨӨРИЙН JWT хос олгоно. Иргэний дугаар ирсэн бол eID-ээр урьд бүртгэгдсэн дансанд НЭГТГЭНЭ (давхардал үүсэхгүй). Private платформд урьдчилан бүртгээгүй иргэн 403 — данс ч үүсэхгүй.",
+        "tags": [
+          "sso"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "maxLength": 256
+                  },
+                  "code": {
+                    "type": "string",
+                    "maxLength": 4096
+                  }
+                },
+                "required": [
+                  "state",
+                  "code"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/sso/native": {
+      "post": {
+        "summary": "SSO native (mobile PKCE) нэвтрэлт",
+        "description": "Mobile апп-ын PKCE code-ийг public client-ээр (client_secret-ГҮЙ, code_verifier-тэй) солино. State шалгалтГҮЙ — PKCE нь interception/replay-аас хамгаална. Native урсгал нь refresh_token хадгалахгүй.",
+        "tags": [
+          "sso"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "maxLength": 4096
+                  },
+                  "code_verifier": {
+                    "type": "string",
+                    "minLength": 43,
+                    "maxLength": 128
+                  },
+                  "redirect_uri": {
+                    "type": "string",
+                    "maxLength": 400
+                  }
+                },
+                "required": [
+                  "code",
+                  "code_verifier",
+                  "redirect_uri"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/sso/logout": {
+      "post": {
+        "summary": "SSO logout URL",
+        "description": "callback-д олгосон богино `ref`-ээр id_token-ыг Redis-ээс авч (нэг удаагийн), RP-initiated logout URL байгуулна. id_token нь cookie/header-т ХЭЗЭЭ Ч ордоггүй — зөвхөн 32 hex ref. ref байхгүй/хугацаа дууссан бол хоосон мөр (алдаа биш).",
+        "tags": [
+          "sso"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ref": {
+                    "type": "string",
+                    "maxLength": 64
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/site/appearance": {
       "get": {
         "summary": "Сайтын нийтийн харагдац",

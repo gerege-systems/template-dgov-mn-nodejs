@@ -19,7 +19,9 @@ import { newGatewayRepository } from '../../../datasources/repositories/postgres
 import { newOAuthClientRepository } from '../../../datasources/repositories/postgres/oauth/oauth_clients_postgres.js';
 import { newServiceScopeResolver } from '../../../datasources/repositories/postgres/oauth/service_scope_postgres.js';
 import { newOrgRepository } from '../../../datasources/repositories/postgres/org/org_postgres.js';
+import { newPlatformSettingsRepository } from '../../../datasources/repositories/postgres/platformsettings/platformsettings_postgres.js';
 import { newSSOTokenRepository } from '../../../datasources/repositories/postgres/ssotoken/ssotoken_postgres.js';
+import { newSSOUserRepository } from '../../../datasources/repositories/postgres/ssouser/ssouser_postgres.js';
 import { newUserIntegrationsRepository } from '../../../datasources/repositories/postgres/userintegrations/userintegrations_postgres.js';
 import { newOrgStampRepository } from '../../../datasources/repositories/postgres/orgstamp/orgstamp_postgres.js';
 import { newRBACRepository } from '../../../datasources/repositories/postgres/rbac/rbac_postgres.js';
@@ -70,6 +72,7 @@ import { newCoreUsecase } from '../../../usecases/core/core_impl.js';
 import { newGatewayUsecase } from '../../../usecases/gateway/gateway_usecase.js';
 import { newGSpaceUsecase } from '../../../usecases/gspace/gspace_usecase.js';
 import { newSSOTokenUsecase } from '../../../usecases/ssotoken/ssotoken_usecase.js';
+import { newSSOUsecase } from '../../../usecases/sso/sso_usecase.js';
 import { newIntegrationsUsecase } from '../../../usecases/integrations/integrations_usecase.js';
 import { newOrgUsecase } from '../../../usecases/org/org_usecase.js';
 import { newRBACUsecase } from '../../../usecases/rbac/rbac_impl.js';
@@ -294,6 +297,18 @@ export async function newApp(): Promise<App> {
     AppConfig.SSO_EID_PROXY_BASE_URL === ''
       ? null
       : newSSOEidProxy(AppConfig.SSO_EID_PROXY_BASE_URL);
+  // SSO нэвтрэлтийн урсгал. Токен хадгалагч нь eID proxy идэвхтэй үед л
+  // залгагдана; хандалтын горим уншигч нь private платформын хаалт.
+  const ssoUC = newSSOUsecase(
+    ssoOidc,
+    newSSOUserRepository(db),
+    jwtService,
+    redisCache,
+    AppConfig.SSO_NATIVE_CLIENT_ID,
+    ssoEidProxy === null ? null : ssoTokenUC,
+    newPlatformSettingsRepository(db),
+  );
+
   const authUC = newAuthUsecase(
     usersUC,
     jwtService,
@@ -379,6 +394,7 @@ export async function newApp(): Promise<App> {
     themeUC,
     coreUC,
     securityUC,
+    ssoUC,
     assetsUC,
     orgUC,
     gspaceUC,

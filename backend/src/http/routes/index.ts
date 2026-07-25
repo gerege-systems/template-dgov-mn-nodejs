@@ -22,6 +22,7 @@ import type { IntegrationsUsecase } from '../../usecases/integrations/integratio
 import type { OrgUsecase } from '../../usecases/org/org_usecase.js';
 import type { RBACUsecase } from '../../usecases/rbac/rbac_usecase.js';
 import type { SecurityUsecase } from '../../usecases/security/security_usecase.js';
+import type { SSOUsecase } from '../../usecases/sso/sso_usecase.js';
 import type { SiteUsecase, ThemeUsecase } from '../../usecases/site/site_usecase.js';
 import type { UsersUsecase } from '../../usecases/users/users_usecase.js';
 import type { RateLimiter } from '../middlewares/ratelimit.js';
@@ -40,6 +41,7 @@ import { registerOrgRoutes } from './route_org.js';
 import { registerRBACRoutes } from './route_rbac.js';
 import { registerSecurityRoutes } from './route_security.js';
 import { registerSiteRoutes } from './route_site.js';
+import { registerSSORoutes } from './route_sso.js';
 import { registerUsersRoutes } from './route_users.js';
 
 /** Deps нь route бүртгэлд шаардлагатай бүх хамаарлын багц. */
@@ -74,6 +76,8 @@ export interface Deps {
   coreUC: CoreUsecase;
   /** securityUC нь RASP-style security event-ийн ингест + admin жагсаалт. */
   securityUC: SecurityUsecase;
+  /** ssoUC нь гадаад SSO (OIDC)-ээр нэвтрэх урсгал (eID-ийн зэрэгцээ 2 дахь арга). */
+  ssoUC: SSOUsecase;
   /**
    * assetsUC нь гарын үсэг · байгууллагын тамга · латин нэр. Байгууллагын
    * эрхийг eID (улсын бүртгэл)-ээр шалгадаг тул eID client-аас хамаарна.
@@ -125,5 +129,6 @@ export function registerRoutes(router: Router, deps: Deps): void {
   registerRBACRoutes(router, deps);
   registerSecurityRoutes(router, deps);
   registerSiteRoutes(router, deps);
+  registerSSORoutes(router, deps);
   registerUsersRoutes(router, deps);
 }
