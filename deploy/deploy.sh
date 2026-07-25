@@ -30,6 +30,19 @@ if [ -n "${INTEGRATION_ENC_KEY:-}" ] && ! grep -q '^INTEGRATION_ENC_KEY=' backen
   echo "▶ INTEGRATION_ENC_KEY-г backend.env-д бичлээ (superadmin MFA идэвхжинэ)"
 fi
 
+# APP_ORIGIN — гуравдагч талын OAuth-ийн redirect_uri үүнээс угсрагдана. Урвуу
+# proxy-ийн цаана хүсэлтийн Host нь дотоод хаяг байж болзошгүй ба redirect_uri нь
+# провайдерт БҮРТГЭСЭНТЭЙ ЯГ таарах ёстой тул ил тавина. BACKEND.ENV-д байхгүй
+# үед Л нэг удаа бичнэ: утгыг OAUTH_ISSUER-ээс авна (мөн л нийтийн origin) —
+# тэр ч байхгүй бол алгасна (config нь ALLOWED_ORIGINS-ийн эхнийхээр нөхнө).
+if ! grep -q '^APP_ORIGIN=' backend.env 2>/dev/null; then
+  issuer="$(grep -E '^OAUTH_ISSUER=' backend.env 2>/dev/null | tail -1 | cut -d= -f2- | tr -d "\"' " || true)"
+  if [ -n "$issuer" ]; then
+    printf 'APP_ORIGIN=%s\n' "$issuer" >> backend.env
+    echo "▶ APP_ORIGIN-г backend.env-д бичлээ: ${issuer}"
+  fi
+fi
+
 # backend.env нь api контейнерийн distroless nonroot хэрэглэгчид (uid 65532)
 # уншигдахуйц байх ёстой — эс бөгөөс config loader EACCES-ээр унана. Хувийн
 # хэвээр (600) үлдэнэ.
