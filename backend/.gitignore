@@ -1,0 +1,21 @@
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Logger test artifacts
+*.log
+
+# Secrets / local env (keep .env.example tracked)
+.env
+.env.*
+!.env.example
+
+# OS / editor junk
+.DS_Store
+.idea/
+.vscode/

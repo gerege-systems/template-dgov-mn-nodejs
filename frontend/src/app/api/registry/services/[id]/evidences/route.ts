@@ -1,0 +1,19 @@
+import { authedFetch } from '@/lib/api';
+import { proxyResult, readJson, checkOrigin, checkUUID } from '@/lib/bff';
+
+export const dynamic = 'force-dynamic';
+
+// PUT /api/registry/services/{id}/evidences — шаардах нотолгооны БҮРЭН
+// жагсаалтыг солино (backend талд нэг транзакц). registry.manage.
+export async function PUT(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  const bad = checkOrigin(req) ?? checkUUID(params.id);
+  if (bad) return bad;
+  const body = await readJson(req);
+  return proxyResult(
+    await authedFetch(`/registry/services/${params.id}/evidences`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  );
+}

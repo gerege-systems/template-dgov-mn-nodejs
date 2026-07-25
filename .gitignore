@@ -1,0 +1,26 @@
+# Secrets — compose interpolation + backend config (both gitignored on purpose;
+# .env.example / backend/.env.example are the tracked templates).
+.env
+.env.*
+!.env.example
+backend.env
+
+# Go-ийн эх хувилбар — порт хийх лавлагаа болгон локалд хадгалагдана, repo-д
+# оруулахгүй (порт дуусмагц устгагдана).
+.go-reference/
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Build / coverage artifacts
+coverage/
+.next/
+out/
+
+# OS / editor junk
+.DS_Store
+.idea/
+.vscode/
+*.log

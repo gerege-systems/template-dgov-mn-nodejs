@@ -1,0 +1,9 @@
+# Government Template Platform V3.0
+# gitleaks тохиргоо — default дүрмүүд дээр нэмэлт allowlist. Энд зөвхөн жинхэнэ
+# нууц БИШ, тестийн жишээ (dummy) утгуудыг зөвшөөрнө.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Логгер unit тестийн жишээ trace ID (\"trace-123-456\") — жинхэнэ API key биш"
+paths = ['''backend/pkg/logger/logger_test\.go''']

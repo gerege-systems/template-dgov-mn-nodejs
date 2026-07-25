@@ -1,0 +1,71 @@
+# Government Template Platform V3.0 — Node.js edition
+# CD — CI амжилттай дууссаны дараа (эсвэл гараар) production сервер рүү deploy
+# хийнэ. SSH-ээр серверт холбогдож, main-ийн сүүлийн commit-ийг checkout хийгээд
+# `deploy/deploy.sh`-г ажиллуулна (image build → compose up -d → health wait).
+#
+# Шаардлагатай нууц түлхүүрүүд (Settings → Secrets and variables → Actions):
+#   DEPLOY_HOST           — серверийн хост/IP (ж: 38.180.243.138)
+#   DEPLOY_USER           — SSH хэрэглэгч (ж: root)
+#   DEPLOY_SSH_KEY        — CD-д зориулсан хувийн SSH түлхүүр (public-г серверийн
+#                           authorized_keys-д нэмнэ)
+#   DEPLOY_PATH           — серверт repo checkout хийсэн зам
+#                           (ж: /srv/template-dgov-mn-nodejs)
+#   INTEGRATION_ENC_KEY   — AES-GCM түлхүүр (deploy.sh backend.env-д нэг удаа бичнэ)
+#   DEPLOY_SSH_PORT       — заавал биш; хоосон бол 22
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ['CI']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to production
+    runs-on: ubuntu-latest
+    environment: production
+    # CI амжилттай дууссан үед Л (эсвэл гараар ажиллуулсан үед) deploy хийнэ.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Configure SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_SSH_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "${DEPLOY_PORT:-22}" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Run remote deploy
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_SSH_PORT }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          INTEGRATION_ENC_KEY: ${{ secrets.INTEGRATION_ENC_KEY }}
+        run: |
+          # Нууц утгуудыг argv-д биш, stdin (heredoc)-оор дамжуулна — серверийн
+          # process listing-д харагдахгүй.
+          ssh -i ~/.ssh/deploy_key -p "${DEPLOY_PORT:-22}" \
+              -o StrictHostKeyChecking=yes \
+              "$DEPLOY_USER@$DEPLOY_HOST" 'bash -s' <<REMOTE
+          set -euo pipefail
+          export INTEGRATION_ENC_KEY='${INTEGRATION_ENC_KEY}'
+          cd '${DEPLOY_PATH}'
+          echo "▶ main-ийн сүүлийн commit-ийг татаж байна…"
+          git fetch --all --prune
+          git checkout main
+          git reset --hard origin/main
+          bash deploy/deploy.sh
+          REMOTE

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <!-- Соёмбо-гал -->
+  <path d="M24 6c3 4.5 3 8 0 12-3-4-3-7.5 0-12Z" fill="#e4b24a"/>
+  <path d="M16 11c1.6 3 1.6 5.4 0 8.4-1.7-3-1.6-5.6 0-8.4Z" fill="#e4b24a" opacity="0.9"/>
+  <path d="M32 11c1.6 2.8 1.7 5.4 0 8.4-1.6-3-1.6-5.4 0-8.4Z" fill="#e4b24a" opacity="0.9"/>
+  <!-- Суурь давхаргууд (платформ) -->
+  <rect x="14" y="24" width="20" height="3.4" rx="1.2" fill="#e4b24a"/>
+  <rect x="11" y="30" width="26" height="3.4" rx="1.2" fill="#e4b24a" opacity="0.85"/>
+  <rect x="8"  y="36" width="32" height="3.4" rx="1.2" fill="#e4b24a" opacity="0.7"/>
+</svg>

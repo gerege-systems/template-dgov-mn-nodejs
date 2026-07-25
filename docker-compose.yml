@@ -1,0 +1,147 @@
+# Full-stack deployment for Government Template Platform V3.0 — Node.js edition
+# (Node/Express API + React web, Postgres, Redis).
+#
+# Secrets:
+#   - ./.env         → compose interpolation (POSTGRES_*, REDIS_PASS, ports) — gitignored
+#   - ./backend.env  → backend config mounted into api+migrate at /app/.env
+#                      (see backend/.env.example) — gitignored
+#
+# Usage:  docker compose up -d --build
+name: template-dgov-mn-nodejs
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      # Least-privilege app role created on first init by backend/deploy/initdb.
+      # The api connects as this NON-superuser so Postgres Row-Level Security
+      # actually enforces (superusers + BYPASSRLS roles skip RLS). migrate keeps
+      # using POSTGRES_USER (needs superuser for CREATE EXTENSION + RLS DDL).
+      APP_DB_USER: ${APP_DB_USER}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+      # initdb scripts run once, on an empty data volume, as the superuser.
+      - ./backend/deploy/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # -h 127.0.0.1 forces a TCP probe. On a first boot (empty volume) postgres
+      # runs a temporary socket-only server to execute the initdb role scripts
+      # before it opens the real TCP listener. A socket-only `pg_isready` flips to
+      # "healthy" during that window, so migrate (depends_on: db healthy, connects
+      # over TCP) would race in and die on a refused connection. A TCP probe stays
+      # unhealthy until the real server accepts connections, i.e. after initdb.
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ['redis-server', '--requirepass', '${REDIS_PASS}', '--save', '', '--appendonly', 'no']
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASS}', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # One-off: apply SQL migrations, then exit. Idempotent — already-applied files
+  # are skipped (schema_migrations), so this re-runs safely on every `up`.
+  migrate:
+    build:
+      context: ./backend
+      dockerfile: deploy/Dockerfile
+    # Distroless-ийн ENTRYPOINT нь `node` тул бүрэн замаар дарж бичнэ.
+    entrypoint: ['/nodejs/bin/node', '/app/dist/cmd/migration/main.js', '--action=up']
+    volumes:
+      - ./backend.env:/app/.env:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: 'no'
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: deploy/Dockerfile
+    volumes:
+      - ./backend.env:/app/.env:ro
+    # Loopback-д гаргана — nginx нь /api/* болон /rp/sign (3 дагч RP-ийн eID sign
+    # relay)-ыг энэ порт руу проксилно.
+    ports:
+      - '127.0.0.1:${API_PORT:-8091}:8080'
+    environment:
+      # RLS enforcement: the api connects as the least-privilege app role, NOT the
+      # superuser the migrate step uses, so Row-Level Security is enforced. The
+      # stack runs the backend in development mode (ENVIRONMENT=development in
+      # backend.env — the internal compose DB has no TLS), so the driver reads
+      # DB_POSTGRE_DSN; this env overrides it (process.env wins over the .env file).
+      # Set APP_DB_DSN in ./.env to the app_user URL, e.g.
+      #   postgres://app_user:...@db:5432/gerege_template?sslmode=disable
+      DB_POSTGRE_DSN: ${APP_DB_DSN}
+    healthcheck:
+      test: ['CMD', '/nodejs/bin/node', '/app/dist/cmd/healthcheck/main.js']
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+    environment:
+      NODE_ENV: production
+      # Next standalone-г 0.0.0.0 дээр bind хийлгэнэ (Docker нь HOSTNAME-г
+      # контейнер ID болгодог тул эс зааваас зөвхөн тэр IP дээр сонсож,
+      # localhost healthcheck refused болдог).
+      HOSTNAME: '0.0.0.0'
+      # BFF → backend over the internal network (frontend appends /api/v1).
+      BACKEND_URL: http://api:8080
+      COOKIE_SECURE: 'true'
+      APP_ORIGIN: ${APP_ORIGIN}
+      # Google OAuth — BFF start route consent URL-д client_id-г хэрэглэнэ (нууц
+      # биш). Хоосон бол Google товч "тохируулаагүй" руу чиглүүлнэ.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      # Гуравдагч интеграцийн OAuth (BFF талд token exchange хийдэг тул client
+      # secret ч энд орно). redirect_uri = ${APP_ORIGIN}/api/integrations/<provider>/callback
+      GOOGLE_DRIVE_CLIENT_ID: ${GOOGLE_DRIVE_CLIENT_ID:-}
+      GOOGLE_DRIVE_CLIENT_SECRET: ${GOOGLE_DRIVE_CLIENT_SECRET:-}
+      DROPBOX_CLIENT_ID: ${DROPBOX_CLIENT_ID:-}
+      DROPBOX_CLIENT_SECRET: ${DROPBOX_CLIENT_SECRET:-}
+      GOOGLE_MEET_CLIENT_ID: ${GOOGLE_MEET_CLIENT_ID:-}
+      GOOGLE_MEET_CLIENT_SECRET: ${GOOGLE_MEET_CLIENT_SECRET:-}
+    depends_on:
+      api:
+        condition: service_healthy
+    # Bind to loopback only; the public reverse proxy (nginx) forwards here.
+    ports:
+      - '127.0.0.1:${WEB_PORT:-3007}:3000'
+    # 127.0.0.1 (localhost биш) — контейнерийн /etc/hosts-д ::1 localhost байгаа
+    # тул IPv6 refused-аас сэргийлнэ.
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q --spider http://127.0.0.1:3000/ || exit 1']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  # OIDC provider нь api backend-д (usecases/oidc + oauth_clients хүснэгт)
+  # шингэсэн — тусдаа Ory Hydra service БАЙХГҮЙ. /oauth2/*, /userinfo,
+  # /.well-known/* endpoint-уудыг api өөрөө үндсэн DB дээр (RLS-ийн доор) хангана.
+
+volumes:
+  dbdata:

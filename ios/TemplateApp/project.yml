@@ -1,0 +1,49 @@
+# xcodegen тодорхойлолт — `xcodegen generate`-ээр .xcodeproj үүсгээд Xcode-оор нээнэ.
+# (repo-д binary .xcodeproj хадгалахгүй; энэ нэг эх сурвалж.)
+name: TemplateApp
+options:
+  bundleIdPrefix: mn.gerege
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+
+targets:
+  TemplateApp:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    entitlements:
+      path: Sources/TemplateApp.entitlements
+      properties:
+        com.apple.developer.associated-domains:
+          - applinks:template.dgov.mn
+          - applinks:sso.dgov.mn
+    # Info.plist — xcodegen үүсгэнэ. Scheme-ууд:
+    #  • geregetemp    — SSO OAuth callback (ASWebAuthenticationSession) + eID App2App
+    #                    (geregetemp://eid/callback) шууд нэвтрэлт.
+    #  • geregetempeid — SSO-ийн eID SIBLING scheme: native SSO үед eID апп approve-ийн
+    #                    дараа энэ scheme-ийг нээж апп+AS session-ыг foreground болгож poll
+    #                    сэргээнэ (OAuth scheme-ийг дахин ашиглавал AS session эрт хаагдана).
+    # geregesmartid:// (eID Mongolia App)-ыг canOpenURL-д зөвшөөрнө.
+    info:
+      path: Sources/Info.plist
+      properties:
+        CFBundleDisplayName: Government Template Platform V3.0
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        # Portrait-only апп — iPad multitasking-д бүх orientation шаардахгүйн тулд
+        # full screen гэж зарлана (Xcode "All interface orientations..." warning-ыг арилгана).
+        UIRequiresFullScreen: true
+        ITSAppUsesNonExemptEncryption: false
+        CFBundleURLTypes:
+          - CFBundleURLName: mn.gerege.temp
+            CFBundleURLSchemes: [geregetemp, geregetempeid]
+        LSApplicationQueriesSchemes: [geregesmartid]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: mn.gerege.temp
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1,2"

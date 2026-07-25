@@ -1,0 +1,717 @@
+/* sso.dgov.mn — login / consent / sign UI
+   Aligned to me.gerege.mn brand-spec.md (OKLch tokens, government-official posture).
+   Single centered card surface. No gradient washes, no marketing aside. */
+
+:root {
+  /* Surfaces */
+  --bg:        oklch(98.5% 0.003 260);
+  --surface:   oklch(100% 0 0);
+  --surface-2: oklch(96.5% 0.005 260);
+
+  /* Text */
+  --fg:    oklch(20% 0.018 260);
+  --muted: oklch(50% 0.015 260);
+  --faint: oklch(70% 0.01 260);
+
+  /* Lines */
+  --border:        oklch(92% 0.006 260);
+  --border-strong: oklch(82% 0.01 260);
+
+  /* DAN brand */
+  --dan-blue:        oklch(53% 0.21 257);
+  --dan-blue-hover:  oklch(48% 0.22 257);
+  --dan-blue-active: oklch(43% 0.23 257);
+  --dan-blue-soft:   oklch(95% 0.03 257);
+  --dan-blue-text:   oklch(50% 0.22 257);
+  --on-dan-blue:     oklch(99% 0 0);
+
+  /* Gold — eID Mongolia verified mark only */
+  --gold:      oklch(72% 0.10 80);
+  --gold-soft: oklch(94% 0.03 85);
+  --gold-text: oklch(46% 0.08 80);
+
+  /* Status */
+  --success:      oklch(58% 0.14 150);
+  --success-soft: oklch(95% 0.04 150);
+  --danger:       oklch(55% 0.20 25);
+  --danger-hover: oklch(48% 0.20 25);
+  --danger-soft:  oklch(96% 0.03 25);
+
+  /* Type */
+  --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-body:    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+
+  /* Geometry */
+  --radius-card:  14px;
+  --radius-input: 8px;
+  --radius-chip:  6px;
+
+  /* Layout */
+  --topbar-h: 64px;
+  --content-pad-x: 24px;
+
+  --shadow-card: 0 1px 0 oklch(20% 0.02 260 / 0.04), 0 24px 56px -28px oklch(20% 0.02 260 / 0.18);
+}
+
+html { color-scheme: light; }
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a { color: var(--dan-blue-text); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+button { font-family: inherit; cursor: pointer; }
+
+h1, h2, h3 { font-family: var(--font-display); margin: 0; color: var(--fg); }
+h1 { font-size: 26px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.2; }
+h2 { font-size: 18px; font-weight: 600; letter-spacing: -0.005em; line-height: 1.3; }
+h3 { font-size: 15px; font-weight: 600; line-height: 1.4; }
+p  { margin: 0; }
+
+.mono   { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.muted  { color: var(--muted); }
+.faint  { color: var(--faint); }
+.center { text-align: center; }
+
+/* ───────── Shell ───────── */
+
+body.bg { display: flex; flex-direction: column; min-height: 100vh; }
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 24px;
+  height: var(--topbar-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 50;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: var(--fg);
+  min-width: 0;
+}
+.brand:hover { text-decoration: none; }
+.brand-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  object-fit: cover;
+  display: block;
+  flex-shrink: 0;
+}
+.brand-text { display: flex; flex-direction: column; line-height: 1.1; min-width: 0; }
+.brand-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -0.005em;
+}
+.brand-tag {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+  margin-top: 2px;
+}
+.topbar-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+.topbar-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 12.5px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.topbar-meta .dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: var(--success);
+  border-radius: 999px;
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--success) 18%, transparent);
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.topbar-spacer { flex: 1; }
+
+.shell {
+  flex: 1;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 64px var(--content-pad-x) 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.footer {
+  padding: 18px 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.footer a { color: var(--muted); }
+.footer a:hover { color: var(--fg); }
+
+/* ───────── Card ───────── */
+
+.card-wrap { display: flex; justify-content: center; }
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 36px 36px 32px;
+  width: 100%;
+  box-shadow: var(--shadow-card);
+}
+.card-error { border-color: color-mix(in oklch, var(--danger) 22%, var(--border)); }
+.card-relative { position: relative; }
+.card-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.card-close:hover { background: var(--surface-2); color: var(--fg); border-color: var(--border); }
+.card-close:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--dan-blue-soft); border-color: var(--dan-blue); }
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--dan-blue-text);
+  margin-bottom: 12px;
+}
+.eyebrow-error { color: var(--danger); }
+.title {
+  font-size: 24px;
+  line-height: 1.22;
+  letter-spacing: -0.015em;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+.sub {
+  color: var(--muted);
+  margin: 0 0 20px;
+}
+.hint {
+  color: var(--muted);
+  font-size: 12.5px;
+  margin-top: 18px;
+  line-height: 1.55;
+}
+.hint code, .sub code {
+  background: var(--dan-blue-soft);
+  color: var(--dan-blue-text);
+  padding: 2px 6px;
+  border-radius: var(--radius-chip);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.hint-small { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+/* RP name as the page hero. Replaces the old chip — we want the
+ * third-party app's name to be the first thing the user sees so they
+ * can verify "yes, I really am signing into <X>". */
+.rp-title {
+  font-size: 30px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  margin: 0 0 6px;
+  color: var(--text);
+}
+.rp-tagline {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 0 0 20px;
+}
+
+/* RP chip (which RP is asking) */
+.rp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 6px;
+  border-radius: 999px;
+  background: var(--dan-blue-soft);
+  border: 1px solid color-mix(in oklch, var(--dan-blue) 18%, var(--dan-blue-soft));
+  font-size: 13px;
+  color: var(--dan-blue-text);
+  margin: 0 0 14px;
+}
+.rp-chip-icon {
+  width: 22px; height: 22px;
+  border-radius: 6px;
+  background: var(--dan-blue);
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  color: var(--on-dan-blue);
+  font-weight: 700;
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+}
+
+/* ───────── Steps ───────── */
+
+.steps {
+  display: flex;
+  gap: 0;
+  margin: 0 0 22px;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.steps li {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  position: relative;
+}
+.steps li + li::before {
+  content: "";
+  position: absolute;
+  left: -2px;
+  top: 50%;
+  width: 12px;
+  height: 1px;
+  background: var(--border-strong);
+}
+.steps .num {
+  width: 22px; height: 22px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 11px;
+}
+.steps li.is-active .num { background: var(--dan-blue); color: var(--on-dan-blue); border-color: var(--dan-blue); }
+.steps li.is-active { color: var(--fg); font-weight: 500; }
+.steps li.is-done .num { background: var(--success); color: var(--on-dan-blue); border-color: var(--success); }
+
+/* ───────── Scope list (consent) ───────── */
+
+.scopes {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px;
+  border-top: 1px solid var(--border);
+}
+.scopes li {
+  border-bottom: 1px solid var(--border);
+  padding: 14px 4px;
+}
+.scopes label {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  align-items: baseline;
+  gap: 4px 12px;
+  cursor: pointer;
+}
+.scopes input[type=checkbox] {
+  grid-row: 1 / span 2;
+  margin-top: 4px;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--dan-blue);
+}
+.scope-key {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg);
+}
+.scope-desc {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* ───────── Form ───────── */
+
+.actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+/* Equal-width buttons spanning the full row, matching the input height
+ * above. Used on the login form so Cancel/Continue together align with
+ * the register-number input. */
+.actions.actions-fill { flex-wrap: nowrap; justify-content: stretch; }
+.actions.actions-fill .btn {
+  flex: 1 1 0;
+  /* ~25% taller than the input above. The primary "Үргэлжлүүлэх" is
+   * now the only button in this row (cancel moved to the corner X),
+   * so we let it dominate as a clear call-to-action. */
+  padding-block: 17px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: var(--radius-input);
+  border: 1px solid transparent;
+  background: var(--surface);
+  color: var(--fg);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+  white-space: nowrap;
+}
+.btn:hover { text-decoration: none; }
+.btn-primary {
+  background: var(--dan-blue);
+  color: var(--on-dan-blue);
+  border-color: var(--dan-blue);
+}
+.btn-primary:hover  { background: var(--dan-blue-hover); border-color: var(--dan-blue-hover); }
+.btn-primary:active { background: var(--dan-blue-active); }
+.btn-secondary {
+  background: var(--surface);
+  color: var(--fg);
+  border-color: var(--border-strong);
+}
+.btn-secondary:hover { background: var(--surface-2); }
+.btn-ghost {
+  background: transparent;
+  color: var(--dan-blue-text);
+}
+.btn-ghost:hover { background: var(--dan-blue-soft); }
+.btn-danger {
+  background: transparent;
+  color: var(--danger);
+}
+.btn-danger:hover { background: var(--danger-soft); color: var(--danger-hover); }
+
+.form { display: flex; flex-direction: column; gap: 9px; margin-bottom: 8px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field-label {
+  font-size: 13px;
+  color: var(--fg);
+  font-weight: 500;
+}
+.input {
+  font: inherit;
+  padding: 11px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-input);
+  background: var(--surface);
+  color: var(--fg);
+  outline: none;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.input::placeholder { color: var(--faint); }
+.input:focus {
+  border-color: var(--dan-blue);
+  box-shadow: 0 0 0 3px var(--dan-blue-soft);
+}
+.input-mono {
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+.alert {
+  padding: 12px 14px;
+  border-radius: var(--radius-input);
+  font-size: 14px;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+.alert-error {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: 1px solid color-mix(in oklch, var(--danger) 22%, var(--danger-soft));
+}
+.alert-info {
+  background: var(--dan-blue-soft);
+  border: 1px solid color-mix(in oklch, var(--dan-blue) 18%, var(--dan-blue-soft));
+  color: var(--dan-blue-text);
+}
+
+/* ───────── Verification code ───────── */
+
+.vcode {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0 22px;
+}
+.vcode-digit {
+  font-family: var(--font-mono);
+  font-size: 36px;
+  line-height: 1;
+  font-weight: 600;
+  padding: 16px 18px;
+  min-width: 28px;
+  text-align: center;
+  border-radius: 12px;
+  background: var(--dan-blue-soft);
+  color: var(--dan-blue-text);
+  letter-spacing: -0.02em;
+  border: 1px solid color-mix(in oklch, var(--dan-blue) 14%, var(--dan-blue-soft));
+}
+
+/* ───────── Polling status ───────── */
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  border-radius: var(--radius-input);
+  margin-bottom: 16px;
+  font-size: 14px;
+  border: 1px solid transparent;
+}
+.status-running {
+  background: var(--dan-blue-soft);
+  color: var(--dan-blue-text);
+  border-color: color-mix(in oklch, var(--dan-blue) 14%, var(--dan-blue-soft));
+}
+.status-ok      { background: var(--success-soft); color: var(--success); border-color: color-mix(in oklch, var(--success) 24%, var(--success-soft)); }
+.status-error   { background: var(--danger-soft); color: var(--danger); border-color: color-mix(in oklch, var(--danger) 22%, var(--danger-soft)); }
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+/* Keep the spinner during status-ok — the success state is shown for
+ * only the brief window before window.location redirects, and a stalled
+ * page with no spinner looks frozen. Only hide on error. */
+.status-error .spinner { display: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ───────── Sign / doc preview ───────── */
+
+.doc-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
+  padding: 14px 16px;
+  margin-bottom: 18px;
+}
+.doc-row { display: flex; gap: 10px; font-size: 14px; }
+.doc-key { color: var(--muted); min-width: 80px; }
+.doc-val { color: var(--fg); flex: 1; word-break: break-word; }
+.doc-val.mono { font-size: 12px; }
+
+/* ───────── Divider ───────── */
+
+.divider {
+  display: flex;
+  align-items: center;
+  margin: 22px 0 14px;
+  color: var(--faint);
+  font-size: 11px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+}
+.divider::before, .divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--border);
+}
+.divider span { padding: 0 12px; }
+
+/* Block button (Google) */
+.btn-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 16px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--fg);
+  border-radius: var(--radius-input);
+  font-weight: 500;
+  font-size: 14px;
+  text-decoration: none;
+}
+.btn-block:hover { background: var(--surface-2); text-decoration: none; }
+.btn-block .btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #4285F4 0%, #34A853 50%, #FBBC05 75%, #EA4335 100%);
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+/* ───────── Trust strip (under card) ───────── */
+
+.trust-strip {
+  display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap;
+  padding: 18px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.trust-strip-item { display: inline-flex; align-items: center; gap: 6px; }
+.trust-strip .dot { color: var(--faint); }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 500;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+.badge-verified {
+  background: var(--gold-soft);
+  color: var(--gold-text);
+  border: 1px solid color-mix(in oklch, var(--gold) 35%, var(--gold-soft));
+}
+.badge-verified svg { color: var(--gold); }
+
+/* ───────── Focus visibility ───────── */
+
+:focus-visible {
+  outline: 2px solid var(--dan-blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.btn:focus-visible, .input:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--dan-blue-soft);
+  border-color: var(--dan-blue);
+}
+
+/* ───────── Responsive ───────── */
+
+@media (max-width: 560px) {
+  :root { --content-pad-x: 16px; --topbar-h: 56px; }
+  .topbar { padding: 0 16px; gap: 10px; }
+  .topbar-meta { display: none; }
+  .topbar-divider { display: none; }
+  .brand-tag { display: none; }
+  .shell { padding: 28px var(--content-pad-x) 48px; }
+  .card { padding: 24px 22px 22px; border-radius: 12px; }
+  .title { font-size: 22px; }
+  .vcode { gap: 8px; }
+  .vcode-digit { font-size: 32px; padding: 12px 14px; min-width: 22px; }
+  .actions { justify-content: stretch; }
+  .actions .btn { flex: 1; }
+}
+
+@media print {
+  .topbar, .footer, .btn { display: none; }
+  .shell { padding: 0; }
+  .card { border: none; box-shadow: none; padding: 0; }
+}
+
+/* ── Нэвтрэх аргын таб (РД / QR) + QR зураг ─────────────────────────── */
+.method-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 18px;
+  background: var(--surface-2);
+  border: 0;
+  border-radius: 12px;
+}
+.method-tab {
+  flex: 1 1 0;
+  text-align: center;
+  padding: 9px 12px;
+  /* <button> default chrome-ыг reset — segmented control болгоно */
+  border: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  font-family: inherit;
+  line-height: 1.2;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.method-tab:hover:not(.is-active) { color: var(--fg); }
+.method-tab.is-active {
+  background: var(--surface);
+  color: var(--dan-blue-text);
+  box-shadow: 0 1px 3px oklch(20% 0.02 260 / 0.12), 0 1px 1px oklch(20% 0.02 260 / 0.06);
+}
+.qr-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 6px 0 16px;
+}
+.qr-img {
+  width: 220px;
+  height: 220px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  image-rendering: pixelated;
+}
+
+/* dan: RP толгойг бүх /oauth/login дэлгэц дээр — доод талаас тусгаарлана */
+.rp-head { margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.08); }
+.rp-head .rp-title { margin: 0; }
+.rp-head .rp-tagline { margin: 4px 0 0; }

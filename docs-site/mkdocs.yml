@@ -1,0 +1,106 @@
+site_name: Government Template Platform V3.0
+site_description: Цахим засаглалыг бүтээх суурь — Government Template Platform V3.0 documentation
+site_url: https://template.dgov.mn/docs/
+copyright: © 2026 Gerege Systems · Government Template Platform V3.0
+docs_dir: docs
+site_dir: site
+use_directory_urls: true
+
+theme:
+  name: material
+  language: en
+  logo: assets/mark.svg
+  favicon: assets/mark.svg
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Харанхуй горим
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Гэрэл горим
+  font:
+    text: Inter
+    code: JetBrains Mono
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+    - navigation.indexes
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+
+extra_css:
+  - stylesheets/brand.css
+
+plugins:
+  - search
+  - i18n:
+      docs_structure: suffix
+      fallback_to_default: true
+      reconfigure_material: true
+      languages:
+        - locale: mn
+          default: true
+          name: Монгол
+          build: true
+        - locale: en
+          name: English
+          build: true
+          site_name: Government Template Platform V3.0
+          nav_translations:
+            Танилцуулга: Overview
+            Архитектур: Architecture
+            "Нэвтрэлт (eID + SSO)": "Authentication (eID + SSO)"
+            "Апп холбох (SSO / OIDC RP)": "App integration (OIDC RP)"
+            "eID Service Proxy": "eID Service Proxy"
+            "API Gateway": "API Gateway"
+            "Байршуулалт (Deployment)": "Deployment"
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+  # material icon shortcodes (:material-*: / :fontawesome-*:) → inline SVG.
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/gerege-systems
+
+nav:
+  - Танилцуулга: index.md
+  - Архитектур: architecture.md
+  - Нэвтрэлт (eID + SSO): authentication.md
+  - Апп холбох (SSO / OIDC RP): sso-integration.md
+  - eID Service Proxy: eid-services.md
+  - API Gateway: api-gateway.md
+  - Байршуулалт (Deployment): deployment.md

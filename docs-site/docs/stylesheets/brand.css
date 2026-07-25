@@ -1,0 +1,67 @@
+/* Government Template Platform V3.0 — брэнд өнгө (navy + gold) */
+:root {
+  --gtp-navy: #111f3e;
+  --gtp-navy-2: #1b2f5a;
+  --gtp-navy-deep: #0b1730;
+  --gtp-gold: #e4b24a;
+  --gtp-gold-2: #cf9c34;
+}
+
+/* Гэрэл горим */
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: var(--gtp-navy);
+  --md-primary-fg-color--light: var(--gtp-navy-2);
+  --md-primary-fg-color--dark: var(--gtp-navy-deep);
+  --md-primary-bg-color: #ffffff;
+  --md-accent-fg-color: var(--gtp-gold-2);
+  --md-typeset-a-color: #1c3a72;
+}
+
+/* Харанхуй горим */
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: var(--gtp-navy-deep);
+  --md-primary-fg-color--light: var(--gtp-navy-2);
+  --md-primary-fg-color--dark: #070f22;
+  --md-accent-fg-color: var(--gtp-gold);
+  --md-typeset-a-color: #8fb2f4;
+  --md-default-bg-color: #0d1730;
+}
+
+/* Header — navy gradient + gold доод зураас */
+.md-header {
+  background: linear-gradient(90deg, var(--gtp-navy-deep), var(--gtp-navy));
+  box-shadow: 0 2px 0 var(--gtp-gold), 0 4px 18px rgba(6, 12, 28, 0.35);
+}
+.md-tabs { background: transparent; }
+
+/* Идэвхтэй nav / accent-ууд gold-оор */
+.md-nav__link--active,
+.md-nav__item .md-nav__link--active { color: var(--gtp-gold-2); font-weight: 600; }
+.md-typeset .md-button--primary {
+  background: var(--gtp-gold); border-color: var(--gtp-gold); color: var(--gtp-navy-deep);
+}
+.md-typeset h1, .md-typeset h2 { letter-spacing: -0.01em; }
+.md-typeset h2 { border-bottom: 1px solid rgba(128,128,128,0.18); padding-bottom: 0.3rem; }
+
+/* Код блок — брэнд accent */
+.md-typeset .highlight span.filename,
+.md-typeset code { border-radius: 6px; }
+.md-typeset a:hover { text-decoration: underline; }
+
+/* Search accent */
+.md-search__input:focus { box-shadow: 0 0 0 2px var(--gtp-gold); }
+
+/* Table толгой */
+.md-typeset table:not([class]) th {
+  background: var(--gtp-navy); color: #fff;
+}
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) th { background: var(--gtp-navy-2); }
+
+/* Admonition (note/tip) accent-ийг gold-оор */
+.md-typeset .admonition.tip, .md-typeset details.tip { border-color: var(--gtp-gold); }
+.md-typeset .tip > .admonition-title, .md-typeset .tip > summary {
+  background-color: rgba(228, 178, 74, 0.12);
+}
+
+/* Footer */
+.md-footer-meta { background: var(--gtp-navy-deep); }

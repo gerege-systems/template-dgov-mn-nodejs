@@ -1,0 +1,11 @@
+# xcodegen-ээр үүсгэдэг тул git-д хадгалахгүй (эх сурвалж = project.yml + Sources/)
+*.xcodeproj
+*.xcworkspace
+
+# Xcode / build артефактууд
+build/
+DerivedData/
+.build/
+xcuserdata/
+*.xcuserstate
+.DS_Store

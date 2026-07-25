@@ -1,0 +1,2311 @@
+/* ============================================================================
+   gerege theme — хуваалцсан дизайн систем
+   me.dgov.mn-ийн дизайнаас хуулбарласан. Эдгээр токеноос гадуур hex утга
+   бүү нэмэгтүн. Гэгээн (light) загвар нь анхдагч; html[data-theme="dark"] нь
+   layout.tsx доторх FOUC-аас сэргийлэх inline script-ээр дамжуулан дарж бичнэ.
+   ============================================================================ */
+
+:root {
+  /* Landing (нүүр) hero-ийн navy дэвсгэрийн default. :root-д тавьсан тул admin
+     theme (theme-bootstrap.js) <html>-д --lp-navy-г override хийхэд .lp дотор
+     уламжлагдана. Landing light/dark аль алинд ижил (үргэлж гүн navy). */
+  --lp-navy:   oklch(24% 0.055 260);
+  /* --lp-header нь landing-ийн ДЭЭД цэс (nav)-ийн дэвсгэр — --lp-navy-гаас
+     ТУСДАА удирдана (admin theme lpHeader). Default нь ижил navy. */
+  --lp-header: oklch(24% 0.055 260);
+
+  /* Гадаргуу */
+  --bg:        oklch(98.5% 0.003 260);
+  --surface:   oklch(100% 0 0);
+  --surface-2: oklch(96.5% 0.005 260);
+
+  /* Текст */
+  --fg:    oklch(20% 0.018 260);
+  --muted: oklch(50% 0.015 260);
+  --faint: oklch(70% 0.01 260);
+
+  /* Зураас */
+  --border:        oklch(92% 0.006 260);
+  --border-strong: oklch(82% 0.01 260);
+
+  /* Gerege брэнд — #1767E7 cobalt (DAN blue) */
+  --dan-blue:        oklch(53% 0.21 257);
+  --dan-blue-hover:  oklch(48% 0.22 257);
+  --dan-blue-active: oklch(43% 0.23 257);
+  --dan-blue-soft:   oklch(95% 0.03 257);
+  --dan-blue-text:   oklch(50% 0.22 257);
+  --on-dan-blue:     oklch(99% 0 0);
+
+  /* Алт — баталгаажсан / итгэлийн тэмдэг ЗӨВХӨН */
+  --gold:      oklch(72% 0.10 80);
+  --gold-soft: oklch(94% 0.03 85);
+  --gold-text: oklch(46% 0.08 80);
+
+  /* Төлөв */
+  --success:      oklch(58% 0.14 150);
+  --success-soft: oklch(95% 0.04 150);
+  --danger:       oklch(55% 0.20 25);
+  --danger-hover: oklch(48% 0.20 25);
+  --danger-soft:  oklch(96% 0.03 25);
+
+  /* Фонт — layout.tsx доторх next/font хувьсагчдаас тэжээгдэнэ */
+  --font-display: var(--font-display-stack), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-body:    var(--font-body-stack),    -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono:    var(--font-mono-stack),    ui-monospace, Menlo, monospace;
+
+  /* Геометр */
+  --radius-card:  10px;
+  --radius-input: 8px;
+  --radius-chip:  6px;
+
+  /* Бүтэц */
+  --topbar-h: 64px;
+  --rail-w:   240px;
+  --content-max: 880px;
+  --content-pad-x: 32px;
+
+  /* Сүүдэр (хэмнэлттэй ашиглана) */
+  --shadow-menu: 0 6px 20px oklch(20% 0.02 260 / 0.10), 0 2px 4px oklch(20% 0.02 260 / 0.06);
+}
+
+/* Харанхуй загвар — бага гэрэлд итгэлийн самбар */
+html[data-theme="dark"] {
+  --bg:        oklch(16% 0.012 260);
+  --surface:   oklch(20% 0.014 260);
+  --surface-2: oklch(24% 0.016 260);
+  --fg:        oklch(96% 0.005 260);
+  --muted:     oklch(66% 0.012 260);
+  --faint:     oklch(46% 0.012 260);
+  --border:        oklch(28% 0.014 260);
+  --border-strong: oklch(36% 0.016 260);
+  --dan-blue:        oklch(66% 0.19 257);
+  --dan-blue-hover:  oklch(72% 0.19 257);
+  --dan-blue-active: oklch(78% 0.18 257);
+  --dan-blue-soft:   oklch(28% 0.10 257);
+  --dan-blue-text:   oklch(76% 0.18 257);
+  --on-dan-blue:     oklch(99% 0 0);
+  --gold:      oklch(80% 0.12 80);
+  --gold-soft: oklch(28% 0.06 80);
+  --gold-text: oklch(82% 0.10 80);
+  --success:      oklch(68% 0.16 150);
+  --success-soft: oklch(26% 0.08 150);
+  --danger:       oklch(70% 0.19 25);
+  --danger-hover: oklch(76% 0.19 25);
+  --danger-soft:  oklch(28% 0.10 25);
+  --shadow-menu: 0 12px 32px oklch(6% 0.005 260 / 0.55), 0 2px 6px oklch(2% 0 0 / 0.4);
+}
+
+/* ============================================================================
+   Өнгөний хослол (accent) — ЗӨВХӨН brand (--dan-blue*) токенуудыг сольдог.
+   Семантик өнгө (--gold итгэл, --success, --danger) хамаарахгүй — утга тогтмол.
+   Анхдагч "cobalt" нь :root/dark дахь утга тул тусдаа блок хэрэггүй.
+   Гэгээн загварын override-ууд эхэлж, дараа нь тод байдлаар тохируулсан
+   харанхуй загварын өндөр-тодорхойлолттой override-ууд ирнэ (эс тэгвээс
+   dark+accent дээр гэгээн утга давхцана).
+   ============================================================================ */
+html[data-accent="teal"] {
+  --dan-blue:        oklch(58% 0.13 195);
+  --dan-blue-hover:  oklch(53% 0.14 195);
+  --dan-blue-active: oklch(48% 0.15 195);
+  --dan-blue-soft:   oklch(95% 0.03 195);
+  --dan-blue-text:   oklch(52% 0.13 195);
+}
+html[data-accent="violet"] {
+  --dan-blue:        oklch(52% 0.20 292);
+  --dan-blue-hover:  oklch(47% 0.21 292);
+  --dan-blue-active: oklch(42% 0.22 292);
+  --dan-blue-soft:   oklch(95% 0.035 292);
+  --dan-blue-text:   oklch(50% 0.21 292);
+}
+html[data-accent="emerald"] {
+  --dan-blue:        oklch(56% 0.14 158);
+  --dan-blue-hover:  oklch(51% 0.15 158);
+  --dan-blue-active: oklch(46% 0.16 158);
+  --dan-blue-soft:   oklch(95% 0.035 158);
+  --dan-blue-text:   oklch(52% 0.14 158);
+}
+html[data-accent="amber"] {
+  --dan-blue:        oklch(58% 0.15 62);
+  --dan-blue-hover:  oklch(53% 0.16 62);
+  --dan-blue-active: oklch(48% 0.16 62);
+  --dan-blue-soft:   oklch(94% 0.04 68);
+  --dan-blue-text:   oklch(50% 0.13 62);
+}
+html[data-theme="dark"][data-accent="teal"] {
+  --dan-blue:        oklch(70% 0.13 195);
+  --dan-blue-hover:  oklch(76% 0.13 195);
+  --dan-blue-active: oklch(82% 0.12 195);
+  --dan-blue-soft:   oklch(28% 0.07 195);
+  --dan-blue-text:   oklch(78% 0.12 195);
+}
+html[data-theme="dark"][data-accent="violet"] {
+  --dan-blue:        oklch(68% 0.18 292);
+  --dan-blue-hover:  oklch(74% 0.18 292);
+  --dan-blue-active: oklch(80% 0.17 292);
+  --dan-blue-soft:   oklch(30% 0.12 292);
+  --dan-blue-text:   oklch(78% 0.17 292);
+}
+html[data-theme="dark"][data-accent="emerald"] {
+  --dan-blue:        oklch(70% 0.15 158);
+  --dan-blue-hover:  oklch(76% 0.15 158);
+  --dan-blue-active: oklch(82% 0.14 158);
+  --dan-blue-soft:   oklch(28% 0.09 158);
+  --dan-blue-text:   oklch(78% 0.14 158);
+}
+html[data-theme="dark"][data-accent="amber"] {
+  --dan-blue:        oklch(76% 0.14 70);
+  --dan-blue-hover:  oklch(82% 0.14 70);
+  --dan-blue-active: oklch(86% 0.13 70);
+  --dan-blue-soft:   oklch(30% 0.08 68);
+  --dan-blue-text:   oklch(80% 0.13 72);
+}
+
+/* Custom accent — админы сонгосон дурын brand hex (--dan-blue-base-г <html>-д
+   inline тавина). hover/active/soft/text хувилбаруудыг color-mix-ээр гаргана
+   (oklab — ойлголтын хувьд жигд). --on-dan-blue цагаан хэвээр. */
+html[data-accent="custom"] {
+  --dan-blue:        var(--dan-blue-base);
+  --dan-blue-hover:  color-mix(in oklab, var(--dan-blue-base), black 12%);
+  --dan-blue-active: color-mix(in oklab, var(--dan-blue-base), black 22%);
+  --dan-blue-soft:   color-mix(in oklab, var(--dan-blue-base), white 88%);
+  --dan-blue-text:   color-mix(in oklab, var(--dan-blue-base), black 10%);
+}
+html[data-theme="dark"][data-accent="custom"] {
+  --dan-blue:        color-mix(in oklab, var(--dan-blue-base), white 18%);
+  --dan-blue-hover:  color-mix(in oklab, var(--dan-blue-base), white 28%);
+  --dan-blue-active: color-mix(in oklab, var(--dan-blue-base), white 38%);
+  --dan-blue-soft:   color-mix(in oklab, var(--dan-blue-base), black 62%);
+  --dan-blue-text:   color-mix(in oklab, var(--dan-blue-base), white 30%);
+}
+
+/* ============================================================================
+   Landing theme — бүрэн палетр. Админ theme-ийн base токенуудыг (--bg --surface
+   --surface-2 --fg --muted --border --border-strong --dan-blue --gold --success
+   --danger) <html>-д inline тавихад hover/soft/text хувилбарыг эндээс color-mix-
+   ээр гаргана. ЗӨВХӨН нийтийн (landing/login) хуудсанд bootstrap data-theme-custom
+   тавина. --on-dan-blue цагаан хэвээр (админ хангалттай гүн danBlue сонгоно).
+   ============================================================================ */
+html[data-theme-custom] {
+  --dan-blue-hover:  color-mix(in oklab, var(--dan-blue), black 12%);
+  --dan-blue-active: color-mix(in oklab, var(--dan-blue), black 22%);
+  --dan-blue-soft:   color-mix(in oklab, var(--dan-blue), white 88%);
+  --dan-blue-text:   color-mix(in oklab, var(--dan-blue), black 10%);
+  --gold-soft:       color-mix(in oklab, var(--gold), white 88%);
+  --gold-text:       color-mix(in oklab, var(--gold), black 22%);
+  --success-soft:    color-mix(in oklab, var(--success), white 88%);
+  --danger-hover:    color-mix(in oklab, var(--danger), black 12%);
+  --danger-soft:     color-mix(in oklab, var(--danger), white 88%);
+  --faint:           color-mix(in oklab, var(--muted), var(--surface) 45%);
+}
+html[data-theme="dark"][data-theme-custom] {
+  --dan-blue-hover:  color-mix(in oklab, var(--dan-blue), white 12%);
+  --dan-blue-active: color-mix(in oklab, var(--dan-blue), white 24%);
+  --dan-blue-soft:   color-mix(in oklab, var(--dan-blue), black 62%);
+  --dan-blue-text:   color-mix(in oklab, var(--dan-blue), white 26%);
+  --gold-soft:       color-mix(in oklab, var(--gold), black 62%);
+  --gold-text:       color-mix(in oklab, var(--gold), white 20%);
+  --success-soft:    color-mix(in oklab, var(--success), black 62%);
+  --danger-hover:    color-mix(in oklab, var(--danger), white 12%);
+  --danger-soft:     color-mix(in oklab, var(--danger), black 62%);
+  --faint:           color-mix(in oklab, var(--muted), var(--surface) 45%);
+}
+
+/* ============================================================================
+   Фонт — data-font нь эцсийн --font-display / --font-body-г бүхэлд нь дарж
+   бичнэ. Гэр бүлүүд next/font-оор self-host (layout.tsx). Mono тогтмол.
+   Анхдагч "inter" нь :root-ийн утга тул тусдаа блок хэрэггүй.
+   ============================================================================ */
+html[data-font="serif"] {
+  --font-display: var(--font-serif-stack), Georgia, 'Times New Roman', serif;
+  --font-body:    var(--font-serif-stack), Georgia, 'Times New Roman', serif;
+}
+html[data-font="system"] {
+  --font-display: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-body:    -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+
+/* ============================================================================
+   Стиль / нягтрал — геометр ба суурь хэмжээс. Анхдагч "comfortable" нь :root.
+   "compact" нь topbar/зай/радиусыг нягтруулж, суурь фонтыг бага зэрэг жижигрүүлнэ.
+   ============================================================================ */
+html[data-style="compact"] {
+  --topbar-h: 56px;
+  --content-pad-x: 24px;
+  --radius-card:  8px;
+  --radius-input: 6px;
+  --radius-chip:  5px;
+}
+html[data-style="compact"] body {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+html { color-scheme: light; }
+html[data-theme="dark"] { color-scheme: dark; }
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a { color: var(--dan-blue-text); text-decoration: none; }
+/* Hover үед доогуур зураас гаргахгүй (nav/карт/block-link-үүдэд эвгүй харагддаг);
+   холбоосууд өнгөөрөө (--dan-blue-text) ялгагдана. */
+a:hover { text-decoration: none; }
+
+button { font-family: inherit; cursor: pointer; }
+
+h1, h2, h3, h4 { font-family: var(--font-display); margin: 0; color: var(--fg); }
+h1 { font-size: 28px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.2; }
+h2 { font-size: 18px; font-weight: 600; letter-spacing: -0.005em; line-height: 1.3; }
+h3 { font-size: 15px; font-weight: 600; line-height: 1.4; }
+p  { margin: 0; }
+
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.faint { color: var(--faint); }
+.center { text-align: center; }
+
+/* ---------- App shell ---------- */
+
+.app-shell { display: grid; grid-template-rows: var(--topbar-h) 1fr; min-height: 100vh; }
+
+.topbar {
+  display: flex; align-items: center; gap: 16px;
+  padding: 0 24px;
+  background: var(--surface);
+  color: var(--fg);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 50;
+}
+.topbar__brand { display: flex; align-items: center; gap: 10px; min-width: 0; text-decoration: none; }
+.topbar__brand-mark {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  object-fit: cover;
+  display: block;
+  flex-shrink: 0;
+}
+.topbar__brand-text { display: flex; flex-direction: column; line-height: 1.1; min-width: 0; }
+.topbar__brand-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -0.005em;
+  color: var(--fg);
+}
+.topbar__brand-tag {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+  margin-top: 2px;
+}
+
+.topbar__divider {
+  width: 1px;
+  height: 24px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.topbar__session {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12.5px;
+  color: var(--muted);
+  min-width: 0;
+}
+.topbar__session-dot {
+  width: 6px; height: 6px;
+  border-radius: 999px;
+  background: var(--success);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--success) 18%, transparent);
+  flex-shrink: 0;
+}
+.topbar__session-strong {
+  color: var(--fg);
+  font-weight: 500;
+}
+
+.topbar__spacer { flex: 1; }
+
+.topbar__actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+.topbar__user {
+  display: flex; align-items: center; gap: 10px;
+  padding: 4px 10px 4px 4px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--fg);
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 13px;
+  font-family: var(--font-body);
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.topbar__user:hover { background: var(--surface-2); border-color: var(--border-strong); }
+.topbar__user svg { color: var(--muted); }
+.topbar__avatar {
+  width: 28px; height: 28px;
+  display: grid; place-items: center;
+  background: var(--dan-blue-soft);
+  color: var(--dan-blue-text);
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+  font-family: var(--font-display);
+}
+
+/* ---------- User menu (topbar dropdown) ---------- */
+
+.user-menu { position: relative; }
+.topbar__user-chevron { color: var(--muted); transition: transform 0.18s ease; }
+.user-menu.is-open .topbar__user-chevron { transform: rotate(180deg); }
+.user-menu.is-open .topbar__user {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+}
+
+.user-menu__popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 260px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-menu);
+  padding: 6px;
+  z-index: 60;
+  transform-origin: top right;
+  animation: user-menu-in 0.14s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes user-menu-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+.user-menu__header {
+  padding: 12px 12px 14px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 6px;
+}
+.user-menu__name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--fg);
+  line-height: 1.3;
+}
+.user-menu__sub {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 4px;
+  letter-spacing: 0.02em;
+}
+
+.user-menu__item {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  color: var(--fg);
+  font-size: 13px;
+  font-family: var(--font-body);
+  text-decoration: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s ease;
+}
+.user-menu__item:hover,
+.user-menu__item:focus-visible {
+  background: var(--surface-2);
+  text-decoration: none;
+  outline: none;
+}
+.user-menu__item svg { color: var(--muted); flex-shrink: 0; }
+.user-menu__item:hover svg,
+.user-menu__item:focus-visible svg { color: var(--fg); }
+
+.user-menu__item--danger { color: var(--danger); }
+.user-menu__item--danger svg { color: var(--danger); }
+.user-menu__item--danger:hover,
+.user-menu__item--danger:focus-visible {
+  background: var(--danger-soft);
+  color: var(--danger-hover);
+}
+.user-menu__item--danger:hover svg,
+.user-menu__item--danger:focus-visible svg { color: var(--danger-hover); }
+
+.user-menu__divider {
+  height: 1px;
+  background: var(--border);
+  margin: 6px 2px;
+}
+
+.user-menu__section-label {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding: 8px 10px 4px;
+}
+.user-menu__control {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  padding: 6px 10px;
+  min-height: 36px;
+  font-size: 13px;
+  color: var(--fg);
+}
+.user-menu__control-label {
+  display: inline-flex; align-items: center; gap: 10px;
+  color: var(--fg);
+  flex-shrink: 0;
+}
+.user-menu__control-label svg { color: var(--muted); flex-shrink: 0; }
+
+.segmented {
+  display: inline-flex;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 2px;
+  gap: 2px;
+}
+.segmented__item {
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  border: 0;
+  background: transparent;
+  padding: 4px 9px;
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  font-family: var(--font-body);
+  border-radius: 5px;
+  cursor: pointer;
+  min-width: 28px;
+  transition: background 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
+}
+.segmented__item:hover { color: var(--fg); }
+.segmented__item.is-active {
+  background: var(--surface);
+  color: var(--fg);
+  box-shadow: 0 1px 2px oklch(20% 0.02 260 / 0.08);
+}
+html[data-theme="dark"] .segmented__item.is-active {
+  background: var(--bg);
+  box-shadow: 0 1px 2px oklch(5% 0 0 / 0.4);
+}
+.segmented__item svg { width: 14px; height: 14px; }
+.segmented__item:focus-visible {
+  outline: 2px solid var(--dan-blue);
+  outline-offset: 1px;
+}
+
+/* Загвар солигдоход өнгөний жигд шилжилт */
+body, .topbar, .card, .rail, .user-menu__popover, .input, .select, .btn,
+.profile-card__avatar, .chip, .badge, .rp, .segmented, .segmented__item,
+.linked__logo, .activity__icon, .rp__logo {
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+/* Хэсэгчилсэн орчуулгын анхааруулга (html[lang="en"] үед харагдана) */
+.i18n-banner {
+  display: none;
+  padding: 9px 16px;
+  background: var(--dan-blue-soft);
+  border-bottom: 1px solid var(--border);
+  color: var(--dan-blue-text);
+  font-size: 12.5px;
+  text-align: center;
+}
+html[lang="en"] .i18n-banner { display: block; }
+.i18n-banner strong { font-weight: 600; }
+
+/* Toast — тохиргоо өөрчлөгдсөн санал хүсэлт */
+.toast {
+  position: fixed;
+  left: 50%; bottom: 24px;
+  transform: translateX(-50%) translateY(8px);
+  background: var(--surface);
+  color: var(--fg);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 13px;
+  box-shadow: var(--shadow-menu);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 200;
+  max-width: calc(100vw - 32px);
+}
+.toast.is-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ---------- Shell body: rail + main ---------- */
+
+.shell-body { display: grid; grid-template-columns: var(--rail-w) 1fr; min-height: calc(100vh - var(--topbar-h)); }
+
+.rail {
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  padding: 24px 16px;
+  position: sticky;
+  top: var(--topbar-h);
+  height: calc(100vh - var(--topbar-h));
+  overflow-y: auto;
+}
+.rail__group { display: flex; flex-direction: column; gap: 2px; }
+.rail__group + .rail__group { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border); }
+.rail__label {
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  padding: 0 12px 8px;
+  font-weight: 500;
+}
+.rail__link {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 12px;
+  color: var(--fg);
+  border-radius: 8px;
+  font-size: 14px;
+  text-decoration: none;
+  transition: background 0.12s ease;
+}
+.rail__link:hover { background: var(--surface-2); text-decoration: none; }
+.rail__link.is-active {
+  background: var(--dan-blue-soft);
+  color: var(--dan-blue-text);
+  font-weight: 600;
+}
+.rail__link svg { flex-shrink: 0; }
+.rail__link.is-active svg { color: var(--dan-blue); }
+.rail__signout {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 12px;
+  color: var(--danger);
+  border-radius: 8px;
+  font-size: 14px;
+  background: transparent;
+  border: 0;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+.rail__signout:hover { background: var(--danger-soft); }
+
+.main {
+  padding: 40px var(--content-pad-x) 96px;
+  min-width: 0;
+}
+.main__inner { max-width: var(--content-max); margin: 0 auto; }
+
+/* ---------- Page header ---------- */
+
+.page-head { display: flex; flex-direction: column; gap: 6px; margin-bottom: 24px; }
+.page-head__eyebrow {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 500;
+}
+.page-head__sub { color: var(--muted); font-size: 14px; max-width: 600px; }
+
+/* ---------- Card ---------- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 24px;
+}
+.card + .card { margin-top: 16px; }
+
+.card__head {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  margin-bottom: 16px;
+}
+.card__head--with-sub { align-items: flex-start; flex-direction: column; gap: 4px; }
+.card__title { display: flex; align-items: center; gap: 10px; }
+.card__sub { color: var(--muted); font-size: 13px; }
+.card__divider { height: 1px; background: var(--border); margin: 16px -24px; }
+
+/* ---------- Definition rows (read-only fields) ---------- */
+
+.defrow {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 16px;
+  padding: 10px 0;
+  font-size: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.defrow:last-child { border-bottom: 0; }
+.defrow__label { color: var(--muted); }
+.defrow__value { color: var(--fg); }
+/* Файлын мөр (интеграцийн browser) — нэр зүүн, үйлдэл баруун. */
+.defrow.defrow--wide { grid-template-columns: 1fr auto; align-items: start; }
+.defrow.defrow--wide .defrow__value { text-align: right; white-space: nowrap; }
+
+/* ---------- Dialog (modal) ---------- */
+
+.dlg-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: color-mix(in oklch, black 55%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow-y: auto;
+}
+.dlg-content {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  background: var(--surface);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 24px 60px color-mix(in oklch, black 30%, transparent);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.dlg-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.dlg-close:hover { background: var(--surface-2); color: var(--fg); }
+.dlg-header { display: flex; flex-direction: column; gap: 6px; padding-right: 32px; }
+.dlg-title { font-size: 17px; font-weight: 700; color: var(--fg); margin: 0; }
+.dlg-desc { font-size: 13px; color: var(--muted); margin: 0; }
+
+/* Popup/modal mobile дээр — гар утсанд бараг бүтэн өргөнтэй, дээрээсээ эхэлж
+   (төвд байрлуулбал өндөр контент дээд талаараа тасардаг), урт форм overlay
+   дотроо гүйлгэгдэнэ. Хаах X товч томроод хүрэхэд амар болно. */
+@media (max-width: 640px) {
+  .dlg-overlay { align-items: flex-start; padding: 12px; }
+  .dlg-content {
+    max-width: none;
+    border-radius: 16px;
+    padding: 20px;
+    /* overlay-д доод зай + iOS safe-area */
+    margin-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+  .dlg-close { width: 34px; height: 34px; top: 12px; right: 12px; }
+}
+
+/* ---------- Form ---------- */
+
+.form-grid { display: grid; gap: 16px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field__label { font-size: 13px; font-weight: 500; color: var(--fg); }
+.field__help  { font-size: 12px; color: var(--muted); }
+.field__error { font-size: 12px; color: var(--danger); }
+.input, .select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: var(--font-body);
+  color: var(--fg);
+  width: 100%;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.input:hover, .select:hover { border-color: var(--border-strong); }
+.input:focus, .select:focus {
+  outline: none;
+  border-color: var(--dan-blue);
+  box-shadow: 0 0 0 3px var(--dan-blue-soft);
+}
+.input[aria-invalid="true"] { border-color: var(--danger); }
+.input[aria-invalid="true"]:focus { box-shadow: 0 0 0 3px var(--danger-soft); }
+.input::placeholder { color: var(--faint); }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-actions { display: flex; justify-content: flex-end; gap: 8px; padding-top: 8px; }
+
+/* ---------- Button ---------- */
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 16px;
+  /* Бүх товч нэвтрэх товчтой (btn--lg ≈ 44px) ижил өндөртэй — апп даяар нэгдсэн. */
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: var(--radius-input);
+  border: 1px solid transparent;
+  background: var(--surface);
+  color: var(--fg);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+  white-space: nowrap;
+  font-family: var(--font-body);
+}
+.btn:hover { text-decoration: none; }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.btn--primary {
+  background: var(--dan-blue);
+  color: var(--on-dan-blue);
+}
+.btn--primary:hover { background: var(--dan-blue-hover); color: var(--on-dan-blue); }
+.btn--primary:active { background: var(--dan-blue-active); }
+
+.btn--secondary {
+  background: var(--surface);
+  color: var(--fg);
+  border-color: var(--border-strong);
+}
+.btn--secondary:hover { background: var(--surface-2); }
+
+.btn--ghost {
+  background: transparent;
+  color: var(--dan-blue-text);
+}
+.btn--ghost:hover { background: var(--dan-blue-soft); }
+
+.btn--danger {
+  background: transparent;
+  color: var(--danger);
+  font-weight: 500;
+}
+.btn--danger:hover { background: var(--danger-soft); color: var(--danger-hover); }
+
+.btn--lg { padding: 13px 22px; font-size: 15px; }
+.btn--block { width: 100%; }
+
+/* ---------- Chip / scope tag ---------- */
+
+.chip {
+  display: inline-flex; align-items: center;
+  padding: 3px 8px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0;
+  border-radius: var(--radius-chip);
+  background: var(--dan-blue-soft);
+  color: var(--dan-blue-text);
+}
+.chip--neutral { background: var(--surface-2); color: var(--muted); }
+.chip--success { background: var(--success-soft); color: var(--success); }
+.chip--danger  { background: var(--danger-soft);  color: var(--danger); }
+
+/* ---------- Badge ---------- */
+
+.badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+.badge--verified {
+  background: var(--gold-soft);
+  color: var(--gold-text);
+  border: 1px solid color-mix(in oklch, var(--gold) 35%, var(--gold-soft));
+}
+.badge--verified svg { color: var(--gold); }
+.badge--success { background: var(--success-soft); color: var(--success); }
+.badge--danger  { background: var(--danger-soft);  color: var(--danger); }
+.badge--warning { background: var(--gold-soft);    color: var(--gold-text); }
+.badge--primary { background: var(--dan-blue-soft); color: var(--dan-blue-text); }
+
+/* ---------- Profile summary block ---------- */
+
+.profile-card { display: flex; align-items: flex-start; gap: 20px; }
+.profile-card__avatar {
+  width: 56px; height: 56px;
+  display: grid; place-items: center;
+  background: var(--dan-blue-soft);
+  color: var(--dan-blue-text);
+  border-radius: 14px;
+  font-size: 20px;
+  font-weight: 600;
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+.profile-card__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.profile-card__name { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.profile-card__name-text { font-family: var(--font-display); font-size: 18px; font-weight: 600; overflow-wrap: anywhere; }
+.profile-card__sub { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+/* Урт таслагдашгүй мөр (SSO имэйл sso_…@sso.local) mobile дээр хэвтээ гүйлгэлт
+   үүсгэхээс сэргийлж таслана. */
+.profile-card__sub .mono { overflow-wrap: anywhere; min-width: 0; }
+.profile-card__sub .dot::before { content: "·"; padding: 0 4px; color: var(--faint); }
+.profile-card__action { align-self: flex-start; }
+
+/* ---------- Activity list ---------- */
+
+.activity { display: flex; flex-direction: column; }
+.activity__item {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+}
+.activity__item:last-child { border-bottom: 0; }
+.activity__icon {
+  width: 32px; height: 32px;
+  display: grid; place-items: center;
+  background: var(--surface-2);
+  border-radius: 8px;
+  color: var(--muted);
+}
+.activity__title { font-size: 14px; }
+.activity__meta { font-size: 12px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.activity__meta .mono { font-size: 12px; }
+.activity__time { font-size: 12px; color: var(--muted); font-family: var(--font-mono); white-space: nowrap; }
+
+/* ---------- Section divider ---------- */
+
+.section-divider {
+  display: flex; align-items: center; gap: 16px;
+  margin: 32px 0 16px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  font-weight: 500;
+}
+.section-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ---------- Grid helpers ---------- */
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+/* ---------- Trust strip ---------- */
+
+.trust-strip {
+  display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap;
+  padding: 18px;
+  border-top: 1px solid var(--border);
+  margin-top: 32px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.trust-strip__item { display: flex; align-items: center; gap: 6px; }
+.trust-strip__dot { color: var(--faint); }
+
+/* ---------- Footer ---------- */
+
+.footer {
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--muted);
+}
+.footer__links { display: flex; gap: 14px; }
+.footer__links a { color: var(--muted); }
+.footer__links a:hover { color: var(--fg); }
+
+/* ---------- Sign-in / auth pages ---------- */
+
+.signin-shell {
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  background: var(--bg);
+}
+.signin-shell__nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 32px;
+  border-bottom: 1px solid var(--border);
+}
+.signin-shell__nav .topbar__brand { color: var(--fg); }
+.signin-shell__nav .topbar__brand-name { color: var(--fg); }
+.signin-shell__nav .topbar__brand-mark { background: transparent; }
+.signin-shell__body {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 48px 24px;
+}
+.signin-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 48px;
+  max-width: 520px;
+  width: 100%;
+  display: flex; flex-direction: column; gap: 24px;
+}
+.signin-card--narrow { max-width: 440px; }
+.signin-card__crest {
+  width: 64px; height: 64px;
+  border-radius: 16px;
+  object-fit: cover;
+  display: block;
+  box-shadow: 0 8px 20px oklch(34% 0.08 250 / 0.18);
+}
+.signin-card__lede { font-size: 15px; color: var(--muted); line-height: 1.6; }
+.signin-card__helper {
+  font-size: 12.5px;
+  color: var(--muted);
+  display: flex; align-items: flex-start; gap: 8px;
+}
+.signin-card__helper svg { color: var(--dan-blue); flex-shrink: 0; margin-top: 2px; }
+.signin-card__trust {
+  display: flex; gap: 14px; flex-wrap: wrap;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.signin-card__trust .badge { background: var(--surface-2); color: var(--muted); }
+.signin-card__trust .badge--verified { background: var(--gold-soft); color: var(--gold-text); border: 1px solid color-mix(in oklch, var(--gold) 35%, var(--gold-soft)); }
+.signin-card__alt {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+.signin-card__alt a { font-weight: 500; }
+.signin-footer {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding: 20px 32px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ---------- Inline error / info banners ---------- */
+
+.alert {
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  border: 1px solid transparent;
+  display: flex; align-items: flex-start; gap: 8px;
+}
+.alert svg { flex-shrink: 0; margin-top: 1px; }
+.alert--danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: color-mix(in oklch, var(--danger) 25%, var(--danger-soft));
+}
+.alert--info {
+  background: var(--dan-blue-soft);
+  color: var(--dan-blue-text);
+  border-color: color-mix(in oklch, var(--dan-blue) 22%, var(--dan-blue-soft));
+}
+.alert--success {
+  background: var(--success-soft);
+  color: var(--success);
+  border-color: color-mix(in oklch, var(--success) 25%, var(--success-soft));
+}
+
+/* ---------- Password strength meter ---------- */
+
+.pwmeter { display: flex; flex-direction: column; gap: 6px; }
+.pwmeter__track {
+  display: flex; gap: 4px;
+}
+.pwmeter__seg {
+  height: 4px;
+  flex: 1;
+  border-radius: 999px;
+  background: var(--surface-2);
+  transition: background 0.18s ease;
+}
+.pwmeter__seg.is-on--weak   { background: var(--danger); }
+.pwmeter__seg.is-on--fair   { background: var(--gold); }
+.pwmeter__seg.is-on--strong { background: var(--success); }
+.pwmeter__label { font-size: 12px; color: var(--muted); }
+.pwmeter__reqs { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.pwmeter__req { display: inline-flex; align-items: center; gap: 5px; }
+.pwmeter__req.is-met { color: var(--success); }
+.pwmeter__req svg { flex-shrink: 0; }
+
+/* ---------- OTP code input ---------- */
+
+.otp-input {
+  letter-spacing: 0.6em;
+  font-family: var(--font-mono);
+  font-size: 22px;
+  text-align: center;
+  padding: 14px 12px;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 1023px) {
+  :root { --content-pad-x: 24px; }
+  .shell-body { grid-template-columns: 1fr; }
+  .rail {
+    position: static;
+    height: auto;
+    padding: 12px 16px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    overflow-x: auto;
+    gap: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .rail__group { flex-direction: row; gap: 4px; }
+  .rail__group + .rail__group { margin-top: 0; padding-top: 0; border-top: 0; padding-left: 16px; margin-left: 4px; border-left: 1px solid var(--border); }
+  .rail__label { display: none; }
+  .rail__link, .rail__signout {
+    padding: 8px 12px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .rail__link svg, .rail__signout svg { display: none; }
+  .main { padding: 32px var(--content-pad-x) 96px; }
+  .defrow { grid-template-columns: 160px 1fr; }
+  .topbar__session, .topbar__divider { display: none; }
+}
+
+@media (max-width: 767px) {
+  :root { --content-pad-x: 20px; --topbar-h: 56px; }
+  h1 { font-size: 24px; }
+  .topbar { padding: 0 16px; gap: 12px; }
+  .topbar__brand-tag { display: none; }
+  .topbar__user span:not(.topbar__avatar) { display: none; }
+  .signin-card { padding: 32px 24px; }
+  .signin-card__trust .badge { font-size: 11px; }
+  .defrow { grid-template-columns: 1fr; gap: 2px; padding: 12px 0; }
+  .defrow__label { font-size: 12px; }
+  .field-row { grid-template-columns: 1fr; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .card { padding: 20px; }
+  /* avatar + нэр эхний мөрөнд, "Профайл харах" товч бүтэн өргөнтэй доор нь
+     буулгаж мобайл дээр эмх цэгцтэй харагдуулна. */
+  .profile-card { gap: 14px; flex-wrap: wrap; }
+  .profile-card__avatar { width: 48px; height: 48px; font-size: 17px; border-radius: 12px; }
+  .profile-card__body { flex: 1 1 auto; }
+  .profile-card__action { flex: 1 1 100%; align-self: stretch; }
+  .profile-card__action .btn { width: 100%; }
+  .footer { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .signin-shell__nav { padding: 14px 20px; }
+  .signin-footer { padding: 16px 20px; }
+}
+
+@media (max-width: 430px) {
+  .rail { padding: 10px 12px; gap: 2px; }
+  .rail__group + .rail__group { padding-left: 8px; margin-left: 2px; }
+  .topbar { gap: 8px; }
+  .topbar__user { padding: 3px 6px 3px 3px; gap: 6px; }
+  .topbar__brand-name { font-size: 14px; }
+  .topbar__brand-mark { width: 28px; height: 28px; }
+}
+
+/* ---------- Focus visibility ---------- */
+
+:focus-visible {
+  outline: 2px solid var(--dan-blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.btn:focus-visible, .input:focus-visible, .select:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--dan-blue-soft);
+  border-color: var(--dan-blue);
+}
+
+/* ---------- Tables ---------- */
+
+.dtable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.dtable thead th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.dtable tbody td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--fg);
+  vertical-align: middle;
+}
+.dtable tbody tr:last-child td { border-bottom: 0; }
+.dtable tbody tr:hover { background: var(--surface-2); }
+
+/* ---------- Print ---------- */
+
+@media print {
+  .rail, .topbar__user, .btn { display: none; }
+  .main { padding: 0; }
+}
+
+/* ---------- Shell2: two-level system nav (admin / manager / user) ---------- */
+
+.shell2 {
+  display: grid;
+  grid-template-columns: 64px 232px 1fr;
+  min-height: 100vh;
+  background: var(--bg);
+  /* hamburger дарахад sidepanel гулсаж нээгдэх/хаагдана. */
+  transition: grid-template-columns 0.24s ease;
+}
+.shell2.is-collapsed { grid-template-columns: 64px 0 1fr; }
+.shell2--loading { background: var(--bg); }
+
+.iconrail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0 0 12px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  /* Viewport-д бэхлэх — grid мөрийн өндрөөр сунахгүй тул доод товчнууд
+     (Тусламж/Гарах) контентын урт хамаарахгүйгээр үргэлж доод буланд харагдана. */
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  align-self: start;
+}
+.iconrail__brand { display: flex; align-items: center; justify-content: center; width: 100%; height: var(--topbar-h, 60px); margin-bottom: 6px; }
+.iconrail__brand img { width: 30px; height: 30px; border-radius: 8px; object-fit: contain; }
+/* lucide SVG-ууд flex эгнээнд багтахдаа 0 хүртэл шахагдаж алга болохоос
+   сэргийлнэ (урт шошготой холбоосууд дээр илэрдэг "icon алга" алдаа). */
+.iconrail__btn svg, .sidepanel__link svg, .topbar2 svg, .btn svg,
+.users-table svg, .page-head svg { flex: 0 0 auto; }
+.iconrail__nav { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.iconrail__bottom { display: flex; flex-direction: column; gap: 6px; margin-top: auto; }
+.iconrail__btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 42px; height: 42px;
+  border: 0; border-radius: 12px; cursor: pointer;
+  background: transparent; color: var(--muted);
+  transition: background .15s, color .15s;
+}
+.iconrail__btn:hover { background: var(--surface-2); color: var(--fg); }
+.iconrail__btn.is-active { background: var(--dan-blue-soft); color: var(--dan-blue-text); }
+.iconrail__signout:hover { background: var(--danger-soft); color: var(--danger); }
+
+.sidepanel {
+  display: flex; flex-direction: column;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  align-self: start;
+}
+.is-collapsed .sidepanel { border-right: 0; }
+.sidepanel__head { display: flex; flex-direction: column; justify-content: center; gap: 1px; height: var(--topbar-h, 64px); padding: 0 16px; border-bottom: 1px solid var(--border); }
+.sidepanel__brand-name { font-size: 12px; color: var(--muted); }
+.sidepanel__title { font-family: var(--font-display); font-size: 16px; font-weight: 650; color: var(--fg); }
+/* Гурван түвшний зүүн цэс: Систем (icon rail) → Дэд систем (accordion бар) →
+   Цэс (холбоос). Дэд систем бүр дарж нээх/хаах толгойтой — зөвхөн НЭГ нь
+   нээлттэй; нээгдэхэд chevron эргэж, доор нь цэсүүд гарна. */
+.sidepanel__nav { display: flex; flex-direction: column; gap: 0; padding: 6px 8px 16px; overflow-y: auto; }
+.sidepanel__group { display: flex; flex-direction: column; }
+/* Дэд системийн хооронд тусгаарлагч. */
+.sidepanel__group + .sidepanel__group { border-top: 1px solid var(--border); }
+/* Дэд системийн толгой — дарж нээх/хаах бар. */
+.sidepanel__group-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  width: 100%; padding: 11px 10px; border-radius: 8px;
+  background: transparent; border: 0; cursor: pointer;
+  font-family: var(--font-body); text-align: left; color: var(--muted);
+  transition: background .15s, color .15s;
+}
+.sidepanel__group-head:hover { background: var(--surface-2); color: var(--fg); }
+.sidepanel__group.is-open > .sidepanel__group-head { color: var(--fg); }
+.sidepanel__group-label {
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .055em;
+}
+.sidepanel__chev { flex: 0 0 auto; color: var(--faint); transition: transform .2s ease; }
+.sidepanel__group.is-open .sidepanel__chev { transform: rotate(180deg); color: var(--muted); }
+.sidepanel__group-items { display: flex; flex-direction: column; gap: 2px; padding: 1px 0 8px; }
+.sidepanel__link {
+  position: relative;
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px 9px 12px; border-radius: 9px;
+  color: var(--secondary); font-size: 14px; text-decoration: none;
+  transition: background .15s, color .15s;
+}
+.sidepanel__link:hover { background: var(--surface-2); color: var(--fg); }
+.sidepanel__link.is-active { background: var(--dan-blue-soft); color: var(--dan-blue-text); font-weight: 600; }
+/* Идэвхтэй цэсийн зүүн ирмэгийн accent — байрлалыг тодоор илэрхийлнэ. */
+.sidepanel__link.is-active::before {
+  content: ""; position: absolute; left: 0; top: 7px; bottom: 7px; width: 3px;
+  border-radius: 0 3px 3px 0; background: var(--dan-blue);
+}
+
+.maincol { display: flex; flex-direction: column; min-width: 0; min-height: 100vh; }
+
+/* Mobile drawer backdrop — зөвхөн ≤900px дээр (доор), нээлттэй үед харагдана. */
+.shell2__backdrop { display: none; position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, 0.45); border: 0; padding: 0; cursor: pointer; }
+.topbar2 {
+  display: flex; align-items: center; gap: 12px;
+  height: var(--topbar-h, 60px); padding: 0 20px;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 20;
+}
+.topbar2__toggle { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); cursor: pointer; }
+.topbar2__toggle:hover { background: var(--surface-2); color: var(--fg); }
+.topbar2__spacer { flex: 1; }
+.topbar2__actions { display: flex; align-items: center; gap: 10px; }
+.topbar2__docs {
+  display: flex; align-items: center; gap: 7px;
+  height: 38px; padding: 0 14px; border-radius: 10px;
+  border: 1px solid var(--border); background: transparent;
+  color: var(--muted); font-size: 13px; font-weight: 600; text-decoration: none;
+}
+.topbar2__docs:hover { background: var(--surface-2); color: var(--fg); }
+@media (max-width: 720px) { .topbar2__docs span { display: none; } }
+.topbar2__search {
+  display: flex; align-items: center; gap: 8px;
+  flex: 0 1 360px; min-width: 0;
+  height: 38px; padding: 0 14px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 999px; color: var(--muted);
+  transition: border-color .15s;
+}
+.topbar2__search:focus-within { border-color: var(--dan-blue); }
+.topbar2__search svg { flex: 0 0 auto; }
+.topbar2__search-input {
+  flex: 1; min-width: 0; border: 0; outline: none; background: transparent;
+  font-size: 14px; color: var(--fg);
+}
+.topbar2__search-input::placeholder { color: var(--muted); }
+@media (max-width: 640px) { .topbar2__search { display: none; } }
+
+/* Shell2 контентыг өргөн дэлгэцэнд бүтэн ашиглаж, хоёр талын том зайг арилгана
+   (нарийн 880px reading-width нь зөвхөн дангаар нэвтрэх хуудсуудад). Хажуугийн
+   padding нь дэлгэцийн хэмжээнд тааруулж responsive. */
+.maincol .main { padding: 28px clamp(16px, 3.5vw, 44px) 72px; }
+.maincol .main__inner { max-width: 1400px; }
+
+/* ---------- Admin tables / RBAC matrix ---------- */
+
+.users__head { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+/* OrgList нь card биш тул дээрх card-тай (OrgRepsCard) .card + .card дүрэмд
+   баригдахгүй — үүсгэх товч дээрх карттай наалдахаас сэргийлж дээд зай өгнө. */
+.orgs { margin-top: 16px; }
+.users-table-wrap { padding: 0; overflow-x: auto; }
+.users-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.users-table th { text-align: left; padding: 11px 14px; color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; border-bottom: 1px solid var(--border); }
+.users-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.users-table tbody tr:last-child td { border-bottom: 0; }
+.users-table tbody tr:hover { background: var(--surface-2); }
+.users-table__role { min-width: 120px; padding: 6px 8px; font-size: 13px; }
+.users-table__actions { text-align: right; white-space: nowrap; }
+
+.rbac-matrix { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rbac-matrix th, .rbac-matrix td { padding: 9px 12px; border-bottom: 1px solid var(--border); text-align: center; }
+.rbac-matrix th:first-child, .rbac-matrix td:first-child { text-align: left; }
+.rbac-matrix thead th { color: var(--muted); font-weight: 600; }
+.rbac-matrix tbody tr:hover { background: var(--surface-2); }
+.rbac-matrix input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--dan-blue); }
+.rbac-perm-label { display: flex; flex-direction: column; gap: 1px; align-items: flex-start; }
+.rbac-perm-label small { color: var(--faint); font-size: 11px; }
+
+/* ---------- Responsive tables ---------- */
+/* >640px: хүснэгт өөрийн саван дотор (.users-table-wrap / overflowX:auto .card)
+   хэвтээ гүйлгэгдэнэ. dtable (eID) болон rbac-matrix нь энэ горимоор үлдэнэ. */
+.users-table-wrap { -webkit-overflow-scrolling: touch; }
+
+/* ---- Хүснэгт mobile дээр — мөр бүр "шошго: утга" хосуудын карт болно ----
+   Багана олонтой хүснэгтийг хэвтээ гүйлгэхийн оронд босоо задлана. Шошгыг
+   `td[data-label]`-ээс уншина (толгойн нүдтэй ижил текст) — тиймээс шинэ
+   хүснэгт нэмэхдээ td бүрд data-label өгнө. Үйлдлийн багана нь data-label-гүй
+   (эсвэл хоосон) тул шошгогүй, бүтэн өргөнтэй мөр болно. */
+@media (max-width: 640px) {
+  .users-table-wrap { overflow-x: visible; }
+  .users-table, .users-table tbody, .users-table tr, .users-table td { display: block; width: 100%; }
+  /* Толгойг зөвхөн нүдээр нуух — дэлгэц уншигчид хэвээр хүртээмжтэй. */
+  .users-table thead {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
+  .users-table tr { padding: 12px 2px; border-bottom: 1px solid var(--border); }
+  .users-table tbody tr:last-child { border-bottom: 0; }
+  .users-table td {
+    display: grid;
+    grid-template-columns: minmax(84px, 38%) 1fr;
+    gap: 10px;
+    align-items: baseline;
+    /* badge/chip нь баганаа дүүргэж сунахаас сэргийлнэ. */
+    justify-items: start;
+    padding: 6px 14px;
+    border-bottom: 0;
+  }
+  .users-table td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 11.5px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .03em;
+    overflow-wrap: anywhere;
+  }
+  /* Шошгогүй нүд (үйлдлийн багана) — бүтэн өргөн, зүүн тийш эгнэнэ. */
+  .users-table td:not([data-label]),
+  .users-table td[data-label=""] { display: block; }
+  .users-table td:not([data-label])::before,
+  .users-table td[data-label=""]::before { content: none; }
+  .users-table__actions { text-align: left; white-space: normal; padding-top: 10px; }
+  /* Урт таслагдашгүй утга (client_id, имэйл) мөрийг тэлэхээс сэргийлнэ. */
+  .users-table td .mono, .users-table td code { overflow-wrap: anywhere; }
+}
+
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 22px; }
+.stat-card { padding: 18px; }
+.stat-card__value { font-family: var(--font-display); font-size: 30px; font-weight: 700; color: var(--fg); }
+.stat-card__label { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+/* --sm нь зөвхөн жижиг padding/фонттой; өндөр нь суурь .btn-тэй адил 44px —
+   бүх товч (нэвтрэх товч ч мөн) апп даяар ижил өндөртэй. */
+.btn--sm { padding: 5px 9px; font-size: 13px; gap: 5px; min-height: 44px; }
+
+/* Dashboard картын тор — мөр доторх картууд жигд (тэнцүү) өндөртэй. */
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; align-items: stretch; }
+.card-grid > .card { height: 100%; display: flex; flex-direction: column; gap: 6px; margin: 0; }
+.card-grid > .card h3 { margin: 4px 0 0; }
+.card-grid > .card p { margin: 0; }
+/* grid-2 (нүүр) картууд мөн тэнцүү өндөртэй. */
+.grid-2 { align-items: stretch; }
+.grid-2 > .card { height: 100%; }
+
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- Mobile bottom tab bar (систем сэлгэгч) ---------- */
+/* Desktop дээр нуугдана — зөвхөн ≤900px үед iconrail-ийг орлоно. */
+:root { --bottombar-h: 60px; }
+.bottombar { display: none; }
+.bottombar__tab {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 7px 4px;
+  transition: color 0.15s ease;
+}
+.bottombar__tab.is-active { color: var(--dan-blue); }
+.bottombar__tab svg { flex: 0 0 auto; }
+.bottombar__tab span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  /* Mobile: maincol нь бүтэн өргөн; iconrail-ийг доод tab bar орлоно, sidepanel
+     нь идэвхтэй системийн хуудсуудыг зүүн дээд hamburger-ээр нээгддэг зүүн drawer
+     болно — контентыг шахахгүй (өмнө нь grid шахагдаж контент харагдахгүй байсан).
+     .is-collapsed-ийн (0,2,0) specificity-г давахын тулд хоёуланг нь дурдана —
+     эс бол mobile дээр maincol нарийн зурвас болж контент шахагддаг. */
+  .shell2,
+  .shell2.is-collapsed { grid-template-columns: 1fr; }
+  /* Хэвтээ гүйлгэлтээс сэргийлэх сүүлчийн хамгаалалт — дотоод гүйлгэдэг сав
+     (жишээ нь .users-table-wrap) өөрийн overflow-x-оор ажиллана. Доод tab bar-т
+     дарагдахгүйн тулд доор нь зай үлдээнэ. */
+  .maincol .main {
+    overflow-x: clip;
+    padding-bottom: calc(var(--bottombar-h) + env(safe-area-inset-bottom, 0px) + 28px);
+  }
+  .iconrail { display: none; }
+  /* зүүн дээд булангийн hamburger — идэвхтэй системийн хуудсын цэсийг нээнэ.
+     (base дээр аль хэдийн display:flex — desktop-т grid баганыг toggle-дэнэ.) */
+
+  /* sidepanel → зүүн дээд буланд байрлах ☰ (topbar2__toggle)-оор нээгддэг зүүн
+     талын drawer. Доод tab bar-ыг бүрхэхгүйн тулд доороосоо түүний өндрөөр
+     тасарна. */
+  .sidepanel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: auto;
+    bottom: auto;
+    /* Доод tab bar-аас дээш дүүрэн өндөр. base rule-ийн height:100vh-г дарж
+       бичнэ; top+bottom-оор сунгах нь grid item-ийн align-self:start-аас болж
+       ажиллахгүй тул өндрийг шууд тооцно. dvh нь mobile хаягийн мөрийг тооцно. */
+    height: calc(100vh - var(--bottombar-h) - env(safe-area-inset-bottom, 0px));
+    height: calc(100dvh - var(--bottombar-h) - env(safe-area-inset-bottom, 0px));
+    width: min(80vw, 288px);
+    overflow-y: auto;
+    z-index: 65;
+    border-right: 1px solid var(--border);
+    border-top: 0;
+    border-radius: 0;
+    box-shadow: 8px 0 28px rgba(0, 0, 0, 0.16);
+    transform: translateX(-100%);
+    transition: transform 0.24s ease;
+  }
+  .shell2:not(.is-collapsed) .sidepanel { transform: translateX(0); }
+  .shell2:not(.is-collapsed) .shell2__backdrop { display: block; }
+
+  /* доод tab bar — фиксэд, viewport-ийн доод ирмэгт */
+  .bottombar {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 70;
+    height: calc(var(--bottombar-h) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    align-items: stretch;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.05);
+  }
+}
+
+/* ---- AI туслахын чат (/me/ai) ---- */
+.aichat { display: flex; flex-direction: column; min-height: 60vh; }
+.aichat__scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 2px 12px;
+}
+.aichat__empty {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+  max-width: 360px;
+}
+.aichat__msg { display: flex; flex-direction: column; gap: 4px; max-width: 78%; }
+.aichat__msg--user { align-self: flex-end; align-items: flex-end; }
+.aichat__msg--model { align-self: flex-start; align-items: flex-start; }
+.aichat__bubble {
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.aichat__msg--user .aichat__bubble {
+  background: var(--dan-blue);
+  border-color: var(--dan-blue);
+  color: var(--on-dan-blue);
+  border-bottom-right-radius: 4px;
+}
+.aichat__msg--model .aichat__bubble { border-bottom-left-radius: 4px; }
+.aichat__msg.is-degraded .aichat__bubble { color: var(--muted); font-style: italic; }
+.aichat__bubble--pending { color: var(--muted); animation: aichat-pulse 1.2s ease-in-out infinite; }
+@keyframes aichat-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+.aichat__tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.aichat__form { display: flex; gap: 8px; margin-top: 12px; }
+.aichat__input { flex: 1; }
+
+/* ---- Voice чат + live орчуулга ---- */
+.aichat__meta { display: inline-flex; align-items: center; gap: 8px; min-height: 18px; }
+.aichat__iconbtn {
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  background: none;
+  padding: 2px;
+  cursor: pointer;
+  color: var(--muted);
+}
+.aichat__iconbtn:hover { color: var(--dan-blue); }
+.aichat__iconbtn:disabled { opacity: 0.5; cursor: default; }
+.aichat__speaking { animation: aichat-pulse 1s ease-in-out infinite; color: var(--dan-blue); }
+.aichat__voice-ico { margin-right: 6px; vertical-align: -2px; opacity: 0.8; }
+.aichat__mic { padding-left: 12px; padding-right: 12px; }
+.aichat__mic.is-recording {
+  color: var(--danger);
+  border-color: var(--danger);
+  animation: aichat-pulse 1.2s ease-in-out infinite;
+}
+.aichat__error { color: var(--danger); font-size: 13px; }
+
+.aichat__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.aichat__toolbar-spacer { flex: 1; }
+.aichat__lang { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
+.aichat__speak { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); cursor: pointer; }
+
+.trrow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.trrow__source { font-size: 13px; color: var(--muted); }
+.trrow__translated { font-size: 15px; line-height: 1.55; }
+
+/* ---- Хуудаслалт (admin хүснэгт) ---- */
+.pager { display: flex; align-items: center; gap: 12px; justify-content: flex-end; margin-top: 12px; }
+.pager__page { font-size: 13px; color: var(--muted); }
+
+/* Профайл — төлөөлдөг байгууллагын жагсаалт (OrgRepsCard) */
+.org-reps { display: flex; flex-direction: column; gap: 10px; }
+.org-rep { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; }
+.org-rep__icon { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; background: var(--dan-blue-soft); color: var(--dan-blue-text); flex: none; }
+.org-rep__body { min-width: 0; flex: 1; }
+.org-rep__name { font-weight: 600; }
+.org-rep__meta { color: var(--muted); font-size: 0.85em; margin-top: 2px; }
+/* Дарж болох карт (жагсаалт → удирдах дэлгэц). */
+.org-rep--link { text-decoration: none; color: inherit; cursor: pointer; transition: border-color .12s, background .12s; }
+.org-rep--link:hover { border-color: var(--border-strong); background: var(--surface-2, rgba(127,127,127,.05)); }
+.org-rep__chevron { color: var(--muted); flex: none; }
+/* Байгууллагын гарын үсэг зурагчид — картан жагсаалт (аватар + нэр + эрх). */
+.org-signers { display: flex; flex-direction: column; gap: 8px; }
+.org-signer { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; }
+.org-signer__avatar { display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%; background: var(--dan-blue-soft); color: var(--dan-blue-text); flex: none; }
+.org-signer__body { min-width: 0; flex: 1; }
+.org-signer__name { font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.org-signer__nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.org-signer__meta { color: var(--muted); font-size: 0.82em; margin-top: 3px; }
+.chip--admin { background: var(--dan-blue-soft); color: var(--dan-blue-text); }
+.chip--pending { background: var(--warning-soft, #fef3c7); color: var(--warning, #b45309); }
+.btn--icon { padding: 6px; flex: none; }
+
+/* Профайл — eID PKI самбар (EidPkiSection) */
+.pki-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 4px; }
+.pki-tile { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 10px; border: 1px solid var(--border); border-radius: 10px; text-align: center; }
+.pki-tile__icon { color: var(--dan-blue-text); }
+.pki-tile__value { font-size: 1.35rem; font-weight: 700; }
+.pki-tile__label { font-size: 0.78rem; color: var(--muted); }
+.pki-tile--success .pki-tile__icon { color: var(--success); }
+.pki-tile--danger .pki-tile__icon { color: var(--danger); }
+.pki-list { margin-top: 16px; }
+.pki-list__title { font-size: 0.85rem; color: var(--muted); font-weight: 600; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.03em; }
+.pki-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+.pki-row__main { min-width: 0; }
+.pki-row__meta { color: var(--muted); font-size: 0.82em; margin-left: auto; }
+
+/* Профайл — 2 баганат карт grid (зайг зохистой ашиглах) */
+.profile-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; margin-top: 16px; }
+.profile-grid > .card { margin-top: 0; }
+@media (max-width: 860px) { .profile-grid { grid-template-columns: 1fr; } }
+
+/* Login card — target дизайн (eID Mongolia App нэвтрэлт) */
+.login-instruction {
+  text-align: center;
+  color: var(--dan-blue-text);
+  font-size: 13.5px;
+  line-height: 1.55;
+  margin: 0 0 4px;
+}
+.input--lg-center {
+  text-align: center;
+  font-size: 17px;
+  letter-spacing: 2px;
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+.btn--eid {
+  background: linear-gradient(135deg, var(--dan-blue), #8b7ff0);
+  color: #fff;
+  /* border-box өндрийг btn--google (1px border)-тэй тэнцүүлэхийн тулд ил
+     transparent border үлдээнэ (border:0 нь 2px намхан болгодог байсан). */
+  border: 1px solid transparent;
+  font-weight: 600;
+}
+.btn--eid:hover { filter: brightness(1.05); color: #fff; }
+.btn--eid:active { filter: brightness(0.97); }
+.btn--eid:disabled { opacity: 0.6; }
+.login-footer { margin-top: 4px; text-align: center; }
+.login-footer__divider { border: 0; border-top: 1px solid var(--border); margin: 4px 0 16px; }
+.login-footer__register {
+  display: block;
+  font-weight: 700;
+  color: var(--fg);
+  text-decoration: none;
+  font-size: 14.5px;
+}
+.login-footer__register:hover { color: var(--dan-blue-text); }
+.login-footer__help {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 12px;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 13px;
+}
+.login-footer__help:hover { color: var(--fg); }
+
+/* Login switch tab — Google/Нэвтрэх товчтой (btn--lg) ижил өндөр.
+   padding 2px (container) + item 44px + border 2px ≈ btn--lg-ийн өндөр. */
+.segmented--tall .segmented__item {
+  padding-top: 0;
+  padding-bottom: 0;
+  min-height: 44px;
+  font-size: 14px;
+  letter-spacing: 0.01em;
+}
+
+/* Google login товч + "эсвэл" зураас */
+.btn--google { background: var(--surface); color: var(--fg); border: 1px solid var(--border); font-weight: 600; }
+.btn--google:hover { background: var(--surface-2); color: var(--fg); }
+.login-or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; margin: 6px 0; }
+.login-or::before, .login-or::after { content: ""; flex: 1; border-top: 1px solid var(--border); }
+
+/* ---------- Дээд талын цэс хайлт (NavSearch dropdown) ---------- */
+.navsearch { position: relative; }
+.navsearch__results {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: var(--card, #fff);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(16, 24, 40, 0.12);
+  padding: 6px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+.navsearch__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: var(--fg, #111827);
+}
+.navsearch__item:hover,
+.navsearch__item.is-active { background: var(--dan-blue-soft, #eef2ff); }
+.navsearch__label { font-size: 14px; font-weight: 500; }
+.navsearch__group { font-size: 11.5px; color: var(--muted, #6b7280); white-space: nowrap; }
+.navsearch__empty { padding: 12px; font-size: 13px; color: var(--muted, #6b7280); text-align: center; }
+
+/* ============================================================================
+   Landing (нүүр) — Government Template Platform V3.0 маркетингийн хуудас (.lp-*)
+   Брэнд токен (--dan-blue, --gold, --surface, light/dark) дээр найруулав.
+   Hero-ийн баруун талд ОДОО БАЙГАА нэвтрэх карт (.signin-card) шигтгэнэ.
+   ============================================================================ */
+.lp {
+  /* Landing-д зориулсан гүн navy + алт. --lp-navy нь :root-д тодорхойлогдсон
+     (admin theme үүнийг <html>-д override хийж болно); --lp-navy-2 нь түүнээс
+     деривэ хийгдэх тул ганц утга солиход нав/hero/cta/footer бүгд өөрчлөгдөнө. */
+  --lp-navy-2:     color-mix(in oklab, var(--lp-navy), white 7%);
+  --lp-navy-line:  oklch(100% 0 0 / 0.12);
+  --lp-navy-line2: oklch(100% 0 0 / 0.22);
+  --lp-on-navy:    oklch(98% 0.004 260);
+  --lp-on-navy-70: oklch(98% 0.004 260 / 0.72);
+  --lp-on-navy-45: oklch(98% 0.004 260 / 0.46);
+  --lp-gold:       oklch(82% 0.14 86);
+  --lp-gold-btn:   oklch(80% 0.145 84);
+  --lp-gold-btn-h: oklch(85% 0.15 86);
+  --lp-on-gold:    oklch(28% 0.05 260);
+  --lp-max:        1200px;
+  --lp-pad:        24px;
+
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  /* clip (биш hidden) — hidden нь scroll container үүсгэж .lp-nav-ийн
+     position: sticky-г эвддэг. clip нь хэвтээ халилтыг таслах хэрнээ
+     sticky-г ажиллуулна. */
+  overflow-x: clip;
+}
+.lp *,
+.lp *::before,
+.lp *::after { box-sizing: border-box; }
+
+.lp-container {
+  width: 100%;
+  max-width: var(--lp-max);
+  margin-inline: auto;
+  padding-inline: var(--lp-pad);
+}
+
+/* ---------- Buttons ---------- */
+.lp-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  padding: 12px 22px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  border: 1.5px solid transparent;
+  border-radius: 10px;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.12s ease, background 0.14s ease, border-color 0.14s ease, color 0.14s ease, filter 0.14s ease;
+}
+.lp-btn:hover { text-decoration: none; }
+.lp-btn:active { transform: translateY(1px) scale(0.99); }
+.lp-btn--sm { padding: 9px 15px; font-size: 14px; border-radius: 9px; }
+.lp-btn--lg { padding: 15px 28px; font-size: 16px; }
+
+.lp-btn--gold { background: var(--lp-gold-btn); color: var(--lp-on-gold); box-shadow: 0 6px 18px oklch(80% 0.145 84 / 0.28); }
+.lp-btn--gold:hover { background: var(--lp-gold-btn-h); filter: brightness(1.03); }
+.lp-btn--outline { background: transparent; border-color: var(--lp-navy-line2); color: var(--lp-on-navy); }
+.lp-btn--outline:hover { background: oklch(100% 0 0 / 0.08); border-color: var(--lp-on-navy); }
+.lp-btn--glass { background: oklch(100% 0 0 / 0.10); border-color: var(--lp-navy-line2); color: var(--lp-on-navy); backdrop-filter: blur(6px); }
+.lp-btn--glass:hover { background: oklch(100% 0 0 / 0.18); }
+
+/* ---------- Nav ---------- */
+.lp-nav {
+  position: sticky; top: 0; z-index: 50;
+  background: var(--lp-header);
+  border-bottom: 1px solid var(--lp-navy-line);
+}
+.lp-nav__inner {
+  width: 100%; max-width: var(--lp-max); margin-inline: auto;
+  padding-inline: var(--lp-pad);
+  height: 66px;
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+}
+.lp-nav__brand { display: flex; align-items: center; gap: 11px; text-decoration: none; min-width: 0; }
+.lp-nav__mark { height: 34px; width: 34px; object-fit: contain; border-radius: 7px; }
+.lp-nav__name {
+  font-family: var(--font-display);
+  font-weight: 700; font-size: 16px; letter-spacing: -0.01em;
+  color: var(--lp-on-navy); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+/* Жижиг дэлгэц дээр урт брэнд нэрийг нуух (тугны лого хэвээр) — товчтой
+   давхцахаас сэргийлнэ. */
+@media (max-width: 560px) { .lp-nav__name { display: none; } }
+.lp-nav__links { display: none; align-items: center; gap: 30px; }
+.lp-nav__links a {
+  font-size: 14.5px; font-weight: 500; color: var(--lp-on-navy-70);
+  text-decoration: none; transition: color 0.14s ease;
+}
+.lp-nav__links a:hover { color: var(--lp-gold); }
+.lp-nav__actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.lp-lang {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 11px;
+  font-family: var(--font-body); font-size: 13px; font-weight: 600;
+  color: var(--lp-on-navy-70);
+  background: oklch(100% 0 0 / 0.06);
+  border: 1px solid var(--lp-navy-line);
+  border-radius: 9px; cursor: pointer;
+  transition: color 0.14s ease, background 0.14s ease;
+}
+.lp-lang:hover { color: var(--lp-on-navy); background: oklch(100% 0 0 / 0.12); }
+/* Nav доторх загвар солигчийг navy дээр тааруулах */
+.lp-nav__actions .segmented { background: oklch(100% 0 0 / 0.08); border-color: var(--lp-navy-line); }
+.lp-nav__actions .segmented__item { color: var(--lp-on-navy-70); }
+
+/* Mobile hamburger + dropdown цэс (<900px). ≥900px дээр inline links харагдана. */
+.lp-nav__burger {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; padding: 0; flex-shrink: 0;
+  color: var(--lp-on-navy); background: oklch(100% 0 0 / 0.06);
+  border: 1px solid var(--lp-navy-line); border-radius: 9px; cursor: pointer;
+  transition: background 0.14s ease;
+}
+.lp-nav__burger:hover { background: oklch(100% 0 0 / 0.12); }
+.lp-nav__mobile {
+  display: flex; flex-direction: column;
+  padding: 4px var(--lp-pad) 12px;
+  border-top: 1px solid var(--lp-navy-line);
+  background: var(--lp-header);
+}
+.lp-nav__mobile a {
+  padding: 13px 4px; font-size: 15px; font-weight: 500;
+  color: var(--lp-on-navy-70); text-decoration: none;
+  border-bottom: 1px solid var(--lp-navy-line);
+}
+.lp-nav__mobile a:last-child { border-bottom: 0; }
+.lp-nav__mobile a:hover { color: var(--lp-gold); }
+@media (min-width: 900px) {
+  .lp-nav__burger, .lp-nav__mobile { display: none; }
+}
+
+/* ---------- Hero ---------- */
+.lp-hero { position: relative; background: var(--lp-navy); overflow: hidden; }
+/* Утга бүхий hero чимэглэл (full-bleed) — hero-г бүтэн дүүргэнэ */
+.lp-hero__art {
+  position: absolute; inset: 0;
+  background: url(/hero-art.svg) center center / cover no-repeat;
+  opacity: 0.95;
+  pointer-events: none;
+}
+.lp-hero__pattern {
+  position: absolute; inset: 0;
+  background-image: radial-gradient(circle at 1px 1px, oklch(100% 0 0 / 0.06) 1px, transparent 0);
+  background-size: 26px 26px;
+  -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 30%, #000 40%, transparent 100%);
+          mask-image: radial-gradient(ellipse 90% 80% at 50% 30%, #000 40%, transparent 100%);
+}
+.lp-hero__inner {
+  position: relative; z-index: 1;
+  width: 100%; max-width: var(--lp-max); margin-inline: auto;
+  padding: 64px var(--lp-pad) 76px;
+  display: grid; grid-template-columns: 1fr; gap: 48px; align-items: center;
+}
+.lp-hero__copy { max-width: 640px; }
+.lp-eyebrow {
+  display: inline-flex; align-items: center; gap: 9px;
+  padding: 6px 13px; margin-bottom: 22px;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--lp-on-navy);
+  background: oklch(100% 0 0 / 0.06);
+  border: 1px solid var(--lp-navy-line); border-radius: 999px;
+}
+.lp-eyebrow__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--lp-gold); box-shadow: 0 0 0 4px oklch(82% 0.14 86 / 0.22); }
+.lp-hero__title {
+  font-family: var(--font-display);
+  font-size: clamp(34px, 5.4vw, 56px); line-height: 1.05; letter-spacing: -0.025em; font-weight: 700;
+  color: var(--lp-on-navy); margin: 0 0 20px;
+}
+.lp-accent { color: var(--lp-gold); }
+.lp-hero__lede {
+  font-size: clamp(16px, 2vw, 19px); line-height: 1.6;
+  color: var(--lp-on-navy-70); margin: 0 0 34px; max-width: 560px;
+}
+.lp-hero__cta { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 38px; }
+
+/* Hero статистикийн мөр (код картын оронд) */
+.lp-hero__statrow { display: flex; flex-wrap: wrap; gap: 16px 30px; }
+.lp-stat { display: flex; flex-direction: column; gap: 3px; }
+.lp-stat__value {
+  font-family: var(--font-display); font-weight: 700; font-size: 18px;
+  letter-spacing: -0.01em; color: var(--lp-on-navy);
+}
+.lp-stat__label { font-size: 12.5px; color: var(--lp-on-navy-45); }
+
+/* Hero-д шигтгэсэн нэвтрэх карт */
+.lp-hero__visual { position: relative; display: flex; justify-content: center; }
+.lp-hero__login {
+  width: 100%; max-width: 480px;
+  scroll-margin-top: 84px;
+  box-shadow: 0 30px 60px oklch(15% 0.02 260 / 0.5);
+}
+
+/* ---------- Sections ---------- */
+.lp-section { padding: 84px 0; background: var(--bg); }
+.lp-section--alt { background: var(--surface-2); }
+.lp-head { text-align: center; max-width: 640px; margin: 0 auto 52px; }
+.lp-head h2 {
+  font-family: var(--font-display);
+  font-size: clamp(26px, 3.6vw, 36px); line-height: 1.15; letter-spacing: -0.02em; font-weight: 700;
+  color: var(--fg); margin: 0 0 14px;
+}
+.lp-head p { font-size: 16.5px; line-height: 1.6; color: var(--muted); margin: 0; }
+
+/* ---------- Bento ---------- */
+.lp-bento { display: grid; grid-template-columns: repeat(1, 1fr); gap: 18px; }
+.lp-card {
+  display: flex; flex-direction: column; justify-content: space-between; gap: 26px;
+  min-height: 210px; padding: 28px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; scroll-margin-top: 84px;
+  transition: border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+}
+.lp-card:hover { border-color: var(--dan-blue); transform: translateY(-3px); box-shadow: 0 14px 30px oklch(50% 0.02 260 / 0.10); }
+.lp-card__top { display: flex; align-items: flex-start; justify-content: space-between; }
+.lp-card__icon {
+  display: grid; place-items: center; width: 52px; height: 52px; border-radius: 13px;
+  background: var(--dan-blue-soft); color: var(--dan-blue-text);
+}
+.lp-card__tag { font-size: 11px; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase; color: var(--faint); }
+.lp-card h3 { font-family: var(--font-display); font-size: 20px; font-weight: 700; letter-spacing: -0.01em; color: var(--fg); margin: 0 0 8px; }
+.lp-card p { font-size: 14.5px; line-height: 1.6; color: var(--muted); margin: 0; }
+.lp-card--dark { background: var(--lp-navy); border-color: var(--lp-navy-line2); }
+.lp-card--dark:hover { border-color: var(--lp-gold); }
+.lp-card--dark h3 { color: var(--lp-on-navy); }
+.lp-card--dark p { color: var(--lp-on-navy-70); }
+.lp-card__icon--onDark { background: oklch(100% 0 0 / 0.1); color: var(--lp-gold); }
+.lp-card--muted { background: var(--surface-2); }
+.lp-card--split { position: relative; overflow: hidden; flex-direction: row; align-items: center; gap: 20px; }
+.lp-card--split > div { flex: 1; min-width: 0; }
+.lp-card--split .lp-card__icon { margin-bottom: 18px; }
+.lp-card__ghost {
+  flex-shrink: 0; color: var(--dan-blue); opacity: 0.08;
+  display: none;
+}
+.lp-link {
+  display: inline-flex; align-items: center; gap: 4px; margin-top: 16px;
+  font-size: 14px; font-weight: 600; color: var(--dan-blue-text); text-decoration: none;
+}
+.lp-link:hover { text-decoration: underline; }
+
+/* ---------- Split (stack) ---------- */
+.lp-split { display: grid; grid-template-columns: 1fr; gap: 48px; align-items: center; }
+.lp-split__copy h2 {
+  font-family: var(--font-display);
+  font-size: clamp(26px, 3.6vw, 34px); line-height: 1.15; letter-spacing: -0.02em; font-weight: 700;
+  color: var(--fg); margin: 0 0 12px;
+}
+.lp-split__sub { font-size: 16px; line-height: 1.6; color: var(--muted); margin: 0 0 30px; }
+.lp-feature-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 24px; }
+.lp-feature-list li { display: flex; gap: 16px; }
+.lp-feature-list__icon {
+  flex-shrink: 0; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 11px;
+  background: var(--surface); border: 1px solid var(--border); color: var(--dan-blue-text);
+}
+.lp-feature-list h4 { font-family: var(--font-display); font-size: 17px; font-weight: 700; color: var(--fg); margin: 0 0 5px; }
+.lp-feature-list p { font-size: 14.5px; line-height: 1.55; color: var(--muted); margin: 0; }
+
+/* Итгэлийн баталгааны карт */
+.lp-deploy {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; overflow: hidden; box-shadow: 0 16px 40px oklch(50% 0.02 260 / 0.08);
+}
+.lp-deploy__bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 22px; background: var(--lp-navy);
+}
+.lp-deploy__bar > span:first-child { font-family: var(--font-display); font-weight: 600; font-size: 15px; color: var(--lp-on-navy); }
+.lp-deploy__badge {
+  padding: 4px 9px; font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+  color: var(--lp-on-gold); background: var(--lp-gold); border-radius: 6px;
+}
+.lp-deploy__list { list-style: none; margin: 0; padding: 22px; display: flex; flex-direction: column; gap: 12px; }
+.lp-deploy__list li {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 15px; background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 10px;
+}
+.lp-deploy__check { display: inline-flex; color: var(--success); }
+.lp-deploy__label { flex: 1; font-size: 14.5px; font-weight: 500; color: var(--fg); }
+.lp-deploy__state { font-size: 12px; font-weight: 500; color: var(--success); }
+
+/* ---------- Everything grid ---------- */
+.lp-grid { display: grid; grid-template-columns: repeat(1, 1fr); gap: 16px; }
+.lp-mini {
+  padding: 22px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 13px; transition: border-color 0.16s ease, transform 0.16s ease;
+}
+.lp-mini:hover { border-color: var(--dan-blue); transform: translateY(-2px); }
+.lp-mini__icon {
+  display: grid; place-items: center; width: 42px; height: 42px; border-radius: 10px;
+  background: var(--dan-blue-soft); color: var(--dan-blue-text); margin-bottom: 15px;
+}
+.lp-mini h4 { font-family: var(--font-display); font-size: 15.5px; font-weight: 700; color: var(--fg); margin: 0 0 6px; }
+.lp-mini p { font-size: 13.5px; line-height: 1.5; color: var(--muted); margin: 0; }
+
+/* ---------- Final CTA ---------- */
+.lp-cta { position: relative; background: var(--lp-navy); overflow: hidden; padding: 92px 0; text-align: center; }
+.lp-cta__pattern {
+  position: absolute; inset: 0;
+  background-image: radial-gradient(circle at 1px 1px, oklch(100% 0 0 / 0.06) 1px, transparent 0);
+  background-size: 26px 26px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, #000 30%, transparent 100%);
+          mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, #000 30%, transparent 100%);
+}
+.lp-cta__inner { position: relative; z-index: 1; }
+.lp-cta__inner h2 {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 4.4vw, 44px); line-height: 1.1; letter-spacing: -0.025em; font-weight: 700;
+  color: var(--lp-on-navy); margin: 0 0 18px;
+}
+.lp-cta__inner > p { font-size: 17px; line-height: 1.6; color: var(--lp-on-navy-70); max-width: 560px; margin: 0 auto 34px; }
+.lp-cta__buttons { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; }
+.lp-cta__tagline {
+  margin-top: 40px; font-size: 12px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--lp-on-navy-45);
+}
+
+/* ---------- Footer ---------- */
+.lp-footer { background: var(--lp-navy); border-top: 1px solid var(--lp-navy-line); padding: 48px 0; }
+.lp-footer__inner {
+  display: flex; flex-direction: column; gap: 26px; align-items: center; text-align: center;
+}
+.lp-footer__mark { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.lp-footer__mark img { height: 30px; width: 30px; border-radius: 7px; }
+.lp-footer__mark span { font-family: var(--font-display); font-weight: 700; font-size: 16px; color: var(--lp-on-navy); }
+.lp-footer__brand > p { font-size: 13px; line-height: 1.5; color: var(--lp-on-navy-45); margin: 0; max-width: 300px; }
+.lp-footer__links { display: flex; flex-wrap: wrap; gap: 22px; justify-content: center; }
+.lp-footer__links a { font-size: 13.5px; color: var(--lp-on-navy-70); text-decoration: none; transition: color 0.14s ease; }
+.lp-footer__links a:hover { color: var(--lp-gold); }
+.lp-footer__copy { font-size: 12.5px; color: var(--lp-on-navy-45); margin: 0; }
+
+/* ---------- Responsive ---------- */
+@media (min-width: 720px) {
+  .lp-grid { grid-template-columns: repeat(2, 1fr); }
+  .lp-card__ghost { display: block; }
+}
+@media (min-width: 900px) {
+  .lp-nav__links { display: flex; }
+  .lp-hero__inner { grid-template-columns: 1.05fr 0.95fr; padding-top: 84px; padding-bottom: 104px; }
+  .lp-bento { grid-template-columns: repeat(12, 1fr); }
+  .lp-card { grid-column: span 4; }
+  .lp-card--wide { grid-column: span 8; }
+  .lp-split { grid-template-columns: 1fr 1fr; gap: 64px; }
+  .lp-grid { grid-template-columns: repeat(4, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-btn, .lp-card, .lp-mini { transition: none; }
+  .lp-card:hover, .lp-mini:hover, .lp-btn:active { transform: none; }
+}
+
+/* ============================================================================
+   Харагдацын удирдлагууд (AppearanceControls) — өнгө/фонт/нягтрал
+   ============================================================================ */
+.appearance { display: grid; gap: 16px; }
+.appearance__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.appearance__label { font-size: 14px; font-weight: 500; color: var(--fg); }
+
+.accent-swatches { display: flex; gap: 8px; }
+.accent-swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 2px solid var(--border);
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--on-dan-blue);
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+.accent-swatch:hover { transform: scale(1.08); }
+.accent-swatch.is-active { border-color: var(--fg); }
+.accent-swatch:focus-visible {
+  outline: 2px solid var(--dan-blue);
+  outline-offset: 2px;
+}
+/* Swatch өнгө нь тухайн accent-ийн гэгээн загварын --dan-blue-тэй тэнцүү.
+   Токен биш тогтмол утга (тухайн swatch-ийн танигдах өнгө) — accent-аас
+   хамааралгүй байх ёстой тул зориуд энд хатуу бичив. */
+.accent-swatch[data-swatch="cobalt"]  { background: oklch(53% 0.21 257); }
+.accent-swatch[data-swatch="teal"]    { background: oklch(58% 0.13 195); }
+.accent-swatch[data-swatch="violet"]  { background: oklch(52% 0.20 292); }
+.accent-swatch[data-swatch="emerald"] { background: oklch(56% 0.14 158); }
+.accent-swatch[data-swatch="amber"]   { background: oklch(58% 0.15 62); }
+/* Custom swatch — сонгоогүй үед солонго conic, сонгосон үед inline hex өнгө. */
+.accent-swatch--custom {
+  background: conic-gradient(from 0deg,
+    oklch(60% 0.2 20), oklch(70% 0.18 90), oklch(65% 0.15 160),
+    oklch(60% 0.2 260), oklch(55% 0.22 320), oklch(60% 0.2 20));
+}
+
+/* Админы харагдац тохиргооны өнгө сонгогч (input[type=color]). */
+.color-input {
+  width: 44px;
+  height: 30px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
+  background: var(--surface);
+  cursor: pointer;
+}
+.color-input::-webkit-color-swatch-wrapper { padding: 0; }
+.color-input::-webkit-color-swatch { border: none; border-radius: 4px; }
+
+/* Нэвтрэхээс өмнөх topbar — харагдац цэс + загвар солигчийг зэрэгцүүлнэ */
+.signin-shell__actions { display: flex; align-items: center; gap: 8px; }
+
+.anon-appearance { position: relative; }
+.anon-appearance__trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-input);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  transition: color 0.12s ease, border-color 0.12s ease;
+}
+.anon-appearance__trigger:hover { color: var(--fg); border-color: var(--border-strong); }
+.anon-appearance.is-open .anon-appearance__trigger { color: var(--dan-blue-text); border-color: var(--dan-blue); }
+.anon-appearance__trigger:focus-visible { outline: 2px solid var(--dan-blue); outline-offset: 2px; }
+
+.anon-appearance__popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 280px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-menu);
+  padding: 16px;
+  z-index: 60;
+  transform-origin: top right;
+  animation: user-menu-in 0.14s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.anon-appearance__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+  margin-bottom: 14px;
+}
+
+/* ============================================================================
+   Landing theme builder (админ) — жагсаалт, засварлагч, preview
+   ============================================================================ */
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: var(--radius-input);
+  border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+  transition: color 0.12s ease, border-color 0.12s ease;
+}
+.icon-btn:hover { color: var(--fg); border-color: var(--border-strong); }
+.icon-btn--danger:hover { color: var(--danger); border-color: var(--danger); }
+
+.theme-list { display: grid; gap: 8px; }
+.theme-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-card);
+  background: var(--surface); flex-wrap: wrap;
+}
+.theme-row.is-active { border-color: var(--dan-blue); background: var(--dan-blue-soft); }
+.theme-row__main { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.theme-row__name { font-weight: 600; font-size: 14px; color: var(--fg); }
+.theme-row__badge {
+  display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600;
+  color: var(--dan-blue-text); background: var(--surface); border-radius: var(--radius-chip);
+  padding: 2px 8px; border: 1px solid var(--dan-blue);
+}
+.theme-row__actions { display: flex; align-items: center; gap: 6px; }
+
+.theme-editor__grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 900px) { .theme-editor__grid { grid-template-columns: 1fr; } }
+
+.theme-section { border: 1px solid var(--border); border-radius: var(--radius-card); padding: 16px; display: grid; gap: 12px; }
+.theme-section > h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+
+.color-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.color-field { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--fg); }
+
+.copy-group { display: grid; gap: 10px; }
+.copy-nest { border-left: 2px solid var(--border); padding-left: 12px; display: grid; gap: 8px; }
+.copy-nest__label { font-size: 12px; font-weight: 600; color: var(--dan-blue-text); text-transform: capitalize; }
+.copy-textarea { resize: vertical; font-size: 13px; line-height: 1.4; }
+.copy-array { display: grid; gap: 8px; }
+.copy-array__item { border: 1px dashed var(--border); border-radius: var(--radius-input); padding: 10px; display: grid; gap: 8px; }
+.copy-array__head { display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; color: var(--muted); }
+
+/* Preview — draft палетрыг inline хувьсагчаар тусгана (sticky) */
+.theme-preview {
+  position: sticky; top: 16px; border: 1px solid var(--border-strong); border-radius: var(--radius-card);
+  overflow: hidden; background: var(--bg); color: var(--fg);
+}
+.theme-preview__bar { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); background: var(--surface-2); padding: 8px 14px; border-bottom: 1px solid var(--border); }
+.theme-preview__body { padding: 22px; display: grid; gap: 12px; }
+.theme-preview__brand { font-weight: 700; font-size: 15px; }
+.theme-preview__hero { font-size: 26px; font-weight: 600; line-height: 1.15; letter-spacing: -0.01em; }
+.theme-preview__lede { font-size: 13.5px; color: var(--muted); line-height: 1.5; margin: 0; }
+.theme-preview__btn { display: inline-flex; align-items: center; padding: 9px 16px; border-radius: var(--radius-input); font-size: 13px; font-weight: 600; }
+.theme-preview__nav { font-size: 12.5px; color: var(--dan-blue-text); }
+
+/* ============================================================================
+   ColorField — найдвартай өнгө сонгогч (1 дарж палитр, хос дарж OS сонгогч)
+   ============================================================================ */
+.cfield { position: relative; display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--fg); }
+.cfield__swatch {
+  width: 34px; height: 26px; border-radius: 7px; border: 1px solid var(--border-strong);
+  padding: 0; cursor: pointer; flex-shrink: 0; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
+  transition: transform 0.1s ease;
+}
+.cfield__swatch:hover { transform: scale(1.06); }
+.cfield.is-open .cfield__swatch { outline: 2px solid var(--dan-blue); outline-offset: 1px; }
+.cfield__label { line-height: 1.2; }
+.cfield__native { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; left: 0; bottom: 0; }
+
+.cfield__pop {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 70;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: var(--shadow-menu); padding: 10px; width: max-content;
+  animation: user-menu-in 0.12s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.cfield__grid { display: grid; grid-template-columns: repeat(8, 20px); gap: 6px; }
+.cfield__preset {
+  width: 20px; height: 20px; border-radius: 5px; border: 1px solid var(--border);
+  padding: 0; cursor: pointer; transition: transform 0.1s ease;
+}
+.cfield__preset:hover { transform: scale(1.18); border-color: var(--fg); }
+.cfield__more {
+  display: block; width: 100%; margin-top: 10px; padding: 7px 10px; font-size: 12.5px;
+  border: 1px solid var(--border); border-radius: var(--radius-input); background: var(--surface-2);
+  color: var(--fg); cursor: pointer;
+}
+.cfield__more:hover { border-color: var(--border-strong); }
