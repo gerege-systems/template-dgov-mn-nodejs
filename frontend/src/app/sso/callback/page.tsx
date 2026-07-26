@@ -4,7 +4,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { consumeNext } from '@/lib/authFlows';
 import { postJSON } from '@/lib/client';
+import { safeNext } from '@/lib/navigation';
 import { useSession } from '@/lib/session';
 
 // Government SSO (sso.dgov.mn)-д БҮРТГЭГДСЭН redirect_uri —
@@ -53,9 +55,13 @@ export default function SsoCallbackPage() {
       // кэшэд `null` сууж байгаа. Хүлээхгүй шилжвэл RequireAuth тэр `null`-ыг
       // хараад `/login?next=…` руу буцааж, хэрэглэгч гацна.
       await refreshSession();
+      // Хэрэглэгч хаашаа явж байгаад login руу шидэгдсэнийг сэргээнэ
+      // (`startSSOLogin` нь sessionStorage-д хадгалсан). `safeNext` нь зөвхөн
+      // ижил origin дахь замыг зөвшөөрөх тул нээлттэй чиглүүлэлт үүсэхгүй.
+      const back = safeNext(consumeNext());
       // `replace` — буцах товчоор code-той URL руу эргэж орохоос сэргийлнэ
       // (state нь нэг удаагийн, аль хэдийн зарцуулагдсан).
-      navigate('/me/dashboard', { replace: true });
+      navigate(back === '/' ? '/me/dashboard' : back, { replace: true });
     })();
   }, [navigate, refreshSession]);
 
