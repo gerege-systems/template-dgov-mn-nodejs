@@ -126,6 +126,19 @@ describe('дугтуй тайлах', () => {
   });
 });
 
+describe('дугтуйн ДАВХАР боолт', () => {
+  // `/users/me` нь `data`-г дахин нэг давхар боодог: `{ data: { user: {…} } }`.
+  // SPA хөрвүүлэлтийн үед энэ давхаргыг задлахаа мартсанаас нэвтэрсэн иргэний
+  // нэр/и-мэйл огт харагдахгүй болсон (401 ч биш, алдаа ч биш — зүгээр хоосон).
+  it('getJSON нь `data`-г буцаана — дотоод боолтыг дуудагч задлана', async () => {
+    fetchMock.mockResolvedValue(
+      json({ status: true, data: { user: { id: 'u-1', username: 'eid_1', first_name: 'Бат' } } }),
+    );
+    const res = await getJSON<{ user: { id: string; first_name: string } }>('/users/me');
+    expect(res.user.first_name).toBe('Бат');
+  });
+});
+
 describe('сүлжээний алдаа', () => {
   it('status=0 болж буцна (throw ХИЙХГҮЙ)', async () => {
     fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));

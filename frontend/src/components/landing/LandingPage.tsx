@@ -15,7 +15,8 @@ import { deepMerge } from '@/lib/theme';
 import { startSSOLogin } from '@/lib/authFlows';
 
 // Нээлттэй эх (Open Source) кодын GitHub репозитор.
-const GITHUB_URL = 'https://github.com/gerege-systems/template-dgov-mn';
+// Энэ хэвлэлийн repo — өмнө нь Go хувилбар руу заадаг байсан.
+import { GITHUB_URL } from '@/lib/links';
 
 // GitHub-ийн лого (lucide-react нь brand icon-уудыг гаргадаггүй тул inline SVG).
 const GitHubMark = ({ size = 18 }: { size?: number }) => (

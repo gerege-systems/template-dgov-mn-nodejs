@@ -12,7 +12,7 @@ import { z } from 'zod';
 import { strictObject } from '../../../../pkg/validators/validators.js';
 import type { SSOUsecase } from '../../../../usecases/sso/sso_usecase.js';
 import { userResponseFromDomain } from '../../../dto/responses/user.js';
-import { issueSessionCookies } from '../../../cookies.js';
+import { issueSessionCookies, setSsoLogoutRef, ssoLogoutRefFromCookie } from '../../../cookies.js';
 import { decodeBody, newSuccessResponse } from '../../../response.js';
 import type { AsyncHandler } from '../../../types.js';
 
@@ -29,9 +29,13 @@ const nativeSchema = strictObject({
   redirect_uri: z.string().min(1).max(400),
 });
 
-/** logoutSchema нь callback-д олгосон logout ref. */
+/**
+ * logoutSchema нь callback-д олгосон logout ref. SPA нь ref-ийг МЭДДЭГГҮЙ (тэр
+ * нь httpOnly cookie-д) тул талбар нь СОНГОЛТТОЙ — байхгүй бол сервер өөрөө
+ * cookie-гоос уншина. Мобайл/m2m клиент ref-ээ биеэр дамжуулсаар байна.
+ */
 const logoutSchema = strictObject({
-  ref: z.string().max(64),
+  ref: z.string().max(64).optional(),
 });
 
 export class SSOHandler {
@@ -53,6 +57,10 @@ export class SSOHandler {
     const out = await this.usecase.complete(req.ctx, body.state, body.code);
     // Browser урсгал — токенуудыг httpOnly cookie-д (JSON бие хэвээр).
     issueSessionCookies(res, out.token, out.refreshToken);
+    // SSO logout ref-ийг httpOnly cookie-д — гарах үед сервер өөрөө уншиж
+    // IdP дээрх session-ийг ч дуусгана (эс бөгөөс "гараад дахин автоматаар
+    // нэвтэрч орох" болно).
+    setSsoLogoutRef(res, out.logoutRef);
     newSuccessResponse(req, res, 200, 'sso login complete', {
       token: out.token,
       refresh_token: out.refreshToken,
@@ -93,7 +101,8 @@ export class SSOHandler {
    */
   logout: AsyncHandler = async (req, res) => {
     const body = decodeBody(req, logoutSchema);
-    const url = await this.usecase.logoutUrl(req.ctx, body.ref);
+    const ref = body.ref ?? ssoLogoutRefFromCookie(req);
+    const url = await this.usecase.logoutUrl(req.ctx, ref);
     newSuccessResponse(req, res, 200, 'sso logout url', { sso_logout_url: url });
   };
 }

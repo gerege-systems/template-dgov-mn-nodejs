@@ -23,8 +23,13 @@ export const permissionsQueryKey = ['session', 'permissions'] as const;
  */
 async function fetchMe(): Promise<SessionUser | null> {
   try {
-    const user = await getJSON<BackendUser>('/users/me');
-    return toSessionUser(user);
+    // ⚠️ `GET /users/me` нь дугтуйн `data`-г ДАХИН нэг давхар боодог:
+    //     { status, message, data: { user: { … } }, request_id }
+    // `getJSON` нь `data`-г буцаадаг тул ЭНД `.user`-ыг задлах ёстой. Үүнийг
+    // алгасвал талбар бүр `undefined` болж, UI нь хоосон нэр · "?" аватар ·
+    // хоосон и-мэйл харуулна — 401 ч биш, алдаа ч биш, зүгээр л хоосон.
+    const res = await getJSON<{ user: BackendUser }>('/users/me');
+    return toSessionUser(res.user);
   } catch (err) {
     if (err instanceof ApiError && (err.status === 401 || err.status === 403)) return null;
     throw err;

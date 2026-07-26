@@ -31,6 +31,15 @@ export const RefreshCookie = 'dgov_refresh';
 export const CsrfCookie = 'dgov_csrf';
 /** CSRF-ийн толгой — мутацийн хүсэлт бүр үүнийг зөөнө. */
 export const CsrfHeader = 'x-dgov-csrf';
+/**
+ * SSO-гийн logout ref — httpOnly. SSO-гоор нэвтэрсэн session-ийг ГАРАХ үед
+ * IdP дээр ч дуусгахад хэрэгтэй богино түлхүүр (id_token өөрөө БИШ — тэр нь
+ * том бөгөөд эмзэг тул Redis-д үлдэж, энд зөвхөн 32 hex ref явна).
+ *
+ * ЖС уншихгүй: SPA нь ref-ийг мэдэх шаардлагагүй — `POST /auth/logout` дээр
+ * сервер өөрөө cookie-гоос уншиж logout URL-ыг буцаана.
+ */
+export const SsoLogoutCookie = 'dgov_sso_logout';
 
 /**
  * Cookie-ийн насжилт. Backend-ийн анхдагч: JWT_EXPIRED=5 цаг,
@@ -101,6 +110,28 @@ export function issueSessionCookies(
   );
 }
 
+/**
+ * setSsoLogoutRef нь SSO-гийн logout ref-ийг httpOnly cookie-д тавина. Хоосон
+ * ref (SSO-гоор нэвтрээгүй) үед юу ч хийхгүй.
+ */
+export function setSsoLogoutRef(res: Response, ref: string): void {
+  if (ref === '') return;
+  appendCookie(
+    res,
+    serialize(SsoLogoutCookie, ref, {
+      httpOnly: true,
+      secure: secureCookies(),
+      sameSite: 'lax',
+      path: '/',
+      maxAge: refreshMaxAgeSeconds,
+    }),
+  );
+}
+
+/** ssoLogoutRefFromCookie нь SSO logout ref-ийг уншина ('' бол байхгүй). */
+export const ssoLogoutRefFromCookie = (req: Request): string =>
+  readCookies(req)[SsoLogoutCookie] ?? '';
+
 /** clearSessionCookies нь гарах үед session cookie-г бүгдийг нь устгана. */
 export function clearSessionCookies(res: Response): void {
   const secure = secureCookies();
@@ -108,6 +139,7 @@ export function clearSessionCookies(res: Response): void {
     [AccessCookie, true],
     [RefreshCookie, true],
     [CsrfCookie, false],
+    [SsoLogoutCookie, true],
   ] as const) {
     appendCookie(
       res,

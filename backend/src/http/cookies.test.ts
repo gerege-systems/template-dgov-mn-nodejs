@@ -17,6 +17,7 @@ import {
   CsrfHeader,
   issueSessionCookies,
   RefreshCookie,
+  SsoLogoutCookie,
 } from './cookies.js';
 import { csrfMiddleware } from './middlewares/csrf.js';
 import type { Request, Response } from './types.js';
@@ -127,7 +128,13 @@ describe('session cookie олгох', () => {
     const res = fakeRes();
     clearSessionCookies(res);
     const cookies = res.cookies();
-    expect(cookies).toHaveLength(3);
+    // access · refresh · csrf · SSO logout ref — ДӨРВҮҮЛЭН. SSO-гийн ref-ийг
+    // орхивол дараагийн нэвтрэлтэд хуучин ref үлдэж, гарах урсгал буруу
+    // session-ыг дуусгах оролдлого хийнэ.
+    expect(cookies).toHaveLength(4);
+    for (const name of [AccessCookie, RefreshCookie, CsrfCookie, SsoLogoutCookie]) {
+      expect(cookies.some((c) => c.startsWith(`${name}=`))).toBe(true);
+    }
     for (const c of cookies) expect(c).toContain('Max-Age=0');
   });
 });
