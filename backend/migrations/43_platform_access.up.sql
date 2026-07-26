@@ -1,4 +1,3 @@
--- Government Template Platform V3.0
 -- Платформын хандалтын горим (access_mode: public|private). Singleton (id=1)
 -- config хүснэгт — site_appearance-ийн адил RLS-гүй нийтийн тохиргоо, зөвхөн
 -- superadmin UPDATE хийнэ. public: хэн ч Government SSO-оор нэвтэрч болно (одоогийн
