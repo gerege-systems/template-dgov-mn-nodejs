@@ -1,7 +1,5 @@
-// eID based AI enabled Government Template Platform V3.0
 // OIDC provider алдааны хуудас — Hydra URLS_ERROR энд чиглүүлнэ.
 import { Link, useSearchParams } from 'react-router-dom';
-
 
 export default function OAuthErrorPage() {
   const [sp] = useSearchParams();

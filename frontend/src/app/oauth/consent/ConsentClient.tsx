@@ -1,4 +1,3 @@
-// eID based AI enabled Government Template Platform V3.0
 // Consent — dan-ий өөрийн дизайн (form-grid / signin-card / btn--*). Логик нь
 // /api/provider/consent-д холбогдоно.
 'use client';

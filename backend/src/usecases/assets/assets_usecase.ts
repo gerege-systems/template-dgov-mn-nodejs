@@ -1,4 +1,3 @@
-// Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
 
 // usecases/assets нь хэрэглэгчийн гарын үсэг (хувь хүн) ба байгууллагын тамганы

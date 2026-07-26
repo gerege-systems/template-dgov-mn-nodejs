@@ -1,4 +1,3 @@
-// Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
 
 // Relay домэйний цэвэр дүрмүүдийн тестүүд — webhook-ийн HMAC гарын үсэг

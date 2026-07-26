@@ -1,4 +1,3 @@
-// Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
 
 // logger нь апп-ын бүтэцлэгдсэн JSON логийн цорын ганц гарц юм. Go template-ийн

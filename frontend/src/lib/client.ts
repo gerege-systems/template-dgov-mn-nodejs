@@ -1,4 +1,3 @@
-// Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
 
 // Browser → API (ижил origin дахь `/api/v1/*`) рүү хандах ЦОРЫН ГАНЦ цэг.

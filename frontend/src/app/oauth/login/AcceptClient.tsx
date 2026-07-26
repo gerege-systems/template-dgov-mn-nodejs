@@ -1,4 +1,3 @@
-// eID based AI enabled Government Template Platform V3.0
 // Нэвтэрсэн сесстэй иргэн /oauth/login руу ирэхэд (eID/Google-ийн дараа буцаж
 // ирсэн, эсвэл өмнөх session) Hydra login challenge-ыг шууд accept хийж RP руу
 // буцна.

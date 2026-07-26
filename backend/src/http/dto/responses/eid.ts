@@ -1,4 +1,3 @@
-// Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
 
 // eID профайлын хариуны DTO-нууд. Wire формат нь snake_case (клиенттэй нийцтэй);

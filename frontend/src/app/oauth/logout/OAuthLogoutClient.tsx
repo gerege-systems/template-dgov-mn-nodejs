@@ -1,4 +1,3 @@
-// eID based AI enabled Government Template Platform V3.0
 // Logout — dan-ий өөрийн дизайн. Гарах товч дарахад ЭХЛЭЭД dan-ий session-ыг
 // цэвэрлээд (/api/auth/logout), дараа нь Hydra logout challenge-ыг accept хийж
 // (/api/provider/logout/accept) RP руу буцна.

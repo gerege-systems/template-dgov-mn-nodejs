@@ -1,5 +1,3 @@
-
-// Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
 
 // Ring R1 регистрийн view-уудын хуваалцсан жижиг компонентууд. Template-ийн
