@@ -30,6 +30,23 @@ if [ -n "${INTEGRATION_ENC_KEY:-}" ] && ! grep -q '^INTEGRATION_ENC_KEY=' backen
   echo "▶ INTEGRATION_ENC_KEY-г backend.env-д бичлээ (superadmin MFA идэвхжинэ)"
 fi
 
+# SSO_CLIENT_ID / SSO_CLIENT_SECRET — Government SSO (sso.dgov.mn) дээр энэ
+# апп-ыг RP болгон бүртгүүлэхэд олгогддог эрхийн мэдээлэл. sso.dgov.mn нь
+# ДИНАМИК бүртгэл (RFC 7591) дэмждэггүй тул бүртгэлийг тэр талын оператор
+# гүйцэтгэнэ; энд зөвхөн үр дүнг суулгана.
+#
+# INTEGRATION_ENC_KEY-ээс ЯЛГААТАЙ нь: эдгээрийг ДАРЖ бичнэ. Шалтгаан нь client
+# secret эргэлддэг (rotate) — GitHub secret-ийг шинэчилмэгц дараагийн deploy
+# сервер дээрх утгыг солих ёстой. Шифрлэлтийн түлхүүр шиг "нэг л удаа" биш.
+if [ -n "${SSO_CLIENT_ID:-}" ] && [ -n "${SSO_CLIENT_SECRET:-}" ]; then
+  tmp_env="$(mktemp)"
+  grep -vE '^(SSO_CLIENT_ID|SSO_CLIENT_SECRET)=' backend.env 2>/dev/null > "$tmp_env" || true
+  printf 'SSO_CLIENT_ID=%s\n' "$SSO_CLIENT_ID" >> "$tmp_env"
+  printf 'SSO_CLIENT_SECRET=%s\n' "$SSO_CLIENT_SECRET" >> "$tmp_env"
+  mv "$tmp_env" backend.env
+  echo "▶ SSO эрхийн мэдээллийг backend.env-д бичлээ (SSO нэвтрэлт идэвхжинэ)"
+fi
+
 # APP_ORIGIN — гуравдагч талын OAuth-ийн redirect_uri үүнээс угсрагдана. Урвуу
 # proxy-ийн цаана хүсэлтийн Host нь дотоод хаяг байж болзошгүй ба redirect_uri нь
 # провайдерт БҮРТГЭСЭНТЭЙ ЯГ таарах ёстой тул ил тавина. BACKEND.ENV-д байхгүй

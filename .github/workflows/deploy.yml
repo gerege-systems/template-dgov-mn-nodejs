@@ -11,6 +11,10 @@
 #   DEPLOY_PATH           — серверт repo checkout хийсэн зам
 #                           (ж: /srv/template-dgov-mn-nodejs)
 #   INTEGRATION_ENC_KEY   — AES-GCM түлхүүр (deploy.sh backend.env-д нэг удаа бичнэ)
+#   SSO_CLIENT_ID         — заавал биш; sso.dgov.mn дээр энэ апп-ыг RP болгон
+#   SSO_CLIENT_SECRET       бүртгүүлэхэд олгогдоно. Хоёулаа өгөгдсөн үед deploy
+#                           нь backend.env-д бичиж SSO нэвтрэлтийг идэвхжүүлнэ
+#                           (secret эргэлддэг тул ДАРЖ бичнэ).
 #   DEPLOY_SSH_PORT       — заавал биш; хоосон бол 22
 name: Deploy
 
@@ -54,6 +58,8 @@ jobs:
           DEPLOY_PORT: ${{ secrets.DEPLOY_SSH_PORT }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
           INTEGRATION_ENC_KEY: ${{ secrets.INTEGRATION_ENC_KEY }}
+          SSO_CLIENT_ID: ${{ secrets.SSO_CLIENT_ID }}
+          SSO_CLIENT_SECRET: ${{ secrets.SSO_CLIENT_SECRET }}
         run: |
           # Нууц утгуудыг argv-д биш, stdin (heredoc)-оор дамжуулна — серверийн
           # process listing-д харагдахгүй.
@@ -62,6 +68,8 @@ jobs:
               "$DEPLOY_USER@$DEPLOY_HOST" 'bash -s' <<REMOTE
           set -euo pipefail
           export INTEGRATION_ENC_KEY='${INTEGRATION_ENC_KEY}'
+          export SSO_CLIENT_ID='${SSO_CLIENT_ID}'
+          export SSO_CLIENT_SECRET='${SSO_CLIENT_SECRET}'
           cd '${DEPLOY_PATH}'
           echo "▶ main-ийн сүүлийн commit-ийг татаж байна…"
           git fetch --all --prune

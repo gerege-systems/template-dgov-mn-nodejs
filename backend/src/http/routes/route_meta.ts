@@ -41,7 +41,14 @@ export function registerMetaRoutes(router: Router, _deps: Deps): void {
         issuer: issuer(),
         features: {
           google_login: AppConfig.GOOGLE_CLIENT_ID !== '',
-          sso: AppConfig.SSO_ISSUER !== '',
+          // SSO нь issuer ГАНЦААРАА биш — `/sso/start` нь client id/secret ба
+          // redirect_uri хоёрыг бас шаарддаг (pkg/oidc-ийн `configured()`).
+          // Зөвхөн issuer-ээр шалгавал UI нь дарахад 500 өгдөг товч харуулна.
+          sso:
+            AppConfig.SSO_ISSUER !== '' &&
+            AppConfig.SSO_CLIENT_ID !== '' &&
+            AppConfig.SSO_CLIENT_SECRET !== '' &&
+            AppConfig.SSO_REDIRECT_URI !== '',
           ai: AppConfig.GEMINI_API_KEY !== '',
           sign: AppConfig.EID_RP_UUID !== '',
         },

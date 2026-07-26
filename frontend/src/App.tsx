@@ -44,6 +44,7 @@ import AdminUsersPage from '@/app/admin/users/page';
 import AppEidCallbackPage from '@/app/app/eid/callback/page';
 import AuthEidCallbackPage from '@/app/auth/eid/callback/page';
 import LoginPage from '@/app/login/page';
+import SsoCallbackPage from '@/app/sso/callback/page';
 import LoginVerifyPage from '@/app/login/verify/page';
 import ManagerDashboardPage from '@/app/manager/dashboard/page';
 import ManagerRequestsPage from '@/app/manager/requests/page';
@@ -114,6 +115,9 @@ function AppRoutes(): React.ReactElement {
       <Route path="/" element={<HomePage />} />
       <Route path="/app/eid/callback" element={<AppEidCallbackPage />} />
       <Route path="/auth/eid/callback" element={<AuthEidCallbackPage />} />
+      {/* Government SSO-д бүртгэгдсэн redirect_uri — энэ маршрут байхгүй бол
+          catch-all нь ?code-ыг залгиж нэвтрэлт чимээгүй унана. */}
+      <Route path="/sso/callback" element={<SsoCallbackPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/login/verify" element={<LoginVerifyPage />} />
       <Route path="/profile" element={<ProfilePage />} />
