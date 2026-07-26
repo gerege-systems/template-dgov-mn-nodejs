@@ -139,7 +139,7 @@ SSO_ISSUER=https://sso.dgov.mn
 SSO_CLIENT_ID=<…>
 SSO_CLIENT_SECRET=<…>
 SSO_REDIRECT_URI=https://node.template.dgov.mn/sso/callback
-SSO_SCOPE=openid profile email
+SSO_SCOPE=openid profile email eid offline_access nationalid
 
 # --- OIDC PROVIDER side (this platform as an issuer) ---
 OAUTH_ISSUER=https://node.template.dgov.mn   # no trailing slash — it is the `iss` claim
@@ -168,6 +168,43 @@ OBSERVABILITY_TOKEN=<random>            # bearer for /metrics + /swagger/doc.jso
 GEMINI_API_KEY=<AIza…>                  # AI features; empty = AI endpoints return 500
 RELAY_DEMO_MODE=false                   # off in production — real platforms call back
 ```
+
+### Registering as an RP on Government SSO
+
+`sso.dgov.mn` does **not** support dynamic registration (RFC 7591) — the client is
+created once through the SSO side's operator API. This deployment is already
+registered:
+
+| Field | Value |
+|---|---|
+| `client_id` | `node-template-dgov-mn` |
+| `redirect_uri` | `https://node.template.dgov.mn/sso/callback` |
+| post-logout | `https://node.template.dgov.mn/` |
+| scope | `openid profile email eid offline_access nationalid` |
+| auth method | `client_secret_basic` |
+| grants | `authorization_code`, `refresh_token` |
+
+The `redirect_uri` is matched **exactly**, so `SSO_REDIRECT_URI` and the
+registration must agree character for character. The SPA **must** have a
+`/sso/callback` route — without it the catch-all swallows `?code` and login fails
+silently.
+
+Re-register / rotate the secret (from the SSO host, with an admin API key):
+
+```bash
+# List registrations
+curl -H "X-API-Key: $KEY" http://127.0.0.1:8081/admin/api/v1/clients
+
+# Rotate — the NEW secret is returned ONCE
+curl -X POST -H "X-API-Key: $KEY" \
+  http://127.0.0.1:8081/admin/api/v1/clients/node-template-dgov-mn/rotate-secret
+```
+
+Put the new secret in the `SSO_CLIENT_SECRET` GitHub secret and the next deploy
+writes it into `backend.env` (`deploy/deploy.sh`); same for `SSO_CLIENT_ID`. If
+neither is provided the deploy leaves the server's values untouched.
+
+
 
 Generate secrets with `openssl rand -base64 48`.
 

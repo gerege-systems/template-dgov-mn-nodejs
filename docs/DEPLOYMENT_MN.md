@@ -140,7 +140,7 @@ SSO_ISSUER=https://sso.dgov.mn
 SSO_CLIENT_ID=<…>
 SSO_CLIENT_SECRET=<…>
 SSO_REDIRECT_URI=https://node.template.dgov.mn/sso/callback
-SSO_SCOPE=openid profile email
+SSO_SCOPE=openid profile email eid offline_access nationalid
 
 # --- OIDC PROVIDER тал (энэ платформ өөрөө issuer) ---
 OAUTH_ISSUER=https://node.template.dgov.mn   # сүүлийн slash-гүй — энэ нь `iss` claim
@@ -169,6 +169,40 @@ OBSERVABILITY_TOKEN=<random>              # prod-д /metrics + /swagger/doc.json
 GEMINI_API_KEY=<AIza…>                    # AI функц; хоосон = AI endpoint 500
 RELAY_DEMO_MODE=false                     # production-д унтраа — бодит platform callback хийнэ
 ```
+
+### Government SSO дээр RP болгон бүртгүүлэх
+
+`sso.dgov.mn` нь **динамик бүртгэл (RFC 7591) дэмждэггүй** — client-ыг SSO талын
+операторын API-аар нэг удаа үүсгэнэ. Энэ deployment аль хэдийн бүртгэгдсэн:
+
+| Талбар | Утга |
+|---|---|
+| `client_id` | `node-template-dgov-mn` |
+| `redirect_uri` | `https://node.template.dgov.mn/sso/callback` |
+| post-logout | `https://node.template.dgov.mn/` |
+| scope | `openid profile email eid offline_access nationalid` |
+| auth method | `client_secret_basic` |
+| grant | `authorization_code`, `refresh_token` |
+
+`redirect_uri` нь **ЯГ** тулгагддаг тул `SSO_REDIRECT_URI` болон бүртгэл хоёр
+тэмдэгт тэмдэгтээрээ таарах ёстой. SPA талд `/sso/callback` **маршрут байх ёстой**
+— эс бөгөөс catch-all нь `?code`-ыг залгиж нэвтрэлт чимээгүй унана.
+
+Дахин бүртгэх / secret эргүүлэх (SSO серверээс, admin API key-тэйгээр):
+
+```bash
+# Бүртгэлүүдийг харах
+curl -H "X-API-Key: $KEY" http://127.0.0.1:8081/admin/api/v1/clients
+
+# Secret эргүүлэх — хариунд ШИНЭ secret НЭГ УДАА буцна
+curl -X POST -H "X-API-Key: $KEY" \
+  http://127.0.0.1:8081/admin/api/v1/clients/node-template-dgov-mn/rotate-secret
+```
+
+Шинэ secret-ийг GitHub secret (`SSO_CLIENT_SECRET`) болгон тавихад дараагийн
+deploy нь `backend.env`-д бичнэ (`deploy/deploy.sh`). `SSO_CLIENT_ID` мөн адил.
+Хоёулаа өгөгдөөгүй бол deploy нь сервер дээрх утгыг ХӨНДӨХГҮЙ.
+
 
 Нууц утгуудыг `openssl rand -base64 48`-аар үүсгэ.
 
