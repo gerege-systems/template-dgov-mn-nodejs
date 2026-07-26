@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from 'react';
 import { postJSON } from '@/lib/client';
-import { useRefreshData } from '@/lib/refresh';
+import { useSession } from '@/lib/session';
 import { useNavigate } from 'react-router-dom';
 
 // Платформ стандарт App2App буцах цэг — `/auth/eid/callback`.
@@ -12,7 +12,7 @@ import { useNavigate } from 'react-router-dom';
 // буцах цэг стандарт. CROSS-DEVICE (desktop QR/push) урсгалд энэ хуудас ОГТ дуудагдахгүй — эх
 // browser байрандаа poll хийж нэвтэрдэг.
 export default function EidCallbackPage() {
-  const refreshData = useRefreshData();
+  const { refresh: refreshSession } = useSession();
   const navigate = useNavigate();
   const [err, setErr] = useState('');
 
@@ -31,8 +31,11 @@ export default function EidCallbackPage() {
       const state = res.data?.state;
       if (state === 'COMPLETE') {
         stopped = true;
-        navigate('/', { replace: true }); // backend poll COMPLETE-д session cookie тавьсан — нэвтэрлээ
-        void refreshData();
+        // backend poll COMPLETE-д session cookie тавьсан — session-ийг ХҮЛЭЭЖ
+        // шинэчилсний ДАРАА л шилжинэ (эс бөгөөс хуучин `null` кэш үлдэж,
+        // хамгаалагдсан хуудас руу орох гэвэл login руу буцаана).
+        await refreshSession();
+        navigate('/', { replace: true });
       } else if (state === 'EXPIRED' || state === 'REFUSED') {
         stopped = true;
         setErr('Нэвтрэлт дуусгагдсангүй. Дахин оролдоно уу.');
@@ -46,7 +49,7 @@ export default function EidCallbackPage() {
       stopped = true;
       clearInterval(timer);
     };
-  }, [navigate, refreshData]);
+  }, [navigate, refreshSession]);
 
   return (
     <main style={{ padding: 40, textAlign: 'center', fontFamily: 'system-ui, sans-serif' }}>

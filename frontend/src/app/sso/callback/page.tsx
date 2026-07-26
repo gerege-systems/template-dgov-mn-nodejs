@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { postJSON } from '@/lib/client';
-import { useRefreshData } from '@/lib/refresh';
+import { useSession } from '@/lib/session';
 
 // Government SSO (sso.dgov.mn)-д БҮРТГЭГДСЭН redirect_uri —
 // `https://<origin>/sso/callback`. Иргэн SSO дээр нэвтэрсний дараа browser-ыг
@@ -21,7 +21,7 @@ import { useRefreshData } from '@/lib/refresh';
 // үр дүнгээр нь шилжүүлнэ.
 export default function SsoCallbackPage() {
   const navigate = useNavigate();
-  const refreshData = useRefreshData();
+  const { refresh: refreshSession } = useSession();
   const [failed, setFailed] = useState(false);
   // React 19-ийн StrictMode нь effect-ийг хөгжүүлэлтэд ХОЁР удаа ажиллуулна.
   // `state` нь НЭГ УДААГИЙН (backend Redis-ээс GetDel хийдэг) тул хоёр дахь
@@ -48,13 +48,16 @@ export default function SsoCallbackPage() {
         setFailed(true);
         return;
       }
-      // Backend session cookie-г аль хэдийн тавьсан — session-ыг дахин уншаад
-      // хэрэглэгчийн самбар руу. `replace` нь буцах товчоор code-той URL руу
-      // эргэж орохоос сэргийлнэ (state аль хэдийн зарцуулагдсан).
-      void refreshData();
+      // Session-ийг ЗААВАЛ ХҮЛЭЭЖ шинэчилнэ. Энэ хуудас нээгдэх үед
+      // `GET /users/me` аль хэдийн 401 буцаасан (cookie тавигдаагүй байсан) тул
+      // кэшэд `null` сууж байгаа. Хүлээхгүй шилжвэл RequireAuth тэр `null`-ыг
+      // хараад `/login?next=…` руу буцааж, хэрэглэгч гацна.
+      await refreshSession();
+      // `replace` — буцах товчоор code-той URL руу эргэж орохоос сэргийлнэ
+      // (state нь нэг удаагийн, аль хэдийн зарцуулагдсан).
       navigate('/me/dashboard', { replace: true });
     })();
-  }, [navigate, refreshData]);
+  }, [navigate, refreshSession]);
 
   useEffect(() => {
     if (failed) navigate('/login?error=sso', { replace: true });

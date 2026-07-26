@@ -5,7 +5,7 @@ import Alert from '@/components/Alert';
 import { postJSON } from '@/lib/client';
 import { safeNext } from '@/lib/navigation';
 import { useT } from '@/lib/lang';
-import { useRefreshData } from '@/lib/refresh';
+import { useSession } from '@/lib/session';
 import { useNavigate } from 'react-router-dom';
 
 type Phase = 'checking' | 'success' | 'expired' | 'refused' | 'error';
@@ -16,7 +16,7 @@ const POLL_INTERVAL_MS = 2500;
 // App2App-ийн дараа eID апп-аас буцаж ирэх callback. session id-г хэдэн удаа
 // poll хийж, COMPLETE бол /me/dashboard (эсвэл next) руу шилжинэ.
 export default function EidVerify({ sessionId, next }: { sessionId: string; next: string }) {
-  const refreshData = useRefreshData();
+  const { refresh: refreshSession } = useSession();
   const navigate = useNavigate();
   const { T } = useT();
   const [phase, setPhase] = useState<Phase>('checking');
@@ -38,8 +38,12 @@ export default function EidVerify({ sessionId, next }: { sessionId: string; next
         const state = res.data?.state;
         if (state === 'COMPLETE') {
           setPhase('success');
-          navigate(safeNext(target));
-          void refreshData();
+          // Session-ийг ЗААВАЛ ХҮЛЭЭЖ шинэчилнэ — эс бөгөөс RequireAuth нь
+          // нэвтрэхээс өмнөх `null`-ыг хараад буцаагаад login руу шидэж,
+          // хэрэглэгч гацна (нэвтэрсэн атлаа "нэвтрээгүй").
+          await refreshSession();
+          if (!mounted.current) return;
+          navigate(safeNext(target), { replace: true });
           return;
         }
         if (state === 'EXPIRED') {
@@ -65,7 +69,7 @@ export default function EidVerify({ sessionId, next }: { sessionId: string; next
       mounted.current = false;
       if (timer) clearTimeout(timer);
     };
-  }, [sessionId, next, navigate, refreshData]);
+  }, [sessionId, next, navigate, refreshSession]);
 
   return (
     <div className="form-grid" aria-live="polite">

@@ -77,7 +77,19 @@ export function SessionProvider({ children }: { children: React.ReactNode }): Re
     me: query.data ?? null,
     loading: query.isLoading,
     refresh: async () => {
-      await qc.invalidateQueries({ queryKey: meQueryKey });
+      // Нэвтрэлт дуусмагц энэ функц session-ийг ЗААВАЛ ШИНЭЭР уншина.
+      //
+      // `invalidateQueries` хангалтгүй: тэр нь зөвхөн "хуучирсан" гэж тэмдэглэдэг.
+      // Мөн зүгээр `refetchQueries` ч эрсдэлтэй — callback хуудас ачаалагдах үед
+      // `GET /users/me` НИСЛЭГТ явж байсан (тэр үед cookie хараахан тавигдаагүй
+      // тул 401 буцаана). Тэр хуучин хариу дараа нь ирж кэшийг `null` болгож
+      // дарж бичвэл RequireAuth хэрэглэгчийг login руу буцаана — яг л
+      // "нэвтэрсэн атлаа нэвтрээгүй" гацаа.
+      //
+      // Тиймээс эхлээд нислэгт байгааг ЦУЦАЛЖ (үр дүнг нь үл тоомсорлож),
+      // дараа нь шинэ хүсэлт явуулж дуустал хүлээнэ.
+      await qc.cancelQueries({ queryKey: meQueryKey });
+      await qc.refetchQueries({ queryKey: meQueryKey });
     },
     clear: () => {
       qc.setQueryData(meQueryKey, null);
