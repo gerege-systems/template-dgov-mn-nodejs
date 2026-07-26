@@ -1,4 +1,3 @@
-// Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
 
 // Гарын үсгийн түлхүүр + id_token-ий БҮТЭН ЭРГЭЛТ: сервер id_token гаргаж,

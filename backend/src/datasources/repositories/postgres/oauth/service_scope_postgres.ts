@@ -1,4 +1,3 @@
-// Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
 
 // gateway_services.scope багана дээрх хөрвүүлэгч — gateway service id ↔ OAuth

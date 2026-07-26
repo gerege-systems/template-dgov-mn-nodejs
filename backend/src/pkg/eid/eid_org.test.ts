@@ -1,4 +1,3 @@
-// Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
 
 // eID байгууллагын төлөөллийн client-ийн unit тестүүд. Гол зорилго: 403 нь

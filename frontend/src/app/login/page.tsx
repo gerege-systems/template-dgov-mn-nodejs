@@ -1,4 +1,3 @@
-// Government Template Platform V3.0
 // Gerege Systems Development Team & Claude AI, 2026
 import { LogIn } from 'lucide-react';
 import SigninShell from '@/components/SigninShell';
@@ -6,8 +5,6 @@ import { safeNext } from '@/lib/navigation';
 import { useSearchParams } from 'react-router-dom';
 import { usePageTitle } from '@/lib/usePageTitle';
 import { startSSOLogin } from '@/lib/authFlows';
-
-
 
 // Нэвтрэлт нь Government SSO (sso.dgov.mn)-оор дамжина. Товч дарахад sso.dgov.mn
 // руу шилжиж, тэндээ нэвтэрч, буцаж ирнэ (OIDC RP урсгал). SSO callback амжилтгүй

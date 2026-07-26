@@ -1,4 +1,3 @@
-// Government Template Platform V3.0
 // Gerege Systems Development Team болон Claude AI хамтран бүтээв, 2026.
 
 import { badRequest, conflict, DomainError, internalCause } from '../../apperror/index.js';

@@ -1,4 +1,3 @@
-// Government Template Platform V3.0
 // Ring System · R1 — Үйлчилгээний нэгдсэн регистрийн frontend типүүд
 // (backend responses_registry.go-ийн snake_case DTO-той тохирно).
 
