@@ -30,3 +30,6 @@ out/
 .idea/
 .vscode/
 *.log
+
+# deploy.sh-ийн no-op хамгаалалт
+.deployed-sha

@@ -68,6 +68,18 @@ if [ -f backend.env ]; then
   chmod 600 backend.env 2>/dev/null || true
 fi
 
+# ── Юу ч өөрчлөгдөөгүй бол огт хөдлөхгүй ────────────────────────────────────
+# Docker-ийн build нь тогтвортой БИШ: ижил эх кодоос ч build бүрд шинэ image ID
+# гардаг тул `up -d` контейнерийг ҮРГЭЛЖ дахин үүсгэж секундын 502 өгдөг.
+STAMP=".deployed-sha"
+HEAD_SHA="$(git rev-parse HEAD)"
+if [ "${FORCE_DEPLOY:-0}" != "1" ] && [ -f "$STAMP" ] && [ "$(cat "$STAMP")" = "$HEAD_SHA" ]; then
+  echo "▶ Өөрчлөлт алга (${HEAD_SHA:0:12}) — build/up алгасав, тасалдал үүсгэхгүй."
+  echo "  Албадах бол: FORCE_DEPLOY=1 bash deploy/deploy.sh"
+  docker compose ps
+  exit 0
+fi
+
 echo "▶ Building images…"
 # shellcheck disable=SC2086 — SERVICES нь зориудаар зайгаар салгасан жагсаалт.
 docker compose build ${SERVICES}
@@ -143,3 +155,6 @@ docker image prune -f >/dev/null
 echo "▶ Stack status:"
 docker compose ps
 echo "✅ Deploy complete."
+
+# Амжилттай дууссан тул дараагийн no-op deploy алгасахад тамга үлдээнэ.
+echo "$HEAD_SHA" > "$STAMP"
