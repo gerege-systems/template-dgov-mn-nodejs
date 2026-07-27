@@ -64,6 +64,12 @@ services:
       db:
         condition: service_healthy
     restart: 'no'
+    # Өгөгдмөл `docker compose up` -аас ГАРГАВ. Шалтгаан: migrate нь deploy
+    # бүрд дахин ажилладаг байсан бөгөөд api нь түүнээс
+    # service_completed_successfully-ээр хамаардаг тул `up -d` нь api+web-ийг
+    # ҮРГЭЛЖ дахин үүсгэдэг байв — код хөндөөгүй commit дээр ч секундын 502.
+    # Одоо migration нь deploy script-ийн ТУСДАА алхам.
+    profiles: ["migrate"]
 
   api:
     build:
@@ -95,8 +101,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
+      # migrate-ийн хамаарлыг САЛГАВ (migrate service дээрх тайлбарыг үз).
+      # Migration нь deploy script-д api эхлэхээс ӨМНӨ тусад нь ажиллаж,
+      # амжилтгүй бол deploy тэндээ зогсоно.
     restart: unless-stopped
 
   web:
